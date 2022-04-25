@@ -7,11 +7,13 @@ import math
 
 DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
 
+
 class SketchObject:
     def __init__(self, kval, sketch):
         self.k = kval
-        self.sketch =sketch
-        self.card =None
+        self.sketch = sketch
+        self.card = None
+
 
 class SketchTreeNode:
     ''' A SketchTree node
@@ -38,7 +40,7 @@ class SketchTreeNode:
         - l_or_r: 0 or 1 depending on if left or right child
     '''
 
-    def __init__(self, parent, row_index, tree_row, kmin=4, kmax=0, storage: st r ='', leaf_input: st r ='') -> None:
+    def __init__(self, parent, row_index, tree_row, kmin=4, kmax=0, storage: str = '', leaf_input: str = '') -> None:
         self.parent = parent
         self.storage = storage
         self.leaf_input = leaf_input
@@ -78,12 +80,13 @@ class SketchTreeNode:
         return self.leaf_input == 'dummy'
 
     def _get_leaf_sketch(self, kval):
-        sketchdir = os.path.join(self.storage ,"k "+ str(kval))
+        sketchdir = os.path.join(self.storage, "k" + str(kval))
         os.makedirs(sketchdir, exist_ok=True)
-        sketchlo c =os.path.join(sketchdir, str(abs(hash(self.leaf_input))))
+        sketchloc = os.path.join(sketchdir, str(abs(hash(self.leaf_input))))
         sketch = SketchObject(kval=kval, sketch=sketchloc)
-        sketch_cal l =subprocess.run \
-            ([DASHINGLOC, "sketch", "-k" + str(kval), "-p10" ,"-o", str(sketchloc), self.leaf_input])
+        sketch_call = subprocess.run(
+            ["/home/jbonnie1/lib/dashing/dashing", "sketch", "-k" + str(kval), "-p10", "-o", str(sketchloc),
+             self.leaf_input])
         print(sketch_call)
         # cmd = ["/home/jbonnie1/lib/dashing/dashing", "card", "--presketched", sketchloc]
         # card_proc = subprocess.run(cmd, capture_output=True, text=True)
@@ -95,21 +98,21 @@ class SketchTreeNode:
         # print("sketch: ", sketch)
         return sketch
 
-
     def _get_union_sketch(self, kval):
 
-        kst r ="k "+ str(kval)
-        sketchdir = os.path.join(self.storage ,kstr)
+        kstr = "k" + str(kval)
+        sketchdir = os.path.join(self.storage, kstr)
         os.makedirs(sketchdir, exist_ok=True)
-        left_sketc h =self.left.sketches[kstr].sketch
-        right_sketc h =self.right.sketches[kstr].sketch
+        left_sketch = self.left.sketches[kstr].sketch
+        right_sketch = self.right.sketches[kstr].sketch
         ## RIGHT NOW ASSUMING LEFT AND RIGHT EXIST
         # sketchdir = os.path.join(self.storage,"k"+ str(kval))
         # os.makedirs(sketchdir, exist_ok=True)
-        sketchlo c =os.path.join(sketchdir, str(abs(hash(left_sketch + right_sketch))))
+        sketchloc = os.path.join(sketchdir, str(abs(hash(left_sketch + right_sketch))))
         sketch = SketchObject(kval=kval, sketch=sketchloc)
-        sketch_cal l =subprocess.run \
-            ([DASHINGLOC, "union", "-k" + str(kval), "-p10" ,"-o", str(sketchloc), left_sketch, right_sketch])
+        sketch_call = subprocess.run(
+            ["/home/jbonnie1/lib/dashing/dashing", "union", "-k" + str(kval), "-p10", "-o", str(sketchloc), left_sketch,
+             right_sketch])
         print(sketch_call)
         return sketch
 
@@ -118,7 +121,7 @@ class SketchTreeNode:
         when you already have the sketches you need for delta, but your tree needs more in case user asks
         '''
         while self.kmin > kmin:
-            self.get_sketch(self.kmin -1)
+            self.get_sketch(self.kmin - 1)
             self.kmin -= 1
         while self.kmax < kmax:
             self.get_sketch(self.kmin + 1)
@@ -135,7 +138,7 @@ class SketchTreeNode:
         else:
             new_sketch = self._get_union_sketch(kval)
 
-        cmd = [DASHINGLOC, "card", "--presketched", new_sketch.sketch]
+        cmd = ["/home/jbonnie1/lib/dashing/dashing", "card", "--presketched", new_sketch.sketch]
         card_proc = subprocess.run(cmd, capture_output=True, text=True)
         card_lines = card_proc.stdout.strip().split('\n')
         ##TODO: this could be how we create a bunch of sketches and cards from the same output table!!!
@@ -154,7 +157,7 @@ class SketchTreeNode:
             self.deltak = k
             self.delta = last_delta
             k += 1
-            ##TODO: can make this return a list of sketches my dudes!!!
+            #           #TODO: can make this return a list of sketches my dudes!!!
             new_sketch = self._get_sketch(k)
             # self.sketches.append(new_sketch)
             self.sketches['k' + str(k)] = new_sketch
