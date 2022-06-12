@@ -1,4 +1,4 @@
-.libPaths(c("/home/jbonnie1/R/4.0.4","/usr/local/lib/R/site-library","/usr/local/lib/R/library",.libPaths()))
+.libPaths(c("/home/jbonnie1/rlibs/4.0.2/","/home/jbonnie1/R/4.0.4","/usr/local/lib/R/site-library","/usr/local/lib/R/library",.libPaths()))
 require(tidyr)
 require(ggplot2)
 require(data.table)
@@ -6,23 +6,75 @@ require(openssl)
 require(dplyr)
 
 
-dashingcmd<- '~/lib/dashing/dashing'
-tag <- 'salmonella'
-genomedir <- file.path('/home/jbonnie1/scr16_blangme2/jessica/data',tag)
-setwd("~/scr16_blangme2/jessica/dandd/progressive_union/")
-# results.save<-list(salmonella=list(),human=list(),ecoli=list())
-load('results.Rda')
-load('orderings.rda')
+library("optparse")
 
-# norder <- 30
-# orderings <- lapply(1:norder,function(c){sample(1:gcount,replace = FALSE)})
-gfiles<- list.files(genomedir)
-gcount<-length(gfiles)
-sketchdir<-file.path(getwd(),"sketches",tag)
+option_list = list(
+  make_option(c("-s", "--species"), type="character", default=NULL, 
+              help="species tagname used to locate data directory", metavar="character"),
+              # option_list=c('HVSVC2','human','salmonella','ecoli')),
+  
+  make_option(c("-o", "--out"), type="character", default=".", 
+              help="output directory path [default= %default]", metavar="character"),
+  
+  make_option(c("-K", "--maxk"), type="numeric", default=20, 
+              help="maximum value of k to sketch [default= %default]", metavar="numeric"),
+  
+  make_option(c("-k", "--mink"), type="numeric", default=14, 
+              help="minimum value of k to sketch [default= %default]", metavar="numeric"),
+  
+  make_option(c("-g", "--ngenomes"), type="numeric", default=10, 
+              help="number of genomes to include in the random orderings [default= %default]", metavar="numeric"),
+  
+  make_option(c("-n", "--norder"), type="numeric", default=30, 
+              help="Number of random orderings to sketch [default= %default]", metavar="numeric"),
+  
+  make_option(c("-d", "--dashing"), type="character", default="/home/jessica/lib/dashing/dashing", 
+              help="location of dashing program [default= %default]", metavar="character")
+); 
+# print(getwd())
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
+
+norder <- opt$norder
+tag <- opt$species
+dashingcmd <- opt$dashing
+mink <- opt$mink
+maxk <- opt$maxk
+outdir <- R.utils::getAbsolutePath(opt$out)
+print(outdir)
+resultsfile=file.path(outdir,paste0(tag,"_results.rda"))
+sketchdir<-file.path(outdir,"sketches",tag)
 dir.create(sketchdir, showWarnings = FALSE)
-mink=12
-maxk=16
+
+
 parval=20
+gdir_base='/home/jbonnie1/scr16_blangme2/jessica/data'
+
+# dashingcmd<- '~/lib/dashing/dashing'
+# tag <- 'salmonella'
+
+genomedir <- file.path(gdir_base,tag)
+if (tag == 'HVSVC2'){ 
+  genomedir <- file.path(gdir_base,tag,'consensus')}
+
+
+# setwd(opt$out)
+# setwd("~/scr16_blangme2/jessica/dandd/progressive_union/")
+results.save = list()
+# results.save<-list(salmonella=list(),human=list(),ecoli=list())
+# load(resultsfile)
+# load('orderings.rda')
+
+
+
+gfiles<- list.files(genomedir,pattern = "*.fa.gz")
+print(gfiles)
+gcount<-unlist(ifelse(is.null(opt$ngenomes), length(gfiles), opt$ngenomes))
+# print(paste("gcount:",gcount))
+gfiles<-gfiles[1:gcount]
+orderings <- lapply(1:norder,function(c){sample(1:gcount,replace = FALSE)})
+
+
 
 nameSketch2<- function(indices, gfiles, kval){
   # Function to return a hash independent of the ordering of the input files
@@ -52,19 +104,24 @@ nameSketch3<-function(input_files,kval, gfiles){
   }
 }
 
-
-nameSketch<-function(input_files,kval){
-  # Function to return a hash independent of the ordering of the input files
-  if (length(input_files) == 1){
-    return(paste0(basename(input_files[[1]]),".w.",kval,".spacing.10.hll"))
-  }
-  else {
-    string<- as.character(paste0(paste0(sort(input_files),collapse=""),"k",kval))
-    
-    filename=paste0(digest::digest(string, algo='md5', serialize = FALSE),kval,length(input_files),".hll")
-    return(filename)
-  }
+reconstituteGenomeList <- function(filename){
+  parts <- unlist(stringr::str_split(filename, "_"))
+  return(array(parts[2:(length(parts)-1)]))
 }
+
+# 
+# nameSketch<-function(input_files,kval){
+#   # Function to return a hash independent of the ordering of the input files
+#   if (length(input_files) == 1){
+#     return(paste0(basename(input_files[[1]]),".w.",kval,".spacing.10.hll"))
+#   }
+#   else {
+#     string<- as.character(paste0(paste0(sort(input_files),collapse=""),"k",kval))
+#     
+#     filename=paste0(digest::digest(string, algo='md5', serialize = FALSE),kval,length(input_files),".hll")
+#     return(filename)
+#   }
+# }
 
 
 
@@ -78,42 +135,50 @@ for (i in 1:length(orderings)){
     sketchkdir=file.path(sketchdir, paste0("k",kval))
     dir.create(sketchkdir, showWarnings = FALSE)
     if (i ==1){
+      sketchkndir=file.path(sketchkdir,paste0("ngen",1))
+      dir.create(sketchkndir, showWarnings = FALSE)
       for (fname in gfiles){
         # sketchprefix <- nameSketch(c(fname),kval)
         sketchprefix <- nameSketch3(c(fname),kval,gfiles)
-        sketch_loc <- file.path(sketchkdir, sketchprefix)
-        if (! file.exists(sketch_loc)){
+        sketch_loc <- file.path(sketchkndir, sketchprefix)
+        if (! file.exists(sketch_loc) | file.size(sketch_loc) == 0L){
           # print(file.path(sketchdir,sketchprefix))
           command=paste0("~/lib/dashing/dashing sketch -k", kval," -p", parval,
-                         " --prefix ", sketchkdir, " ", file.path(genomedir, fname))
-          # print(command)
-          system(command, ignore.stdout = TRUE, ignore.stderr = TRUE)
-        } } }
+                         " --prefix ", sketchkndir, " ", file.path(genomedir, fname))
+          print(" ")
+          print(command)
+          print(" ")
+          system(command, ignore.stdout = FALSE, ignore.stderr = FALSE)
+       }
+      } }
     reorder_sketches <- unlist(lapply(reorder, function(x){
-      oldpath=file.path(sketchdir,nameSketch(x,kval))
-      newpath=file.path(sketchkdir,nameSketch3(x,kval,gfiles))
-      if (file.exists(oldpath)){
-        print(paste("Old Name:",oldpath))
-        print(paste("New Name:", newpath))
-        file.rename(oldpath, newpath)
-      }
+      # oldpath=file.path(sketchdir,nameSketch(x,kval))
+      newpath=file.path(sketchkndir,nameSketch3(x,kval,gfiles))
+      # if (file.exists(oldpath)){
+      #   print(paste("Old Name:",oldpath))
+      #   print(paste("New Name:", newpath))
+      #   file.rename(oldpath, newpath)
+      # }
       return(newpath)
     }))
+    print(reorder_sketches)
     for (g in 1:gcount){
-      unionprefix <- file.path(sketchkdir,nameSketch3(reorder[1:g], kval,gfiles))
+      sketchkndir <- file.path(sketchkdir,paste0("ngen",g))
+      dir.create(sketchkndir, showWarnings = FALSE)
+      unionprefix <- file.path(sketchkndir,nameSketch3(reorder[1:g], kval,gfiles))
       omni_list=append(omni_list,list(list(ordering=i, ngenomes=g, kval=kval, union_loc=unionprefix)))
       # print(paste("ngenomes",g," kval ",kval))
       if (g>1 ){
         # print(paste( reorder_paths[1:g], collapse=" "))
-        alt_input1= file.path(sketchkdir,nameSketch3(reorder[1:(g-1)], kval, gfiles))
-        alt_input2= file.path(sketchkdir,nameSketch3(reorder[g], kval, gfiles))
+        alt_input1= file.path(sketchkdir,paste0("ngen",g-1),nameSketch3(reorder[1:(g-1)], kval, gfiles))
+        alt_input2= file.path(sketchkdir,paste0("ngen",1),nameSketch3(reorder[g], kval, gfiles))
         
-        # command <- paste0("~/lib/dashing/dashing union -p ", parval,"-z -o ", unionprefix, " ", paste( reorder_sketches[1:g], collapse=" "))
-        command <- paste0("~/lib/dashing/dashing union -p ", parval,"-z -o ", unionprefix, " ", alt_input1, " ", alt_input2)
+        # command <- paste0("~/lib/dashing/dashing union -p ", parval," -z -o ", unionprefix, " ", paste( reorder_sketches[1:g], collapse=" "))
+        command <- paste0("~/lib/dashing/dashing union -p ", parval," -z -o ", unionprefix, " ", alt_input1, " ", alt_input2)
         
         print(command)
-        if (! file.exists(unionprefix)){
-          system(command, ignore.stdout = TRUE)
+        if (! file.exists(unionprefix) | file.size(unionprefix) == 0L){
+          system(command, ignore.stdout = FALSE)
         }
       }
     }
@@ -169,7 +234,7 @@ tp <-
 
 
 
-results.save[[tag]] = append(results.save[[tag]],
+results.save = append(results.save,
                              list(list(
                                card = card,
                                omni = omni.table,
@@ -178,7 +243,7 @@ results.save[[tag]] = append(results.save[[tag]],
                                orderings = orderings
                              )))
 
-save(results.save,file="results.Rda")
+save(results.save,file=resultsfile)
 
 ggplot2::ggsave(filename = paste0("plot_",tag,length(orderings),".pdf"), 
                 plot = tp, 
