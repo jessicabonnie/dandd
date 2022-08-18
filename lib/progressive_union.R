@@ -44,7 +44,12 @@ option_list = list(
               help="absolute path to directory of genomic data with species names as subdirectories containing fasta files."),
   
   make_option(c("-r", "--registers"), type="numeric", default=20, 
-              help="number of registers to use during sketching[default= %default]", metavar="numeric")
+              help="number of registers to use during sketching[default= %default]", metavar="numeric"),
+  make_option(c("-l", "--filelist"), type="character", default=NULL, 
+              help="file containing a list of fasta file names that should be included in desired original ordering order"),
+  make_option(c("-p", "--prefix"), type="character", default=NULL, 
+              help="tag to use in results files to distinguish runs of different filelists",metavar="character")
+  
   
 ); 
 # print(getwd())
@@ -57,17 +62,20 @@ dashingcmd <- opt$dashing
 mink <- opt$mink
 maxk <- opt$maxk
 outdir <- R.utils::getAbsolutePath(opt$out)
-print(outdir)
+
 
 
 sketchdir<-file.path(outdir,"sketches",tag)
 dir.create(sketchdir, showWarnings = FALSE)
 gdir_base<-opt$inputdir
 nregister=opt$registers
+if (!is.null(opt$prefix)){
+results_prefix<-file.path(sketchdir,paste0(tag,"_",opt$prefix))
+} else {results_prefix<-file.path(sketchdir,tag)}
 
 hashkey_loc=file.path(sketchdir,paste0(tag,"_hashkey.rda"))
 oldresultsfile=file.path(outdir,paste0(tag,"_results.rda"))
-resultsfile=file.path(sketchdir, paste0(tag,"_results.rda"))
+resultsfile=paste0(results_prefix,"_results.rda")
 
 if(file.exists(oldresultsfile)){ file.rename(oldresultsfile, resultsfile)}
 
@@ -81,7 +89,7 @@ if (tag == 'HVSVC2'){
   genomedir <- file.path(gdir_base,'HVSVC2','consensus')
   species='HVSVC2'}
 
-if (tag == 'HVSVC2_2'){ 
+if (tag == 'HVSVC2_snv_sv'){ 
   genomedir <- file.path(gdir_base,'HVSVC2','consensus_snv_sv')
   species='HVSVC2'}
 if (tag == 'HVSVC2_snv'){ 
@@ -108,46 +116,53 @@ if (file.exists(hashkey_loc)){
   load(hashkey_loc)} else{ hashkey=hash()}
 # load('orderings.rda')
 
-fasta_files <- sort(list.files(genomedir,pattern = "*\\.(fa.gz|fasta.gz|fna.gz|fasta|fa)"))
-
-old_expected_sort<-file.path(outdir,paste0(tag,"_sortorder.csv"))
-expected_sort<-file.path(sketchdir,paste0(tag,"_sortorder.csv"))
-if (file.exists(old_expected_sort)){file.rename(old_expected_sort, expected_sort)}
-
-# print(expected_sort)
 if (is.null(opt$sortorder)){
-  if (! file.exists(expected_sort)){
-    gfiles <- fasta_files
-    # write.csv(file=expected_sort, data.frame(gfiles,seq(1,length(gfiles))),col.names = FALSE, row.names=FALSE, quote=FALSE)
-  } else {
-    order.df <- read.csv(expected_sort, header = TRUE, strip.white = TRUE,stringsAsFactors = FALSE) %>%
-      arrange(position)
-    complement <- fasta_files[!fasta_files %in% order.df$name]
-    if (length(complement) > 0){
-    gfiles <- append(order.df$names,complement)
-    } else {
-      gfiles <- order.df$name
-      # print(gfiles)
-      }
-    
+fasta_files <- sort(list.files(genomedir,pattern = "*\\.(fa.gz|fasta.gz|fna.gz|fasta|fa)"))
+} else { 
+  print("%#%#%#%# I SEE THE SORT FILE %#%#%#%#")
+  fasta_files <- unlist(fread(opt$sortorder, header=FALSE))
   }
-  order.df <- data.frame(name=gfiles,position=seq(1,length(gfiles)))
-  write.csv(file=expected_sort, x=order.df, row.names=FALSE, quote=FALSE)
-} else {
-  provided_order <- read.csv(expected_sort, header = TRUE, strip.white = TRUE,stringsAsFactors = FALSE) %>%
-    arrange(position)
-  if (file.exists(expected_sort)){
-    order.df <- read.csv(expected_sort, header = TRUE, strip.white = TRUE,stringsAsFactors = FALSE) %>%
-      arrange(position)
-    sanity <- inner_join(provided_order,order.df,by='position')
-    if (any(sanity$name.x != sanity$name.y)){ stop("OH NO, THE PROVIDED ORDER DOES NOT MATCH WHAT WE HAVE BEEN USING!! 
-                                                             You need to bomb all of you ngen folders greater than 1. Or else, run a function that
-                                                             isn't here yet to fix them.")
-      error(1)}
-    gfiles <- provided_order$name
-    
-  }
-}
+gfiles <- fasta_files
+
+
+expected_sort<-paste0(results_prefix,"_sortorder_out.txt")
+# if (file.exists(expected_sort)){file.rename(old_expected_sort, expected_sort)}
+cat(unlist(gfiles), sep="\n", file=expected_sort)
+
+# # print(expected_sort)
+# if (is.null(opt$sortorder)){
+#   if (! file.exists(expected_sort)){
+#     gfiles <- fasta_files
+#     # write.csv(file=expected_sort, data.frame(gfiles,seq(1,length(gfiles))),col.names = FALSE, row.names=FALSE, quote=FALSE)
+#   } else {
+#     order.df <- read.csv(expected_sort, header = TRUE, strip.white = TRUE,stringsAsFactors = FALSE) %>%
+#       arrange(position)
+#     complement <- fasta_files[!fasta_files %in% order.df$name]
+#     if (length(complement) > 0){
+#     gfiles <- append(order.df$names,complement)
+#     } else {
+#       gfiles <- order.df$name
+#       # print(gfiles)
+#       }
+#     
+#   }
+#   order.df <- data.frame(name=gfiles,position=seq(1,length(gfiles)))
+#   write.csv(file=expected_sort, x=order.df, row.names=FALSE, quote=FALSE)
+# } else {
+#   provided_order <- read.csv(expected_sort, header = TRUE, strip.white = TRUE,stringsAsFactors = FALSE) %>%
+#     arrange(position)
+#   if (file.exists(expected_sort)){
+#     order.df <- read.csv(expected_sort, header = TRUE, strip.white = TRUE,stringsAsFactors = FALSE) %>%
+#       arrange(position)
+#     sanity <- inner_join(provided_order,order.df,by='position')
+#     if (any(sanity$name.x != sanity$name.y)){ stop("OH NO, THE PROVIDED ORDER DOES NOT MATCH WHAT WE HAVE BEEN USING!! 
+#                                                              You need to bomb all of you ngen folders greater than 1. Or else, run a function that
+#                                                              isn't here yet to fix them.")
+#       error(1)}
+#     gfiles <- provided_order$name
+#     
+#   }
+# }
 
 get_hash_string <-function(filenames){
   outvect=character(length=length(filenames))
@@ -157,13 +172,11 @@ get_hash_string <-function(filenames){
   return(outvect)}
 
 assign_hash_string <- function(filename, len=6){
-  print(paste0("%%%",filename,"%%%"))
   # newalphanum=digest::digest(file=filename, algo='md5', serialize = FALSE)
   # newtrunc=stringr::str_trunc(alphanum, len, "right",ellipsis = '')
   
   alphanum=digest::digest(filename, algo='md5', serialize = FALSE)
   trunc=stringr::str_trunc(alphanum, len, "right",ellipsis = '')
-  print(paste0(filename, ' file keyed to hash ', trunc))
   if (has.key(key = filename, hashkey)){
     return(hashkey[[filename]])
   }
@@ -180,7 +193,7 @@ print(paste0("I KNOW GCOUNT AND IT IS: ", gcount))
 # print(paste("gcount:",gcount))
 gfiles<-gfiles[1:gcount]
 lapply(gfiles, function(x){
-  assign_hash_string(x)
+  assign_hash_string(x,len=1)
 })
 save(hashkey, file=hashkey_loc)
 
@@ -259,17 +272,17 @@ reconstituteGenomeList <- function(filename){
 
 
 omni_list<-list()
-
+lapply(seq(mink, maxk),function(x){dir.create(file.path(sketchdir, paste0("k",x),"ngen1"), showWarnings = FALSE,recursive = TRUE)})
 for (i in 1:length(orderings)){
+  print(paste0("Length of orderings ",length(orderings)))
   reorder <- gfiles[orderings[[i]]]
   reorder_paths <- unlist(lapply(reorder,function(x){file.path(genomedir,x)}))
   
   for (kval in mink:maxk){
     sketchkdir=file.path(sketchdir, paste0("k",kval))
-    dir.create(sketchkdir, showWarnings = FALSE)
     if (i ==1){
       sketchkndir=file.path(sketchkdir,paste0("ngen",1))
-      dir.create(sketchkndir, showWarnings = FALSE)
+      # dir.create(sketchkndir, showWarnings = FALSE)
       for (fname in gfiles){
         newsketchprefix <- nameSketch(c(fname),kval, registers=nregister)
         sketchprefix <- nameSketch3(c(fname),kval,gfiles,registers=nregister)
@@ -277,8 +290,12 @@ for (i in 1:length(orderings)){
         newsketch_loc <- file.path(sketchkndir, newsketchprefix)
         if (! file.exists(sketch_loc) | file.size(sketch_loc) == 0L){
           # print(file.path(sketchdir,sketchprefix))
-          command=paste0("~/lib/dashing/dashing sketch -k", kval," -p", parval,
-                         " --prefix ", sketchkndir, " -S ",nregister," " ,file.path(genomedir, fname))
+
+    command=paste0("seq ", kval," ", maxk, " | parallel --jobs 8 '~/lib/dashing/dashing sketch -k {} -p ", parval,
+                         " --prefix ", sketchdir,"/k{}/ngen1 " ," -S ",nregister," " ,file.path(genomedir, fname),"'")
+
+          # command=paste0("~/lib/dashing/dashing sketch -k", kval," -p", parval,
+          #                " --prefix ", sketchkndir, " -S ",nregister," " ,file.path(genomedir, fname))
           print(command)
           system(command, ignore.stdout = FALSE, ignore.stderr = FALSE)
        }
@@ -299,7 +316,7 @@ for (i in 1:length(orderings)){
       dir.create(sketchkndir, showWarnings = FALSE)
       oldunionprefix <- file.path(sketchkndir,nameSketch3(reorder[1:g], kval,gfiles, registers=nregister))
       unionprefix <- file.path(sketchkndir,nameSketch(reorder[1:g], kval,registers=nregister))
-      if (file.exists(oldunionprefix)){
+      if (g>1 & file.exists(oldunionprefix)){
         print(paste("#### I rename",oldunionprefix, "to", unionprefix))
         file.rename(oldunionprefix, unionprefix)
       }
@@ -331,22 +348,26 @@ for (i in 1:length(orderings)){
 
 omni.table<-rbindlist(omni_list)
 old_index_loc=paste0('/scratch16/blangme2/jessica/dandd/progressive_union/',tag,'_',length(orderings),'_index.tsv')
-index_loc=file.path(sketchdir,paste0(tag,'_',length(orderings),'_index.tsv'))
+index_loc=paste0(results_prefix,'_',length(orderings),'_index.tsv')
 if(file.exists(old_index_loc)){file.rename(old_index_loc,index_loc)}
 
 old_card_loc=paste0("/scratch16/blangme2/jessica/dandd/progressive_union/",tag,"_",length(orderings),"_cardinalities.txt")
-card_loc=file.path(sketchdir,paste0(tag,"_",length(orderings),"_cardinalities.txt"))
+card_loc=paste0(results_prefix,"_",length(orderings),"_cardinalities.txt")
 if(file.exists(old_card_loc)){file.rename(old_card_loc,card_loc)}
 
 
 
 write.table(unique(omni.table$union_loc),index_loc, row.names = FALSE, col.names = FALSE, quote = FALSE)
 
-command <- paste0("~/lib/dashing/dashing card --presketched -F ", index_loc," -o ",card_loc)
+command <- paste0("~/lib/dashing/dashing card --presketched -p10 -F ", index_loc," -o ",card_loc)
 print(command)
+### COMMENT THIS LINE FOR CARDINALITY CALL FAIL CORRECTION
 system(command,wait = TRUE)
-# cmd_output <-fread(cmd = paste0("~/lib/dashing/dashing card --presketched -F ", index_loc))
-
+# cmd_output <-fread(cmd = paste0("~/lib/dashing/dashing card -p10 --presketched -F ", index_loc))
+if (file.size(card_loc) == 0L){
+  warning("DASHING CARD output is empty!")
+  
+}
 card <- read.table(card_loc, header = F, stringsAsFactors = F, skip=1) %>% 
   rename(union_loc=V1, UniqXMatch=V2)
 # cbind(omni.table,card) %>% mutate(union_loc != union_loc2) %>% View()
@@ -375,7 +396,7 @@ results.save[[paste0("ng",gcount)]] = list(
                                # tp = tp,
                                orderings = orderings,
                                gfiles=gfiles,
-                               sort=order.df
+                               sort=fasta_files
                              )
 # }
 save(results.save,file=resultsfile)
