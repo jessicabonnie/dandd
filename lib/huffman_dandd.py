@@ -1,6 +1,7 @@
 #import parallel
 #import random
 #import pandas as pd
+from ast import Str
 from numpy import unique
 import sys
 import os
@@ -77,10 +78,10 @@ class SpeciesSpecifics:
 
 class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location'''
-    def __init__(self, filenames: list, kval: int, registers: int, speciesinfo: SpeciesSpecifics):
+    def __init__(self, filenames: list, kval: int, registers: int, speciesinfo: SpeciesSpecifics, prefix=None):
         self.files = filenames
         self.ngen = len(filenames)
-        self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval, registers=registers)
+        self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval, registers=registers, prefix=prefix)
         self.dir = os.path.join(speciesinfo.sketchdir,"k"+ str(kval), "ngen" + str(self.ngen))
         self.full = os.path.join(self.dir, self.base)
         self.registers = registers
@@ -354,6 +355,7 @@ class DeltaTree:
         self.registers=registers
         self._build_tree(fasta_files, speciesinfo)
         self.fill_tree(speciesinfo, registers)
+        self.ngen = len(fasta_files)
         #self.card0 = speciesinfo.card0
         #self.cardkey=speciesinfo.cardkey
         
@@ -490,6 +492,28 @@ class DeltaTree:
         print(bestks)
         for k in bestks:
             root.update_node( speciesinfo, registers, k)
-        
-        
+
+def fasta_files(inputdir):
+    reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
+    return [fasta for fasta in os.listdir(inputdir) if reg_compile]
+
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int):
+    '''something'''
+    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir sketchdir=sketchdir, kstart=10)
+    #inputdir = speciesinfo.inputdir
+    fastas = fasta_files(speciesinfo.inputdir)
+    fastas.sort()
+    dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo)
+    speciesinfo.save_cardkey()
+    speciesinfo.save_hashkey()
+    dtree.print_tree()
+    return dtree
+
+def save_dtree(dtree: DeltaTree, outloc: str, tag: str, flag=None):
+    '''something'''
+    if flag is None:
+        flag = ""
+    else: flag = flag
+    filepath=os.path.join(outloc,  tag + flag + "_" + dtree.ngen + '_dtree.pickle')
+    pickle.dump(obj=dtree, file=filepath)
         
