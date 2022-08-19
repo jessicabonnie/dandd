@@ -16,7 +16,6 @@ from multiprocessing import Process
 #import glob
 
 DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
-ecolidir="/home/jbonnie1/scr16_blangme2/jessica/data/ecoli"
 codelib='/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
 
 class SpeciesSpecifics:
@@ -39,9 +38,11 @@ class SpeciesSpecifics:
         else:
             hashkey=dict()
         return hashkey
+
     def save_hashkey(self):
         usual=os.path.join(self.sketchdir,self.tag+'_hashkey.pickle')
-        pickle.dump(file=usual, obj=self.hashkey)
+        with open(usual,"wb") as f:
+            pickle.dump(file=f, obj=self.hashkey)
     
     def _read_cardkey(self):
         usual=os.path.join(self.sketchdir, self.tag+'_cardinalities.pickle')
@@ -53,7 +54,8 @@ class SpeciesSpecifics:
     
     def save_cardkey(self):
         usual=os.path.join(self.sketchdir, self.tag+'_cardinalities.pickle')
-        pickle.dump(file=usual, obj=self.cardkey)
+        with open(usual,"wb") as f:
+            pickle.dump(file=f, obj=self.cardkey)
             
     def _resolve_species(self):
         for title in ['HVSVC2','ecoli','salmonella','human']:
@@ -81,7 +83,7 @@ class SketchFilePath:
     def __init__(self, filenames: list, kval: int, registers: int, speciesinfo: SpeciesSpecifics, prefix=None):
         self.files = filenames
         self.ngen = len(filenames)
-        self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval, registers=registers, prefix=prefix)
+        self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval, registers=registers)
         self.dir = os.path.join(speciesinfo.sketchdir,"k"+ str(kval), "ngen" + str(self.ngen))
         self.full = os.path.join(self.dir, self.base)
         self.registers = registers
@@ -118,8 +120,8 @@ class SketchFilePath:
         else:
             speciesinfo.card0.append(self.full)
             return 0
-    
-   
+
+
 class SketchObj:
     ''' A sketchobject.
         kval = the kvalue used to construct the sketch
@@ -299,8 +301,7 @@ class DeltaTreeNode:
         self.find_delta_helper(speciesinfo, registers, kval, direction=1)
         self.find_delta_helper(speciesinfo, registers, kval, direction=-1)
         return
-    
-    
+
     def update_node(self, speciesinfo, registers, kval):
         '''something'''
         if self.ksketches[kval] is None:
@@ -320,7 +321,6 @@ class DeltaTreeNode:
                 sys.exit()
         self.update_card(speciesinfo)
         return
-
     def update_card(self, speciesinfo):
         '''something'''
         sketches = [sketch for sketch in self.ksketches if sketch is not None]
@@ -338,7 +338,7 @@ class DeltaTreeNode:
                 if sketch.sketch in sketches:
                     sketch.check_cardinality(speciesinfo)
                     sketch.dpos=sketch.card/sketch.kval
-        
+
 class DeltaTree:
     ''' Delta tree data structure. '''
     def __init__(self, fasta_files, speciesinfo, kstart=10, registers=20):
@@ -358,12 +358,10 @@ class DeltaTree:
         self.ngen = len(fasta_files)
         #self.card0 = speciesinfo.card0
         #self.cardkey=speciesinfo.cardkey
-        
-    def fasta_files(inputdir):
-        '''Retrieve sorted list of fasta files in the given directory'''
-        reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
-        return [fasta for fasta in os.listdir(inputdir) if reg_compile].sort()
-    
+    # def fasta_files(inputdir):
+    #     '''Retrieve sorted list of fasta files in the given directory'''
+    #     reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
+    #     return [fasta for fasta in os.listdir(inputdir) if reg_compile].sort()
     def batch_update_card(self, speciesinfo):
         '''something'''
         if len(speciesinfo.card0) > 0:
@@ -409,13 +407,16 @@ class DeltaTree:
                 fasta_input=s, left=None, right=None
             ) for s in symbol]
         inputs.sort()
-        procs = []
-        for dnode in inputs:
-            proc = Process(target=DeltaTreeNode.find_delta, args=[dnode, speciesinfo, self.registers, speciesinfo.kstart])
-            procs.append(proc)
-            proc.start()
-        for proc in procs:
-            proc.join()
+        for n in inputs:
+            n.find_delta(speciesinfo, self.registers, speciesinfo.kstart)
+        #inputs = [n.find_delta(speciesinfo, self.registers, speciesinfo.kstart) for n in inputs]
+        # procs = []
+        # for dnode in inputs:
+        #     proc = Process(target=DeltaTreeNode.find_delta, args=[dnode, speciesinfo, self.registers, speciesinfo.kstart])
+        #     procs.append(proc)
+        #     proc.start()
+        # for proc in procs:
+        #     proc.join()
         
         self._dt = inputs
              
@@ -448,7 +449,7 @@ class DeltaTree:
             self._code_lengths.append(depth)
             self._code_words.append(code)
             self._symbols.append(node.fasta_input)
-
+            
     def compute_code(self) -> None:
         ''' Update symbols/code-lengths/code-words from left to right after DeltaTree is built.'''
         root = self._dt[-1]
@@ -474,7 +475,7 @@ class DeltaTree:
                 print('Right', node.right)
                 _print_tree_recursive(node.right)
         _print_tree_recursive(root)
-    
+
     def print_list(self) -> None:
         nodes = []
         for i, node in enumerate(self._dt):
@@ -492,16 +493,20 @@ class DeltaTree:
         print(bestks)
         for k in bestks:
             root.update_node( speciesinfo, registers, k)
-
+        
 def fasta_files(inputdir):
     reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
     return [fasta for fasta in os.listdir(inputdir) if reg_compile]
 
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, flist_loc=None):
     '''something'''
-    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir sketchdir=sketchdir, kstart=10)
+    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart)
     #inputdir = speciesinfo.inputdir
     fastas = fasta_files(speciesinfo.inputdir)
+    if flist_loc:
+        with open(flist_loc) as file:
+            fsublist = [line.strip() for line in file]
+        fastas = [f for f in fastas if f in fsublist]
     fastas.sort()
     dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo)
     speciesinfo.save_cardkey()
@@ -509,11 +514,11 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int):
     dtree.print_tree()
     return dtree
 
-def save_dtree(dtree: DeltaTree, outloc: str, tag: str, flag=None):
+def save_dtree(dtree: DeltaTree, outloc: str, tag: str, label=None):
     '''something'''
-    if flag is None:
-        flag = ""
-    else: flag = flag
-    filepath=os.path.join(outloc,  tag + flag + "_" + dtree.ngen + '_dtree.pickle')
-    pickle.dump(obj=dtree, file=filepath)
-        
+    if label is None:
+        label = ""
+    filepath=os.path.join(outloc,  tag + label + "_" + str(dtree.ngen) + '_dtree.pickle')
+    with open(filepath,"wb") as f:
+        pickle.dump(obj=dtree, file=f)
+    
