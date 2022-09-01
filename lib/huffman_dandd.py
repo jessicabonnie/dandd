@@ -171,6 +171,7 @@ class SketchObj:
             print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
             subprocess.call(cmd, shell=True)
             self.cmd=cmd
+            ##TODO Check if call raises error / returns 0
         else:
             self.cmd = cmd
         #print(self.cmd)
@@ -198,6 +199,7 @@ class SketchObj:
             self.cmd = cmd
             #" ".join(cmdlist)
         print(self.cmd)
+    ##TODO: make leaf sketch and union sketch private
         
     def create_sketch(self, sfp: SketchFilePath, speciesinfo: SpeciesSpecifics):
         ''' If sketch file exists, assign path to self.sketch and return path. 
@@ -208,12 +210,14 @@ class SketchObj:
         elif sfp.ngen > 1:
             self.union_sketch(sfp)
         else:
+            ##TODO: Raise runtime error raise RuntimeError(string with warning)
             print("For some reason you are trying to sketch an empty list of files. Don't do that.")
             sys.exit()
         self.sketch = sfp.full
         return self.sketch
     
     def print(self):
+        ##TODO make this a __repr__ function instead
         print("k : {0}; cardinality: {1}; pos delta: {2}; loc : {3}; cmd: {4}".format(self.kval, self.card, self.dpos, self.sketch, self.cmd))
     
     def individual_card(self, speciesinfo):
@@ -303,7 +307,7 @@ class DeltaTreeNode:
         return
 
     def update_node(self, speciesinfo, registers, kval):
-        '''something'''
+        '''Populate the sketch object for the given k at the self node as well as all children of the node'''
         if self.ksketches[kval] is None:
             #create sketch file path holding information relating to the sketch for that k 
             sfp = SketchFilePath(filenames=self.fastas, kval=kval, registers = registers, speciesinfo=speciesinfo)
@@ -339,6 +343,7 @@ class DeltaTreeNode:
                     sketch.check_cardinality(speciesinfo)
                     sketch.dpos=sketch.card/sketch.kval
 
+
 class DeltaTree:
     ''' Delta tree data structure. '''
     def __init__(self, fasta_files, speciesinfo, kstart=10, registers=20):
@@ -363,7 +368,7 @@ class DeltaTree:
     #     reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
     #     return [fasta for fasta in os.listdir(inputdir) if reg_compile].sort()
     def batch_update_card(self, speciesinfo):
-        '''something'''
+        '''Update the cardinality dictionary for any sketches which have been added to the card0 list in speciesinfo '''
         if len(speciesinfo.card0) > 0:
             cmdlist = [DASHINGLOC,"card --presketched -p10"] +  speciesinfo.card0
             cmd = " ".join(cmdlist)
@@ -483,6 +488,7 @@ class DeltaTree:
         print(' -> '.join(nodes))
 
     def fill_tree(self, speciesinfo, registers):
+        '''Starting at the root make sure that all nodes in the tree contain the sketches for the argmax ks for every node as well as 2 less than the minimum and 2 greater than the maximum'''
         root = self._dt[-1]
         bestks = list(unique([n.bestk for n in self._dt]))
         bestks = [k for k in bestks if k!=0  ]
@@ -495,20 +501,24 @@ class DeltaTree:
             root.update_node( speciesinfo, registers, k)
         
 def fasta_files(inputdir):
+    '''return a list of all fasta files in a directory accounting for all the possible extensions'''
     reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
     return [fasta for fasta in os.listdir(inputdir) if reg_compile]
 
 def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, flist_loc=None):
-    '''something'''
+    '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions'''
+    # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart)
     #inputdir = speciesinfo.inputdir
     fastas = fasta_files(speciesinfo.inputdir)
+    # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
     if flist_loc:
         with open(flist_loc) as file:
             fsublist = [line.strip() for line in file]
         fastas = [f for f in fastas if f in fsublist]
     fastas.sort()
     dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo)
+    # Save the cardinality keys as well as the hashkey for the next run of the species
     speciesinfo.save_cardkey()
     speciesinfo.save_hashkey()
     dtree.print_tree()
