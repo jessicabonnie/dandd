@@ -13,6 +13,7 @@ apout=${outdir}/${approach}
 dashing=/home/jbonnie1/lib/dashing/dashing
 outprefix=${outdir}_${approach}_k${kval}
 summary=${outdir}_${approach}_k${kval}.csv
+nthreads=8
 
 mkdir -p ${apout}
 cd ${datadir}
@@ -32,12 +33,12 @@ for fasta in ${fastalist[@]}; do
 
   if [ $approach == 'kmc' ]; then
     outsketch=${apout}/${fasta}.kmc
-    /usr/bin/time -o ${outprefix}.out -v sh -c "kmc -v -k${kval} -ci1 -fm ${datadir}/${fasta} ${apout}/${fasta}.kmc ${outdir}/kmc > ${cardloc}"
+    /usr/bin/time -o ${outprefix}.out -v sh -c "kmc -v -t${nthreads} -k${kval} -ci1 -fm ${datadir}/${fasta} ${apout}/${fasta}.kmc ${outdir}/kmc > ${cardloc}"
     card=$(grep "No. of unique counted k-mers" ${cardloc} | awk '{print $NF}')
 
   elif [ $approach == 'dashing' ]; then
     outsketch=${apout}/${fasta}.w.${kval}.spacing.20.hll
-    /usr/bin/time -o ${outprefix}.out -v sh -c "${dashing} sketch -k ${kval} -S 20 ${fasta} -P ${apout}; ${dashing} card -p 10 --presketched ${outsketch} > ${cardloc}"
+    /usr/bin/time -o ${outprefix}.out -v sh -c "${dashing} sketch -p ${nthreads}-k ${kval} -S 20 ${fasta} -P ${apout}; ${dashing} card -p ${nthreads} --presketched ${outsketch} > ${cardloc}"
     card=$(awk 'NR==2{print $NF}' ${cardloc})
   fi
 #capture benchmarking values
@@ -72,8 +73,8 @@ union_and_count()
 {
   prefix=$1
   karg=$2
-  ${dashing} union -p 10 -z -o ${prefix}_k${karg}.hll -F ${prefix}.txt
-  ${dashing} card -p10 --presketched ${prefix}_k${karg}.hll > ${prefix}_k${karg}.card
+  ${dashing} union -p ${nthreads} -z -o ${prefix}_k${karg}.hll -F ${prefix}.txt
+  ${dashing} card -p ${nthreads} --presketched ${prefix}_k${karg}.hll > ${prefix}_k${karg}.card
   
 }
 export -f union_and_count
@@ -156,7 +157,9 @@ for howmany in $(seq 1 $nfasta); do
       curunion=${sketched[0]}
       
       # using the previous created sketch, get the cardinality for the first db in the random ordering
-      /usr/bin/time -o ${timeout} -v sh -c "kmc_tools transform ${curunion} histogram ${newhist};  cut -f2 ${newhist} | paste -sd+ | bc > ${cardloc}"
+      cmd="kmc_tools -t${nthreads} transform ${curunion} histogram ${newhist};  cut -f2 ${newhist} | paste -sd+ | bc > ${cardloc}"
+      echo ${cmd}
+      /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
       
     else
       echo "INSIDE HOW MANY IS GREATER"
@@ -166,10 +169,11 @@ for howmany in $(seq 1 $nfasta); do
       echo Next addition ${newguy}
       
       # benchmark timing for progressive union of sketches
-      /usr/bin/time -o ${timeout} -v sh -c "
-          kmc_tools simple ${curunion} ${newguy} union ${newunion}; 
-          kmc_tools transform ${newunion} histogram ${newhist};
+      cmd="kmc_tools -t${nthreads} simple ${curunion} ${newguy} union ${newunion}; 
+          kmc_tools -t${nthreads} transform ${newunion} histogram ${newhist};
           cut -f2 ${newunion}.hist | paste -sd+ | bc > ${cardloc}"
+          echo ${cmd}
+      /usr/bin/time -o ${timeout} -v sh -c "$cmd"
       
       #A new union is made when sketch number > 1 so pass that along to the start of the next loop
       curunion=${newunion}
@@ -181,9 +185,9 @@ for howmany in $(seq 1 $nfasta); do
   elif [ $approach == 'dashing' ]; then
     newunion=${apout}/c${howmany}_k${kval}.hll
     if [[ "$howmany" -eq 1 ]]; then
-      /usr/bin/time -v -o ${timeout} sh -c "${dashing} card -p 10 --presketched ${curunion} > ${cardloc}"
+      /usr/bin/time -v -o ${timeout} sh -c "${dashing} card -p ${nthreads} --presketched ${curunion} > ${cardloc}"
     else
-    /usr/bin/time -v -o ${timeout} sh -c "${dashing} union -p 10 -z -o ${newunion} ${curunion} ${sketched[${howmany}-1]}; ${dashing} card -p 10 --presketched ${newunion} > ${cardloc}"
+    /usr/bin/time -v -o ${timeout} sh -c "${dashing} union -p 10 -z -o ${newunion} ${curunion} ${sketched[${howmany}-1]}; ${dashing} card -p ${nthreads} --presketched ${newunion} > ${cardloc}"
     curunion=${newunion}
     fi
     card=$(awk 'NR==2{print $NF}' ${cardloc})
@@ -216,12 +220,12 @@ if [ $approach == 'kmc' ]; then
   echo ${string} >> ${apout}/complex_union.txt
   
   #Benchmarch the process
-  cmd="kmc_tools complex ${apout}/complex_union.txt; kmc_tools transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}"
+  cmd="kmc_tools -t${nthreads} complex ${apout}/complex_union.txt; kmc_tools -t${nthreads} transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}"
   echo ${cmd}
   /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
   
 elif [ $approach == 'dashing' ]; then
-cmd="${dashing} union -p 10 -z -o ${fullunion} ${sketched[@]}; ${dashing} card -p 10 -S 20 --presketched ${fullunion} > ${cardloc}"
+cmd="${dashing} union -p ${nthreads} -z -o ${fullunion} ${sketched[@]}; ${dashing} card -p ${nthreads} -S 20 --presketched ${fullunion} > ${cardloc}"
 echo ${cmd}
   /usr/bin/time -v -o ${timeout} sh -c "${cmd}"
   
@@ -244,10 +248,10 @@ timeout=${outprefix}_fullunionf_k${kval}.out
 
 if [ $approach == 'kmc' ]; then
   #echo "kmc -k${kval} -ci1 -fm \@${apout}/all_fastas.txt ${fullunionf} ${outdir}/kmcfullf 2> ${fullunionf}.card"
-  /usr/bin/time -o ${timeout} -v sh -c "kmc -k${kval} -ci1 -fm @${apout}/all_fastas.txt ${fullunionf} ${outdir}/kmc > ${cardloc}"
+  /usr/bin/time -o ${timeout} -v sh -c "kmc -t${nthreads} -k${kval} -ci1 -fm @${apout}/all_fastas.txt ${fullunionf} ${outdir}/kmc > ${cardloc}"
 
 elif [ $approach == 'dashing' ]; then
-cmd="${dashing} hll -k ${kval} -p 10  -S 20 ${apout}/all_fastas.txt  > ${cardloc}"
+cmd="${dashing} hll -k ${kval} -p ${nthreads}  -S 20 ${apout}/all_fastas.txt  > ${cardloc}"
 echo ${cmd}
   /usr/bin/time -v -o ${timeout} sh -c "$cmd"
   card=$(awk 'NR==2{print $NF}' ${cardloc})
