@@ -24,10 +24,14 @@ def parse_arguments():
 
 #tag: str, genomedir: str, sketchdir: str, kstart: int
 
+
+
+
+
 def main():
     args = parse_arguments()
     dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, flist_loc=args.flist_loc)
-    huffman_dandd.save_dtree(dtree=dtree, outloc=args.sketchdir, tag=args.tag, label=args.label)
+    dtree.save(outloc=args.sketchdir, tag=args.tag, label=args.label)
 
 
 
