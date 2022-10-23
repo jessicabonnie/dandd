@@ -19,7 +19,7 @@ mkdir -p ${apout}
 cd ${datadir}
 fastalist=$(cd ${datadir} && ls *gz)
 # rm ${outdir}_${approach}.out
-echo "Method,Stage,Fasta,Sketch,Order,Count,Card, MaxResSetSize_kb, UserTime_sec" > ${summary}
+echo "Method,Stage,Fasta,Sketch,Order,Count,Card, MaxResSetSize_kb, WallClock_hms" > ${summary}
 
 index=1
 ## For each fasta create a kmc database or sketch
@@ -38,14 +38,16 @@ for fasta in ${fastalist[@]}; do
 
   elif [ $approach == 'dashing' ]; then
     outsketch=${apout}/${fasta}.w.${kval}.spacing.20.hll
-    /usr/bin/time -o ${outprefix}.out -v sh -c "${dashing} sketch -p ${nthreads}-k ${kval} -S 20 ${fasta} -P ${apout}; ${dashing} card -p ${nthreads} --presketched ${outsketch} > ${cardloc}"
+    /usr/bin/time -o ${outprefix}.out -v sh -c "${dashing} sketch -p ${nthreads} -k ${kval} -S 20 ${fasta} -P ${apout}"
+    ${dashing} card -p ${nthreads} --presketched ${outsketch} > ${cardloc}
     card=$(awk 'NR==2{print $NF}' ${cardloc})
   fi
 #capture benchmarking values
 mrss=$(grep "Maximum resident" ${outprefix}.out | awk '{print $NF}')
-utime=$(grep "User time" ${outprefix}.out | awk '{print $NF}')
+## TODO switch to wallclock
+wctime=$(grep "wall clock" ${outprefix}.out | awk '{print $NF}')
 
-    echo "${approach},${stage},${fasta},${outsketch},$(($index-1)),1,${card},${mrss},${utime}" >> ${summary}
+    echo "${approach},${stage},${fasta},${outsketch},$(($index-1)),1,${card},${mrss},${wctime}" >> ${summary}
     index+=1
 done
 
@@ -157,9 +159,10 @@ for howmany in $(seq 1 $nfasta); do
       curunion=${sketched[0]}
       
       # using the previous created sketch, get the cardinality for the first db in the random ordering
-      cmd="kmc_tools -t${nthreads} transform ${curunion} histogram ${newhist};  cut -f2 ${newhist} | paste -sd+ | bc > ${cardloc}"
+      cmd="kmc_tools -t${nthreads} transform ${curunion} histogram ${newhist}"
       echo ${cmd}
       /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
+      cut -f2 ${newhist} | paste -sd+ | bc > ${cardloc}
       
     else
       echo "INSIDE HOW MANY IS GREATER"
@@ -169,11 +172,11 @@ for howmany in $(seq 1 $nfasta); do
       echo Next addition ${newguy}
       
       # benchmark timing for progressive union of sketches
-      cmd="kmc_tools -t${nthreads} simple ${curunion} ${newguy} union ${newunion}; 
-          kmc_tools -t${nthreads} transform ${newunion} histogram ${newhist};
-          cut -f2 ${newunion}.hist | paste -sd+ | bc > ${cardloc}"
-          echo ${cmd}
+      cmd="kmc_tools -t${nthreads} simple ${curunion} ${newguy} union ${newunion}" 
+      echo ${cmd}
       /usr/bin/time -o ${timeout} -v sh -c "$cmd"
+       kmc_tools -t${nthreads} transform ${newunion} histogram ${newhist}
+          cut -f2 ${newunion}.hist | paste -sd+ | bc > ${cardloc}
       
       #A new union is made when sketch number > 1 so pass that along to the start of the next loop
       curunion=${newunion}
@@ -194,9 +197,10 @@ for howmany in $(seq 1 $nfasta); do
   fi
   #capture benchmarking values
   mrss=$(grep "Maximum resident" ${timeout} | awk '{print $NF}')
-  utime=$(grep "User time" ${timeout} | awk '{print $NF}')
+  wctime=$(grep "wall clock" ${timeout} | awk '{print $NF}')
+  if [[ "$howmany" -eq '1' ]]; then wctime=NA; mrss=NA;fi
 
-  echo "${approach},${stage},${fsum},${outsketch},${rand_ind[@]},${newunion},${card},${mrss},${utime}" >> ${summary}
+  echo "${approach},${stage},${fsum},${outsketch},${rand_ind[@]},${howmany},${card},${mrss},${wctime}" >> ${summary}
 
 
 done
@@ -220,20 +224,23 @@ if [ $approach == 'kmc' ]; then
   echo ${string} >> ${apout}/complex_union.txt
   
   #Benchmarch the process
-  cmd="kmc_tools -t${nthreads} complex ${apout}/complex_union.txt; kmc_tools -t${nthreads} transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}"
+  cmd="kmc_tools -t${nthreads} complex ${apout}/complex_union.txt" 
   echo ${cmd}
   /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
+  kmc_tools -t${nthreads} transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}
   
 elif [ $approach == 'dashing' ]; then
-cmd="${dashing} union -p ${nthreads} -z -o ${fullunion} ${sketched[@]}; ${dashing} card -p ${nthreads} -S 20 --presketched ${fullunion} > ${cardloc}"
+cmd="${dashing} union -p ${nthreads} -z -o ${fullunion} ${sketched[@]}"
 echo ${cmd}
-  /usr/bin/time -v -o ${timeout} sh -c "${cmd}"
+/usr/bin/time -v -o ${timeout} sh -c "${cmd}"
+
+${dashing} card -p ${nthreads} -S 20 --presketched ${fullunion} > ${cardloc}
   
-  card=$(awk 'NR==2{print $NF}' ${cardloc})
+card=$(awk 'NR==2{print $NF}' ${cardloc})
 fi
 mrss=$(grep "Maximum resident" ${timeout} | awk '{print $NF}')
-utime=$(grep "User time" ${timeout} | awk '{print $NF}')
-echo "${approach},${stage},NA,${fullunion},NA,${nfasta},${card},${mrss},${utime}" >> ${summary}
+wctime=$(grep "wall clock" ${timeout} | awk '{print $NF}')
+echo "${approach},${stage},NA,${fullunion},NA,${nfasta},${card},${mrss},${wctime}" >> ${summary}
 
 exit
 
@@ -258,7 +265,7 @@ echo ${cmd}
   echo cardloc $cardloc
 fi
 mrss=$(grep "Maximum resident" ${timeout} | awk '{print $NF}')
-utime=$(grep "User time" ${timeout} | awk '{print $NF}')
-echo "${approach},${stage},all,${fullunionf},NA,${nfasta},${card},${mrss},${utime}" >> ${summary}
+wctime=$(grep "wall clock" ${timeout} | awk '{print $NF}')
+echo "${approach},${stage},all,${fullunionf},NA,${nfasta},${card},${mrss},${wctime}" >> ${summary}
 
 #/usr/bin/time -o ${outprefix}_c${howmany}.out -v kmc -ci1 -k${kval} -fm @${apout}/c${howmany}.txt ${apout}/c${howmany}_k${kval}.kmc ${outdir}/kmc > ${apout}/c${howmany}_k${kval}.card
