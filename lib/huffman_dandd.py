@@ -368,6 +368,13 @@ class DeltaTreeNode:
                 
         self.update_card(speciesinfo)
         return
+    def plot_df(self):
+        nodevals=[]
+        for kval in range(len(self.ksketches)):
+            linelist=[self.ngen,kval,self.ksketches[kval].delta_pos, self.node_title]
+            nodevals.append(linelist)
+        ndf=pd.DataFrame(nodevals,columns=["ngenomes","kval","delta_pos", "title"])
+        return ndf
 
     def update_card(self, speciesinfo):
         '''retrieve/calculate cardinality for any sketches in the node that lack it'''
@@ -507,11 +514,7 @@ class DeltaTree:
             while idx_insert < len(self._dt)-increment and self._dt[idx_insert+increment].ngen <= new_node.ngen:
                 
                 idx_insert += increment
-            #print("OUTSIDE of WHILE LOOP. NEW VALUES: ")
-            #print("idx_insert: ", idx_insert)
-            #print("new node ngen: ",new_node.ngen)
-            #print("current length of dt: ",len(self._dt))
-            #print("current increment: ", increment)
+            
             self._dt = self._dt[:idx_insert+increment] + [new_node] + self._dt[idx_insert+increment:]
                 
             idx_current += nchildren
@@ -623,6 +626,29 @@ class DeltaTree:
         with open(filepath,"wb") as f:
             pickle.dump(obj=self, file=f)
 
+    def all_delta_pos(self):
+        
+    def delta_pos(self):
+        ''' Traverse the DeltaTree to return all possible delta values.'''
+        root = self._dt[-1]
+        print(root)
+        def _delta_pos_recursive(node):
+            tmplist=[]
+            tmplist.extend(node.plot_df())
+            if node.children:
+                nchild=len(node.children)
+                for i in range(nchild):
+                    
+                    print(i)
+                    n=node.children[i]
+                    #tmplist.extend(n.plot_df())
+                    #print("Child {}:".format(i),n)
+                    tmplist.extend(_delta_pos_recursive(n))
+            return tmplist
+        #for node in self.fastas
+        dflist= _delta_pos_recursive(root)
+        return pd.concat(dflist)
+
    
 
 
@@ -675,7 +701,7 @@ class DeltaSpider(DeltaTree):
         results=[]
         for i in range(len(orderings)):
             oresults=smain.sketch_ordering(speciesinfo, orderings[i])
-            odf=pd.DataFrame(oresults,columns=["count","k","delta"])
+            odf=pd.DataFrame(oresults,columns=["ngenomes","kval","delta"])
             odf['ordering']=i
             results.append(odf)
         #rdf=pd.DataFrame(results,columns=["k","delta"])
