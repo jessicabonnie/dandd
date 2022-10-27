@@ -537,29 +537,6 @@ class DeltaTree:
         #self.batch_update_card()
         #self.compute_code()
     
-    # def _traverse_tree(self, node, depth, code):
-    #     ''' Traverse a DeltaTree recursively. '''
-    #     if node.left:
-    #         self._traverse_tree(node.left, depth + 1, code+'0')
-    #     if node.right:
-    #         self._traverse_tree(node.right, depth + 1, code+'1')
-    #     if not (node.left or node.right):
-    #         self._code_lengths.append(depth)
-    #         self._code_words.append(code)
-    #         self._symbols.append(node.node_title)
-            
-    # def compute_code(self) -> None:
-    #     ''' Update symbols/code-lengths/code-words from left to right after DeltaTree is built.'''
-    #     root = self._dt[-1]
-    #     self._traverse_tree(root, depth=0, code='')
-    #     for i, s in enumerate(self._symbols):
-    #         self.codebook[s] = self._code_words[i]
-    #     # print(self._code_lengths)
-    #     # print(self._code_words)
-    #     # print(self._symbols)
-    
-    # def get_code(self, c: str) -> str:
-    #     return self.codebook[c]
     
     def print_tree(self) -> None:
         ''' Traverse the DeltaTree in a depth-first way.'''
