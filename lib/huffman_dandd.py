@@ -375,7 +375,9 @@ class DeltaTreeNode:
                 
         self.update_card(speciesinfo)
         return
+
     def plot_df(self):
+        '''create a dataframe of all "possible" delta values that were examined during creation of the node for use in plotting'''
         nodevals=[]
         for kval in range(len(self.ksketches)):
             if self.ksketches[kval]:
@@ -451,9 +453,11 @@ class DeltaTree:
             speciesinfo.card0 = []
     
     def root_delta(self):
+        '''retrieve the root node of the tree'''
         root=self._dt[-1]
         return root.delta
     def root_k(self):
+        '''retrieve the argmax k for the root node'''
         root=self._dt[-1]
         return root.bestk
 
