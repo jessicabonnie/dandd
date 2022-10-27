@@ -140,8 +140,6 @@ class SketchFilePath:
     
     def nameSketch(self, speciesinfo: SpeciesSpecifics, kval: int, registers: int):
         '''Determine what the name of a sketch is/will be'''
-        #print("inside namesketch")
-        #print("ngen value is: {0}".format(self.ngen))
         if self.ngen > 1:
             
             filehashes = [self.assign_hash_string(filename=onefile, speciesinfo=speciesinfo, length=1) for onefile in self.files]
@@ -196,8 +194,6 @@ class SketchObj:
         # gt = greater than
         return self.delta_pos > other.delta_pos
     
-    #if (! file.exists(sketch_loc) | file.size(sketch_loc) == 0L){
-    #    command=paste0("seq ", kval," ", maxk, " | parallel --jobs 8 '~/lib/dashing/dashing sketch -k {} -p ", parval," --prefix ", sketchdir,"/k{}/ngen1 " ," -S ",nregister," " ,file.path(genomedir, fname),"'")
     def leaf_sketch(self, sfp, speciesinfo, debug=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmdlist = [DASHINGLOC, "sketch", "-k" + str(self.kval),
@@ -362,10 +358,7 @@ class DeltaTreeNode:
                     presketches= presketches + [self.children[i].ksketches[kval].sketch]
                 
                 self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp, speciesinfo=speciesinfo, presketches=presketches)
-                # self.right.update_node(speciesinfo, registers, kval)
-                # self.left.update_node(speciesinfo, registers, kval)
-                # self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp, speciesinfo=speciesinfo, presketches=[self.left.ksketches[kval].sketch, self.right.ksketches[kval].sketch])
-                #print([self.left.ksketches[kval].sketch,self.right.ksketches[kval].sketch])
+                
             elif self.ngen == 1:
                 #print("Inside ngen=1 of update_node")
                 self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp,  speciesinfo=speciesinfo)
@@ -494,32 +487,20 @@ class DeltaTree:
         #     proc.join()
         
         self._dt = inputs
-        #print("LENGTH OF INPUT OBJECT")
-        #print(len(inputs))
-        #print("NCHILDREN:", nchildren)
         idx_insert = 0
         idx_current = 0
         while idx_current != len(self._dt) - 1:
             increment=nchildren-1
-            #print("INSIDE WHILE LOOP")
             children=self._dt[idx_current:idx_current+nchildren]
-            #print(len(children))
             progeny=[p.progeny for p in children]
             #flatten the progeny list
             progeny=[item for sublist in progeny for item in sublist]
-            #print("AFTER FLATTENING")
-            #print(progeny)
             child_titles=[c.node_title for c in children]
             new_node = DeltaTreeNode(
                 node_title="_".join(child_titles),
-                # node_title=f'{self._dt[idx_current].node_title}_{self._dt[idx_current+1].node_title}',
                 children = children,
                 # children = [self._dt[idx_current],self._dt[idx_current+1]]
                 progeny=progeny
-                # ,
-                # #ngen=self._dt[idx_current].ngen+self._dt[idx_current+1].ngen,
-                # left=self._dt[idx_current],
-                # right=self._dt[idx_current+1]
             )
             new_node.find_delta(speciesinfo=speciesinfo, registers=self.registers, kval=speciesinfo.kstart)
             
@@ -552,12 +533,6 @@ class DeltaTree:
                     n=node.children[i]
                     print("Child {}:".format(i),n)
                     _print_tree_recursive(n)
-            # if node.left:
-            #     print('Left', node.left)
-            #     _print_tree_recursive(node.left)
-            # if node.right:
-            #     print('Right', node.right)
-            #     _print_tree_recursive(node.right)
         _print_tree_recursive(root)
 
     def print_list(self) -> None:
@@ -622,22 +597,16 @@ class DeltaTree:
         #print(root)
         def _delta_pos_recursive(node):
             tmplist=[node.plot_df()]
-            #tmplist.append(node.plot_df())
-            #print(node.plot_df())
+            
             if node.children:
                 nchild=len(node.children)
                 for i in range(nchild):
                     #print(i)
                     n=node.children[i]
-                    #tmplist.extend(n.plot_df())
-                    #print("Child {}:".format(i),n)
                     tmplist.extend(_delta_pos_recursive(n))
-            #print(tmplist)
             return tmplist
         
-        #for node in self.fastas
         dflist= _delta_pos_recursive(root)
-        #print(dflist)
         return pd.concat(dflist)
 
    
