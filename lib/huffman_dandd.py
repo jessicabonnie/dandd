@@ -53,6 +53,7 @@ class SpeciesSpecifics:
         self.orderings = None
         
     def _read_hashkey(self):
+        '''Recover species specific hashkey from pickle file'''
         usual=os.path.join(self.sketchdir,self.tag+'_hashkey.pickle')
         if os.path.exists(usual):
             hashkey=pickle.load(open(usual, "rb", -1))
@@ -61,11 +62,13 @@ class SpeciesSpecifics:
         return hashkey
 
     def save_hashkey(self):
+        '''Store/Update/Overwrite species specific hashkey to pickle'''
         usual=os.path.join(self.sketchdir,self.tag+'_hashkey.pickle')
         with open(usual,"wb") as f:
             pickle.dump(file=f, obj=self.hashkey)
     
     def _read_cardkey(self):
+        '''Recover key of previously calculated cardinalities from pickle file'''
         usual=os.path.join(self.sketchdir, self.tag+'_cardinalities.pickle')
         if os.path.exists(usual):
             cardkey=pickle.load(open(usual, "rb", -1))
@@ -74,11 +77,13 @@ class SpeciesSpecifics:
         return cardkey
     
     def save_cardkey(self):
+        '''Store cardinalities in species specific pickle'''
         usual=os.path.join(self.sketchdir, self.tag+'_cardinalities.pickle')
         with open(usual,"wb") as f:
             pickle.dump(file=f, obj=self.cardkey)
             
     def _resolve_species(self):
+        '''Parse the name of the species from the data description tag'''
         for title in ['HVSVC2','ecoli','salmonella','human']:
             if title in self.tag:
                 return title
@@ -86,12 +91,14 @@ class SpeciesSpecifics:
         return self.tag
     
     def _locate_input(self, genomedir: str):
+        '''Determine if there is a subdirectory structure in the input directory (current applies to HVSVC2 inputs)'''
         if self.species == 'HVSVC2':
             return os.path.join(genomedir, self.species, self.tag.replace('HVSVC2','consensus'))
         else:
             return os.path.join(genomedir, self.tag)
         
     def check_cardinality(self, fullpath):
+        '''Check if cardinality has already been calculated for a sketch. If so, return it, if not add it to a list of cardinalities to be calculated and then return 0'''
         if fullpath in self.cardkey.keys() and self.cardkey[fullpath] != 0:
             return float(self.cardkey[fullpath])
         elif fullpath not in self.card0:
@@ -167,7 +174,7 @@ class SketchObj:
             sketch = the location of the sketch file
             cmd = the command used to create the sketch
             card = the cardinality of the sketch
-            dpos = possible delta value (to be compared to other ks of the same group of files)
+            delta_pos = possible delta value (to be compared to other ks of the same group of files)
     '''
     
     def __init__(self, kval, sfp, speciesinfo, presketches=None):
@@ -180,14 +187,14 @@ class SketchObj:
         #self._speciesinfo = speciesinfo
         self.create_sketch(sfp, speciesinfo)
         self.card = self.check_cardinality(speciesinfo)
-        self.dpos = self.card/self.kval
+        self.delta_pos = self.card/self.kval
     
     def __lt__(self, other):
         # lt = less than
-        return self.dpos < other.dpos
+        return self.delta_pos < other.delta_pos
     def __gt__(self, other):
         # gt = greater than
-        return self.dpos > other.dpos
+        return self.delta_pos > other.delta_pos
     
     #if (! file.exists(sketch_loc) | file.size(sketch_loc) == 0L){
     #    command=paste0("seq ", kval," ", maxk, " | parallel --jobs 8 '~/lib/dashing/dashing sketch -k {} -p ", parval," --prefix ", sketchdir,"/k{}/ngen1 " ," -S ",nregister," " ,file.path(genomedir, fname),"'")
@@ -250,7 +257,7 @@ class SketchObj:
     
     def print(self):
         ##TODO make this a __repr__ function instead
-        print("k : {0}; cardinality: {1}; pos delta: {2}; loc : {3}; cmd: {4}".format(self.kval, self.card, self.dpos, self.sketch, self.cmd))
+        print("k : {0}; cardinality: {1}; pos delta: {2}; loc : {3}; cmd: {4}".format(self.kval, self.card, self.delta_pos, self.sketch, self.cmd))
     
     def individual_card(self, speciesinfo, debug=False):
         cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
@@ -329,7 +336,7 @@ class DeltaTreeNode:
         else:
             self.maxk = kval
         old_d = self.delta
-        new_d = self.ksketches[kval].dpos
+        new_d = self.ksketches[kval].delta_pos
         if old_d < new_d:
             speciesinfo.kstart = kval
             self.bestk = kval
@@ -371,8 +378,9 @@ class DeltaTreeNode:
     def plot_df(self):
         nodevals=[]
         for kval in range(len(self.ksketches)):
-            linelist=[self.ngen,kval,self.ksketches[kval].delta_pos, self.node_title]
-            nodevals.append(linelist)
+            if self.ksketches[kval]:
+                linelist=[self.ngen,kval,self.ksketches[kval].delta_pos, self.node_title]
+                nodevals.append(linelist)
         ndf=pd.DataFrame(nodevals,columns=["ngenomes","kval","delta_pos", "title"])
         return ndf
 
@@ -392,7 +400,7 @@ class DeltaTreeNode:
             if sketch:
                 if sketch.sketch in sketches:
                     sketch.check_cardinality(speciesinfo)
-                    sketch.dpos=sketch.card/sketch.kval
+                    sketch.delta_pos=sketch.card/sketch.kval
 
 
 class DeltaTree:
@@ -439,7 +447,7 @@ class DeltaTree:
                     if sketch:
                         if sketch.sketch in speciesinfo.card0:
                             sketch.card=speciesinfo.check_cardinality(sketch.sketch)
-                            sketch.dpos=sketch.card/sketch.kval
+                            sketch.delta_pos=sketch.card/sketch.kval
             speciesinfo.card0 = []
     
     def root_delta(self):
@@ -626,27 +634,29 @@ class DeltaTree:
         with open(filepath,"wb") as f:
             pickle.dump(obj=self, file=f)
 
-    def all_delta_pos(self):
-        
+  
     def delta_pos(self):
-        ''' Traverse the DeltaTree to return all possible delta values.'''
+        ''' Traverse the DeltaTree to return a dataframe with all possible delta values.'''
         root = self._dt[-1]
-        print(root)
+        #print(root)
         def _delta_pos_recursive(node):
-            tmplist=[]
-            tmplist.extend(node.plot_df())
+            tmplist=[node.plot_df()]
+            #tmplist.append(node.plot_df())
+            #print(node.plot_df())
             if node.children:
                 nchild=len(node.children)
                 for i in range(nchild):
-                    
-                    print(i)
+                    #print(i)
                     n=node.children[i]
                     #tmplist.extend(n.plot_df())
                     #print("Child {}:".format(i),n)
                     tmplist.extend(_delta_pos_recursive(n))
+            #print(tmplist)
             return tmplist
+        
         #for node in self.fastas
         dflist= _delta_pos_recursive(root)
+        #print(dflist)
         return pd.concat(dflist)
 
    
@@ -669,14 +679,16 @@ class DeltaSpider(DeltaTree):
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
 
-    def progressive_union( speciesinfo: SpeciesSpecifics, registers=20, flist_loc=None, additional=0, ordering_file=None):
+    def progressive_union(self, speciesinfo: SpeciesSpecifics, registers=20, flist_loc=None, additional=0, ordering_file=None):
         #tag: str, genomedir: str, sketchdir: str, kstart: int, registers=20, flist_loc=None, additional=0, ordering_file=None):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
         
         #speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart)
         
-        fastas = retrieve_fasta_files(speciesinfo.inputdir)
-        # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
+        #fastas = retrieve_fasta_files(speciesinfo.inputdir)
+        fastas=self.fastas
+        
+        # If a fasta file list is provided, subset the fastas from the species directory to only use the intersection
         if flist_loc:
             with open(flist_loc) as file:
                 fsublist = [line.strip() for line in file]
@@ -699,7 +711,7 @@ class DeltaSpider(DeltaTree):
         # create a sketch of the full union of the fastas
         smain = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo,registers=registers)
         results=[]
-        for i in range(len(orderings)):
+        for i in range(0,len(orderings)):
             oresults=smain.sketch_ordering(speciesinfo, orderings[i])
             odf=pd.DataFrame(oresults,columns=["ngenomes","kval","delta"])
             odf['ordering']=i
@@ -709,14 +721,19 @@ class DeltaSpider(DeltaTree):
 
 
     def sketch_ordering(self, speciesinfo, ordering):
+        '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas in a dataframe'''
         flen=len(ordering)
+        print(flen)
         output=[]
-        for i in range(0,flen):
-            sublist=[self.fastas[j] for j in ordering[:i+1]]
+        for i in range(1,flen+1):
+            if flen == 4:
+                print("YES!!")
+            #print(i)
+            sublist=[self.fastas[j] for j in ordering[:i]]
             print("Sublist")
             print(sublist)
             ospider=DeltaSpider(fasta_files=sublist, speciesinfo=speciesinfo, registers=self.registers)
-            output.append([i+1, ospider.root_k(), ospider.delta])
+            output.append([i, ospider.root_k(), ospider.delta])
         return output
 
 
