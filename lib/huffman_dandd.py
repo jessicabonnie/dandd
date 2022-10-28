@@ -192,6 +192,9 @@ class SketchObj:
     def __gt__(self, other):
         # gt = greater than
         return self.delta_pos > other.delta_pos
+    def __repr__(self):
+        ##TODO make this a __repr__ function instead
+        return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
     def leaf_sketch(self, sfp, speciesinfo, debug=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
@@ -244,14 +247,14 @@ class SketchObj:
         elif sfp.ngen > 1:
             self.union_sketch(sfp)
         else:
-            ##TODO: Raise runtime error raise RuntimeError(string with warning)
             raise RuntimeError("For some reason you are trying to sketch an empty list of files. Don't do that.")
         self.sketch = sfp.full
         return self.sketch
     
-    def print(self):
-        ##TODO make this a __repr__ function instead
-        print("k : {0}; cardinality: {1}; pos delta: {2}; loc : {3}; cmd: {4}".format(self.kval, self.card, self.delta_pos, self.sketch, self.cmd))
+    # def __repr__(self):
+    #     ##TODO make this a __repr__ function instead
+    #     return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
+        # print("k : {0}; cardinality: {1}; pos delta: {2}; loc : {3}; cmd: {4}".format(self.kval, self.card, self.delta_pos, self.sketch, self.cmd))
     
     def individual_card(self, speciesinfo, debug=False):
         cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
@@ -294,7 +297,7 @@ class DeltaTreeNode:
         self.assign_progeny()
         self.fastas = [f.node_title for f in self.progeny]
         self.ngen = len(self.progeny)
-        print(self.progeny)
+        #print(self.progeny)
         #self.speciesinfo=speciesinfo
 
     def __repr__(self):
