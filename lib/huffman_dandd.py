@@ -1,6 +1,5 @@
 #import parallel
 #import random
-#import pandas as pd
 from ast import Str
 import sys
 import os
@@ -246,8 +245,7 @@ class SketchObj:
             self.union_sketch(sfp)
         else:
             ##TODO: Raise runtime error raise RuntimeError(string with warning)
-            print("For some reason you are trying to sketch an empty list of files. Don't do that.")
-            sys.exit()
+            raise RuntimeError("For some reason you are trying to sketch an empty list of files. Don't do that.")
         self.sketch = sfp.full
         return self.sketch
     
@@ -609,15 +607,6 @@ class DeltaTree:
         dflist= _delta_pos_recursive(root)
         return pd.concat(dflist)
 
-   
-
-
-class DeltaSpider(DeltaTree):
-    '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
-    def __init__(self, fasta_files, speciesinfo, registers=20):
-        nchildren=len(fasta_files)
-        super().__init__(fasta_files, speciesinfo, registers=registers, nchildren=nchildren)
-
     def find_delta_delta(self, fasta_subset: list, speciesinfo: SpeciesSpecifics, registers=20):
         '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
         majord = self.delta
@@ -628,15 +617,35 @@ class DeltaSpider(DeltaTree):
         print("Full Tree Delta: ", self.delta)
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
+   
+
+
+class DeltaSpider(DeltaTree):
+    '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
+    def __init__(self, fasta_files, speciesinfo, registers=20):
+        nchildren=len(fasta_files)
+        super().__init__(fasta_files, speciesinfo, registers=registers, nchildren=nchildren)
+
+    # def find_delta_delta(self, fasta_subset: list, speciesinfo: SpeciesSpecifics, registers=20):
+    #     '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
+    #     majord = self.delta
+    #     majork = self.root_k()
+    #     # create list of fastas that are in the original spider that are not in the subset provided
+    #     fastas = [f for f in self.fastas if f not in fasta_subset]
+    #     small_spider = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo, registers=registers)
+    #     print("Full Tree Delta: ", self.delta)
+    #     print("Subtree Delta: ", small_spider.delta)
+    #     return self - small_spider
 
     def progressive_union(self, speciesinfo: SpeciesSpecifics, registers=20, flist_loc=None, additional=0, ordering_file=None):
-        #tag: str, genomedir: str, sketchdir: str, kstart: int, registers=20, flist_loc=None, additional=0, ordering_file=None):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
-        
+        #TODO add speciesinfo as a property of tree object to be retrieved accordingly
+
         #speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart)
         
         #fastas = retrieve_fasta_files(speciesinfo.inputdir)
         fastas=self.fastas
+        # speciesinfo=self.speciesinfo
         
         # If a fasta file list is provided, subset the fastas from the species directory to only use the intersection
         if flist_loc:
@@ -664,7 +673,7 @@ class DeltaSpider(DeltaTree):
         for i in range(0,len(orderings)):
             oresults=smain.sketch_ordering(speciesinfo, orderings[i])
             odf=pd.DataFrame(oresults,columns=["ngenomes","kval","delta"])
-            odf['ordering']=i
+            odf['ordering']=i+1
             results.append(odf)
         #rdf=pd.DataFrame(results,columns=["k","delta"])
         return pd.concat(results)
@@ -676,12 +685,7 @@ class DeltaSpider(DeltaTree):
         print(flen)
         output=[]
         for i in range(1,flen+1):
-            if flen == 4:
-                print("YES!!")
-            #print(i)
             sublist=[self.fastas[j] for j in ordering[:i]]
-            print("Sublist")
-            print(sublist)
             ospider=DeltaSpider(fasta_files=sublist, speciesinfo=speciesinfo, registers=self.registers)
             output.append([i, ospider.root_k(), ospider.delta])
         return output
