@@ -37,10 +37,10 @@ library("optparse")
 # opt_parser = OptionParser(option_list=option_list, resultsfile);
 # opt = parse_args(opt_parser);
 
-plotProgressiveUnion <- function(species, out, ngenome, delta, nshow=Inf){
+plotProgressiveUnion <- function(species, out, delta, nshow=Inf){
 tag=species
 outdir=out
-gcount=ngenome
+gcount=max(delta$ngenomes)
 item=paste0("ng",gcount)
 norder=max(delta$ordering)
 
