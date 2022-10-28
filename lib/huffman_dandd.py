@@ -639,39 +639,95 @@ class DeltaSpider(DeltaTree):
     #     print("Full Tree Delta: ", self.delta)
     #     print("Subtree Delta: ", small_spider.delta)
     #     return self - small_spider
+    # def solo_progression(ordering_loc=None):
+    #     if not ordering_loc:
+    #         ordering_loc=os.path.join(speciesinfo.sketchdir,speciesinfo.tag + "_"+ str(len(fastas))+"sorted_ordering.pickle")
+    #         if not os.path.exists(ordering_loc):
+    #             pass
 
-    def progressive_union(self, speciesinfo: SpeciesSpecifics, registers=20, flist_loc=None, additional=0, ordering_file=None):
+    def orderings_list(self, speciesinfo: SpeciesSpecifics, ordering_file=None, flist_loc=None, count=None):
+        '''create or retrieve a series of random orderings of fasta sketches. return also the expected "sorted" array of the files. A subset of the fastas in the tree can be provided by name (in a file). The ordering of this file will be used when count=1 and the list is provided.'''
+        fastas=self.fastas
+        fastas.sort()
+
+        # If a fasta file list is provided, subset the fastas from the species directory to only use the intersection
+        if flist_loc:
+            with open(flist_loc) as file:
+                fsublist = [line.strip() for line in file]
+            fastas = [f for f in fastas if f in fsublist]
+            #order fastas as given in file
+            fastas = [f for f in fsublist if f in fastas]
+        # if count is one "sorted" ordering is returned with the reference list
+        if count == 1:
+            return [fastas,[i for i in range(len(fastas))]]
+        
+        # orderings are handled as sets to prevent duplication
+        orderings=set()
+        default_ordering=os.path.join(speciesinfo.sketchdir,speciesinfo.tag + "_"+ str(len(fastas))+"orderings.pickle")
+        # if no ordering file is provided the default location is used
+        if not ordering_file:
+            ordering_file=default_ordering
+        # if the ordering file exists then read the orderings
+        if os.path.exists(ordering_file):
+            with open(ordering_file,'rb') as f:
+                orderings=pickle.load(f)
+            # if count was not provided then just return the orderings that are already there
+            if not count:
+                return [fastas, list(orderings)]
+            # if the count is lte to the number of orderings in the file, take the first count number of orderings
+            if count <= len(orderings):
+                return [fastas, list(orderings)[:count]]
+
+        # if there is no ordering file at the location, time to make some    
+        else:
+            # if count is not provided, how will we know how many to make??
+            if not count:
+                raise ValueError("You must provide a value for count when there is no default ordering file")
+        
+        orderings = random_orderings(length=len(fastas), norder=count-len(orderings), preexist=orderings)
+        # save the orderings for use next run of species 
+        with open(ordering_file,"wb") as f:
+            pickle.dump(orderings, f)
+        return [fastas, list(orderings)]
+        
+
+
+
+
+
+    def progressive_union(self, speciesinfo: SpeciesSpecifics, registers=20, flist_loc=None, count=30, ordering_file=None):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
         #TODO add speciesinfo as a property of tree object to be retrieved accordingly
 
         #speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart)
         
         #fastas = retrieve_fasta_files(speciesinfo.inputdir)
-        fastas=self.fastas
+        #fastas=self.fastas
+        fastas, orderings = self.orderings_list(speciesinfo, ordering_file=ordering_file, flist_loc=flist_loc, count=count)
         # speciesinfo=self.speciesinfo
         
         # If a fasta file list is provided, subset the fastas from the species directory to only use the intersection
-        if flist_loc:
-            with open(flist_loc) as file:
-                fsublist = [line.strip() for line in file]
-            fastas = [f for f in fastas if f in fsublist]
-        fastas.sort()
-        orderings=set()
-        default_ordering=os.path.join(speciesinfo.sketchdir,speciesinfo.tag + "_"+ str(len(fastas))+"orderings.pickle")
-        if not ordering_file:
-            ordering_file=default_ordering
-        if os.path.exists(ordering_file):
-            with open(ordering_file,'rb') as f:
-                orderings=pickle.load(f)
-        orderings = random_orderings(length=len(fastas), norder=additional, preexist=orderings)
-        if len(orderings) == 0:
-            raise ValueError("You must provide a pickle of a set of random orderings or a value for additional. Right now the set of orderings is 0")
-        # save the orderings for use next run of species 
-        with open(ordering_file,"wb") as f:
-            pickle.dump(orderings, f)
-        orderings=list(orderings)
+        # if flist_loc:
+        #     with open(flist_loc) as file:
+        #         fsublist = [line.strip() for line in file]
+        #     fastas = [f for f in fastas if f in fsublist]
+        # fastas.sort()
+        # orderings=set()
+        # default_ordering=os.path.join(speciesinfo.sketchdir,speciesinfo.tag + "_"+ str(len(fastas))+"orderings.pickle")
+        # if not ordering_file:
+        #     ordering_file=default_ordering
+        # if os.path.exists(ordering_file):
+        #     with open(ordering_file,'rb') as f:
+        #         orderings=pickle.load(f)
+        # orderings = random_orderings(length=len(fastas), norder=additional, preexist=orderings)
+        # if len(orderings) == 0:
+        #     raise ValueError("You must provide a pickle of a set of random orderings or a value for additional. Right now the set of orderings is 0")
+        # # save the orderings for use next run of species 
+        # with open(ordering_file,"wb") as f:
+        #     pickle.dump(orderings, f)
+        # orderings=list(orderings)
         # create a sketch of the full union of the fastas
-        smain = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo,registers=registers)
+        smain = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo,registers=self.registers)
         results=[]
         for i in range(0,len(orderings)):
             oresults=smain.sketch_ordering(speciesinfo, orderings[i])
