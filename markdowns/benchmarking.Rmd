@@ -11,6 +11,8 @@ require(dplyr)
 require(tidyr)
 require(ggplot2)
 require(lubridate)
+require(pander)
+require(knitr)
 
 e.kval=14
 e.dtimes<-read.csv(paste0("../../scratch/benchmarking/ecoli_dashing_k",e.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
@@ -97,16 +99,17 @@ stage2
 
 stage3 <- all.times %>% filter(Stage==3)  %>% ungroup() %>%
   #group_by(species, Method) %>%
-  select(Method, species, WallClock_sec, MaxResSetSize_kb) 
+  select(Method, species, WallClock_sec, MaxResSetSize_kb, Stage) 
 
 stage3
 
 ```
 
+## TABLE CONTENTS
+```{r resultdf, }
 
-```{r resultdf}
-
-rbind(stage1, stage2, stage3) %>% ungroup() %>% group_by(species, Method, Stage) %>% arrange(species,.by_group = TRUE)
+rbind(stage1, stage2, stage3) %>% ungroup() %>% group_by(species, Method, Stage) %>% arrange(species,.by_group = TRUE) %>% kable()
+  #pandoc.table()
 #arrange(Method, decending=FALSE) %>% arrange(species)
 
 ```
