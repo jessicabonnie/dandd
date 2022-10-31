@@ -1,0 +1,423 @@
+---
+title: "Benchmarking"
+author: "Jessica Bonnie"
+date: "8/31/2022"
+output: html_document
+---
+
+
+```{r prep}
+require(dplyr)
+require(tidyr)
+require(ggplot2)
+require(lubridate)
+
+e.kval=14
+e.dtimes<-read.csv(paste0("../../scratch/benchmarking/ecoli_dashing_k",e.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+e.ktimes <- read.csv(paste0("../../scratch/benchmarking/ecoli_kmc_k",e.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+e.times <- rbind(e.dtimes,e.ktimes) %>% mutate(species="ecoli", Count=as.numeric(Count),WallClock_sec=period_to_seconds(hms(WallClock_hms,quiet = TRUE)))
+e.times$MaxResSetSize_kb[e.times$Stage==2 & e.times$Count==1] <- NA
+e.times$WallClock_hms <- hms(e.times$WallClock_hms,quiet = TRUE)
+
+
+
+s.kval=15
+s.dtimes<-read.csv(paste0("../../scratch/benchmarking/salmonella_dashing_k",s.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+s.ktimes <- read.csv(paste0("../../scratch/benchmarking/salmonella_kmc_k",s.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+s.times <- rbind(s.dtimes,s.ktimes) %>% mutate(species="salmonella", Count=as.numeric(Count),WallClock_sec=period_to_seconds(hms(WallClock_hms,quiet = TRUE)))
+s.times$MaxResSetSize_kb[s.times$Stage==2 & s.times$Count==1] <- NA
+s.times$WallClock_hms <- hms(s.times$WallClock_hms,quiet = TRUE)
+
+h.kval=18
+h.dtimes<-read.csv(paste0("../../scratch/benchmarking/human_dashing_k",h.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+h.ktimes <- read.csv(paste0("../../scratch/benchmarking/human_kmc_k",h.kval,".csv"),stringsAsFactors = FALSE) %>% mutate(line=row_number())
+h.times <- rbind(h.dtimes,h.ktimes) %>% mutate(species="human", Count=as.numeric(Count),WallClock_sec=period_to_seconds(hms(WallClock_hms,quiet = TRUE)))
+h.times$MaxResSetSize_kb[h.times$Stage==2 & h.times$Count==1] <- NA
+h.times$WallClock_hms <- hms(h.times$WallClock_hms,quiet = TRUE)
+
+all.times <- rbind(e.times,s.times,h.times)
+#all.times$MaxResSetSize_kb[all.times$Stage==2 & all.times$Count==1] <- NA
+
+
+```
+
+## STAGE 1
+```{r values1}
+#Stage 1 Time Value: Average Wall Clock Time for sketch
+#Stage 1 Space Value: Average Max Res for sketch
+
+#Stage 2 (PU) Time Value: Total Time Across All Unions
+#Stage 2 (PU) Space Value: Max Max Res across All Unions
+
+#Stage 3 (Full Union) Time Value: It is what it is
+#Stage 3 (Full Union) Space Value: Ditto
+
+stage1 <- all.times %>% filter(Stage==1) %>%
+  select(-Card,-Count,-Fasta,-Sketch,-Order,-line) %>% 
+  group_by(species, Method) %>% summarise_all(mean) %>% 
+  select(species, Method, WallClock_sec, MaxResSetSize_kb, Stage=Stage)
+stage1
+
+```
+
+
+## STAGE 2
+```{r values2}
+#Stage 1 Time Value: Average Wall Clock Time for sketch
+#Stage 1 Space Value: Average Max Res for sketch
+
+#Stage 2 (PU) Time Value: Total Time Across All Unions
+#Stage 2 (PU) Space Value: Max Max Res across All Unions
+
+#Stage 3 (Full Union) Time Value: It is what it is
+#Stage 3 (Full Union) Space Value: Ditto
+
+stage2 <- all.times %>% filter(Stage==2)  %>% 
+  select(-Card,-Count) %>% 
+  group_by(species, Method) %>%
+  summarise(maxspace=max(MaxResSetSize_kb,na.rm = TRUE),totalwall=sum(WallClock_sec,na.rm = TRUE),totaluser=sum(UserTime_sec,na.rm = TRUE),
+            totalsystem=sum(SystemTime_sec,na.rm = TRUE))  %>% mutate(Stage=2) %>%
+  select(species, Method, WallClock_sec=totalwall, MaxResSetSize_kb=maxspace, Stage) 
+
+stage2
+
+```
+
+
+## STAGE 3
+```{r values3}
+#Stage 1 Time Value: Average Wall Clock Time for sketch
+#Stage 1 Space Value: Average Max Res for sketch
+
+#Stage 2 (PU) Time Value: Total Time Across All Unions
+#Stage 2 (PU) Space Value: Max Max Res across All Unions
+
+#Stage 3 (Full Union) Time Value: It is what it is
+#Stage 3 (Full Union) Space Value: Ditto
+
+stage3 <- all.times %>% filter(Stage==3)  %>% ungroup() %>%
+  #group_by(species, Method) %>%
+  select(Method, species, WallClock_sec, MaxResSetSize_kb) 
+
+stage3
+
+```
+
+
+```{r resultdf}
+
+rbind(stage1, stage2, stage3) %>% ungroup() %>% group_by(species, Method, Stage) %>% arrange(species,.by_group = TRUE)
+#arrange(Method, decending=FALSE) %>% arrange(species)
+
+```
+
+## Single Sketch Values
+
+### Ecoli
+#### Memory Scaled
+```{r eoutput1}
+
+filter(e.times, Stage==1)  %>% ggplot(aes(y=MaxResSetSize_kb, x=Method, color=Method)) + geom_boxplot() + geom_point() + scale_y_log10()
+
+filter(e.times, Stage==1)  %>% ggplot(aes(y=WallClock_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+filter(e.times, Stage==1)  %>% ggplot(aes(y=UserTime_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+filter(e.times, Stage==1)  %>% ggplot(aes(y=SystemTime_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+
+```
+
+
+
+### Salmonella
+
+```{r soutput1}
+
+
+filter(s.times, Stage==1)  %>% ggplot(aes(y=MaxResSetSize_kb, x=Method, color=Method)) + geom_boxplot() + geom_point() 
+
+#filter(s.times, Stage==1)  %>% ggplot(aes(y=WallClock_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+filter(s.times, Stage==1)  %>% ggplot(aes(y=WallClock_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+filter(s.times, Stage==1)  %>% ggplot(aes(y=UserTime_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+filter(s.times, Stage==1)  %>% ggplot(aes(y=SystemTime_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+
+
+```
+
+
+
+```{r houtput}
+
+filter(h.times, Stage==1)  %>% ggplot(aes(y=log10(MaxResSetSize_kb), x=Method, color=Method)) + geom_boxplot() + geom_point()
+
+filter(h.times, Stage==1)  %>% ggplot(aes(y=WallClock_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+filter(h.times, Stage==1)  %>% ggplot(aes(y=UserTime_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+filter(h.times, Stage==1)  %>% ggplot(aes(y=SystemTime_sec, x=Method, color=Method)) + geom_boxplot() + geom_point()
+
+
+```
+
+
+```{r alloutput}
+filter(all.times, Stage==1)  %>% group_by(Method) %>% ggplot(aes(y=MaxResSetSize_kb, x=species, color=Method)) + geom_boxplot(position=position_identity()) + geom_point() + scale_y_log10()
+
+filter(all.times, Stage==1) %>% group_by(Method) %>% ggplot(aes(y=WallClock_sec, x=species, color=Method)) + geom_boxplot(position=position_identity()) + geom_point() + scale_y_log10()
+filter(all.times, Stage==1) %>% group_by(Method) %>% ggplot(aes(y=UserTime_sec, x=species, color=Method)) + geom_boxplot(position=position_identity()) + geom_point() + scale_y_log10()
+filter(all.times, Stage==1) %>% group_by(Method) %>% ggplot(aes(y=SystemTime_sec, x=species, color=Method)) + geom_boxplot(position=position_identity()) + geom_point() + scale_y_log10()
+
+
+
+```
+
+
+
+## Graphs of Progressive Unions
+
+```{r eoutput2}
+filter(e.times, Stage==2)  %>% ggplot(aes(y=MaxResSetSize_kb, x=Count, color=Method)) +  geom_point()
+
+filter(e.times, Stage==2)  %>% ggplot(aes(y=WallClock_sec, x=Count, color=Method)) + geom_point()
+
+spacetime = max(e.times$MaxResSetSize_kb,na.rm=TRUE)/max(e.times$WallClock_sec,na.rm=TRUE)
+timespace = max(e.times$MaxResSetSize_kb,na.rm=TRUE)/max(e.times$WallClock_sec,na.rm=TRUE)
+spacetime
+
+filter(e.times, Stage==2)  %>% ggplot(aes(y=WallClock_sec, x=Count, color=Method, linetype="Time")) +  geom_line() + geom_line(mapping=aes(x=Count,y=MaxResSetSize_kb/spacetime, linetype="Space")) + scale_y_continuous(
+    name = "Max Size",
+    sec.axis = sec_axis(~.*spacetime, name="Wall Clock Time")
+  ) 
+
+
+
+```
+
+```{r soutput2}
+filter(s.times, Stage==2)  %>% ggplot(aes(y=MaxResSetSize_kb, x=Count, color=Method)) +  geom_point() 
+
+filter(s.times, Stage==2)  %>% ggplot(aes(y=WallClock_sec, x=Count, color=Method)) + geom_point()
+
+spacetime = max(log(s.times$MaxResSetSize_kb),na.rm=TRUE)/max(s.times$WallClock_sec,na.rm=TRUE)
+
+
+filter(s.times, Stage==2)  %>% ggplot(aes(y=WallClock_sec, x=Count, color=Method, linetype="Time")) +  geom_line() + geom_line(mapping=aes(x=Count,y=log(MaxResSetSize_kb)/spacetime, linetype="Space")) + scale_y_continuous(
+    name = "Log Max Size",
+    sec.axis = sec_axis(~.*spacetime, name="Wall Clock (sec)")
+  ) 
+
+
+```
+
+```{r houtput2}
+filter(h.times, Stage==2)  %>% ggplot(aes(y=MaxResSetSize_kb, x=Count, color=Method)) +  geom_point() 
+
+filter(h.times, Stage==2)  %>% ggplot(aes(y=WallClock_sec, x=Count, color=Method)) + geom_point()
+
+spacetime = max(log(h.times$MaxResSetSize_kb),na.rm=TRUE)/max(log(h.times$WallClock_sec),na.rm=TRUE)
+
+
+filter(h.times, Stage==2)  %>% ggplot(aes(y=log(WallClock_sec), x=Count, color=Method, linetype="Time")) +  geom_line() + geom_line(mapping=aes(x=Count,y=log(MaxResSetSize_kb)/spacetime, linetype="Space")) + scale_y_continuous(
+    name = "Log Max Size",
+    sec.axis = sec_axis(~.*spacetime, name="Log Wall Clock")
+  ) 
+
+
+```
+
+```{r alloutput2}
+filter(all.times, Stage==2)  %>% ggplot(aes(y=log(MaxResSetSize_kb), x=Count, linetype=Method, color=species)) +  geom_line() 
+
+filter(all.times, Stage==2)  %>% ggplot(aes(y=log(WallClock_sec), x=Count, linetype=Method, color=species)) + geom_line()
+
+spacetime = max(log(all.times$MaxResSetSize_kb ),na.rm=TRUE)/max(log(all.times$WallClock_sec),na.rm=TRUE)
+
+
+filter(all.times, Stage==2)   %>% ggplot(aes(y=log(WallClock_sec), x=Count, color=species)) +  
+  geom_line(data=subset(all.times, Method == "dashing"),aes(linetype="Time-Dashing")) +
+  geom_line(data=subset(all.times, Method == "kmc"),aes(linetype="Time-KMC")) +
+  geom_line(data=subset(all.times, Method == "kmc"),mapping=aes(x=Count,y=log(MaxResSetSize_kb)/spacetime, linetype="Space-KMC")) +
+  geom_line(data=subset(all.times, Method == "dashing"),mapping=aes(x=Count,y=log(MaxResSetSize_kb)/spacetime, linetype="Space-Dashing")) +
+  scale_y_continuous(
+    name = "Log Max Size",
+    sec.axis = sec_axis(~.*spacetime, name=" Log Wall Clock")
+  ) +  ggtitle(label = "Progressive of Premade Sketches + Cardinality")
+
+spacetime_nl = max(all.times$MaxResSetSize_kb,na.rm=TRUE)/max(all.times$WallClock_sec,na.rm=TRUE)
+
+
+filter(all.times, Stage==2)  %>% group_by(species) %>% ggplot(aes(y=WallClock_sec, x=Count, color=species)) +  
+  geom_line(data=subset(all.times, Method == "dashing"),aes(linetype="Time-Dashing")) +
+  geom_line(data=subset(all.times, Method == "kmc"),aes(linetype="Time-KMC")) +
+  geom_line(data=subset(all.times, Method == "kmc"),mapping=aes(x=Count,y=MaxResSetSize_kb/spacetime_nl, color=species, linetype="Space-KMC")) +
+  geom_line(data=subset(all.times, Method == "dashing"),mapping=aes(x=Count,y=MaxResSetSize_kb/spacetime_nl, color=species,linetype="Space-Dashing")) +
+  scale_y_continuous(
+    name = "Max Size",
+    sec.axis = sec_axis(~.*spacetime_nl, name="Wall Clock")
+  ) +  ggtitle(label = "Progressive of Premade Sketches")
+```
+
+
+
+
+## Graphs of Full Unions
+
+```{r output3}
+filter(all.times, Stage==3)  %>% ungroup() %>% ggplot(aes(y=log(MaxResSetSize_kb),x=Method, color=species)) +  geom_boxplot(position=position_identity()) +geom_point()
+
+filter(all.times, Stage==3)  %>% ungroup() %>% ggplot(aes(y=log(WallClock_sec),x=Method, color=species)) +  geom_boxplot(position=position_identity()) +geom_point()
+
+spacetime = max(log(e.times$MaxResSetSize_kb),na.rm=TRUE)/max(log(e.times$WallClock_sec),na.rm=TRUE)
+timespace = max(e.times$MaxResSetSize_kb,na.rm=TRUE)/max(e.times$WallClock_sec,na.rm=TRUE)
+
+
+filter(all.times, Stage==3)  %>% ungroup() %>% ggplot(aes(y=log(WallClock_sec), x=Method)) +
+  geom_boxplot(position=position_identity()) +  geom_point(aes(color=species)) +
+  geom_boxplot(mapping=aes(x=Method,y=log(MaxResSetSize_kb)/spacetime)) +  geom_point(aes(color=species)) +
+  scale_y_continuous(
+    name = "Log Max Size",
+    sec.axis = sec_axis(~.*spacetime, name="Log Wall Clock")
+  ) + ggtitle(label = "Single Union of Premade Sketches ")
+
+
+
+```
+
+
+```{r est}
+
+all.times %>% filter(Stage==3) %>% select(Method,species,Card)
+all.times %>% filter(Stage==1) %>% select(Method,species, line, Card) %>% arrange(line)
+all.times %>% filter(Stage==2) %>% select(Method,species, line, Card) %>% arrange(line)
+```
+
+
+```{sh kmc3, eval=FALSE}
+
+species=human
+approach=kmc
+kval=18
+upperout=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking
+/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/benchmark.sh ${species} ${approach} ${kval} ${upperout}
+
+
+```
+
+
+
+```{sh dashing, eval=FALSE}
+#tag=human
+#dashing=/home/jessica/lib/dashing/dashing
+#datadir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
+#outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/${tag}
+#mkdir -p ${outdir}/dashing
+#cd ${outdir}/dashing
+#find ${datadir}/*gz | parallel --jobs 8 '/usr/bin/time -v ~/lib/dashing/dashing sketch -S 20 {} -P /home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/human/dashing' &> ${outdir}_dashing.out
+
+species=human
+approach=dashing
+kval=18
+upperout=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking
+/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/benchmark.sh ${species} ${approach} ${kval} ${upperout}
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "Maximum"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "Maximum"
+
+```
+
+```{sh dashinge, eval=FALSE}
+
+#tag=ecoli
+#dashing=/home/jessica/lib/dashing/dashing
+#datadir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
+#outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/${tag}
+#mkdir -p ${outdir}/dashing
+#cd ${outdir}/dashing
+#find ${datadir} | parallel --jobs 8 '/usr/bin/time -v  ~/lib/dashing/dashing sketch -S 20 {} -P /home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/ecoli/dashing' &> ${outdir}_dashing.out
+
+species=ecoli
+approach=dashing
+kval=14
+upperout=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking
+/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/benchmark.sh ${species} ${approach} ${kval} ${upperout}
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "Maximum"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "Maximum"
+
+```
+
+```{sh kmc3e, eval=FALSE}
+#tag=ecoli
+#datadir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
+#outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/${tag}
+#mkdir -p ${outdir}/kmc
+#cd ${outdir}/kmc
+
+#ls ${datadir} | parallel --jobs 8 '/usr/bin/time -v kmc -ci1 -cx15 -fm /home/jbonnie1/scr16_blangme2/jessica/data/ecoli/{} {}.kmc /home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/ecoli/kmc' &> ${outdir}_kmc.out
+
+species=ecoli
+approach=kmc
+kval=14
+upperout=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking
+/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/benchmark.sh ${species} ${approach} ${kval} ${upperout}
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "Maximum"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "Maximum"
+
+```
+
+```{sh dashings, eval=FALSE}
+#tag=salmonella
+#dashing=/home/jessica/lib/dashing/dashing
+#datadir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
+#outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/${tag}
+#mkdir -p ${outdir}/dashing
+#cd ${outdir}/dashing
+#find ${datadir} | parallel --jobs 8 '/usr/bin/time -v  ~/lib/dashing/dashing sketch -S 20 {} -P /home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/salmonella/dashing' &> ${outdir}_dashing.out
+
+species=salmonella
+approach=dashing
+kval=15
+upperout=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking
+/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/benchmark.sh ${species} ${approach} ${kval} ${upperout}
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "Maximum"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "Maximum"
+```
+
+```{sh kmc3s, eval=FALSE}
+
+#tag=salmonella
+#datadir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
+#outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/${tag}
+#mkdir -p ${outdir}/kmc
+#cd ${outdir}/kmc
+#ls ${datadir} | parallel --jobs 8 '/usr/bin/time -v kmc -ci1 -cx15 -fm /home/jbonnie1/scr16_blangme2/jessica/data/salmonella/{} {}.kmc /home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking/salmonella/kmc' &> ${outdir}_kmc.out
+
+species=salmonella
+approach=kmc
+kval=15
+upperout=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking
+/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/benchmark.sh ${species} ${approach} ${kval} ${upperout}
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}.out | grep "Maximum"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "User time"
+cat ${upperout}/${species}_${approach}_k${kval}_c*.out | grep "Maximum"
+```
+
+
+
+
+
+```{sh kmce_union, eval=FALSE}
+species=salmonella
+approach=kmc
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/benchmarking
+apout=${outdir}/${species}/${approach}
+
+datadir=/home/jbonnie1/scr16_blangme2/jessica/data/${species}
+#nfasta=$(ls ${datadir}/*gz | wc -l | bc -l)
+
+
+
+```

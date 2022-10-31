@@ -19,7 +19,8 @@ mkdir -p ${apout}
 cd ${datadir}
 fastalist=$(cd ${datadir} && ls *gz)
 # rm ${outdir}_${approach}.out
-echo "Method,Stage,Fasta,Sketch,Order,Count,Card, MaxResSetSize_kb, WallClock_hms" > ${summary}
+#create header of output table
+echo "Method,Stage,Fasta,Sketch,Order,Count,Card,MaxResSetSize_kb, WallClock_hms,SystemTime_sec,UserTime_sec" > ${summary}
 
 index=1
 ## For each fasta create a kmc database or sketch
@@ -46,8 +47,10 @@ for fasta in ${fastalist[@]}; do
 mrss=$(grep "Maximum resident" ${outprefix}.out | awk '{print $NF}')
 ## TODO switch to wallclock
 wctime=$(grep "wall clock" ${outprefix}.out | awk '{print $NF}')
+systime=$(grep "System time" ${outprefix}.out | awk '{print $NF}')
+utime=$(grep "User time" ${outprefix}.out | awk '{print $NF}')
 
-    echo "${approach},${stage},${fasta},${outsketch},$(($index-1)),1,${card},${mrss},${wctime}" >> ${summary}
+    echo "${approach},${stage},${fasta},${outsketch},$(($index-1)),1,${card},${mrss},${wctime},${systime},${utime}" >> ${summary}
     index+=1
 done
 
@@ -198,9 +201,11 @@ for howmany in $(seq 1 $nfasta); do
   #capture benchmarking values
   mrss=$(grep "Maximum resident" ${timeout} | awk '{print $NF}')
   wctime=$(grep "wall clock" ${timeout} | awk '{print $NF}')
+  systime=$(grep "System time" ${timeout}| awk '{print $NF}')
+  utime=$(grep "User time" ${timeout}| awk '{print $NF}')
   if [[ "$howmany" -eq '1' ]]; then wctime=NA; mrss=NA;fi
 
-  echo "${approach},${stage},${fsum},${outsketch},${rand_ind[@]},${howmany},${card},${mrss},${wctime}" >> ${summary}
+  echo "${approach},${stage},${fsum},${outsketch},${rand_ind[@]},${howmany},${card},${mrss},${wctime},${systime},${utime}" >> ${summary}
 
 
 done
@@ -240,7 +245,9 @@ card=$(awk 'NR==2{print $NF}' ${cardloc})
 fi
 mrss=$(grep "Maximum resident" ${timeout} | awk '{print $NF}')
 wctime=$(grep "wall clock" ${timeout} | awk '{print $NF}')
-echo "${approach},${stage},NA,${fullunion},NA,${nfasta},${card},${mrss},${wctime}" >> ${summary}
+systime=$(grep "System time" ${timeout} | awk '{print $NF}')
+utime=$(grep "User time" ${timeout} | awk '{print $NF}')
+echo "${approach},${stage},NA,${fullunion},NA,${nfasta},${card},${mrss},${wctime},${systime},${utime}" >> ${summary}
 
 exit
 
@@ -266,6 +273,8 @@ echo ${cmd}
 fi
 mrss=$(grep "Maximum resident" ${timeout} | awk '{print $NF}')
 wctime=$(grep "wall clock" ${timeout} | awk '{print $NF}')
-echo "${approach},${stage},all,${fullunionf},NA,${nfasta},${card},${mrss},${wctime}" >> ${summary}
+systime=$(grep "System time" ${timeout} | awk '{print $NF}')
+utime=$(grep "User time" ${timeout} | awk '{print $NF}')
+echo "${approach},${stage},all,${fullunionf},NA,${nfasta},${card},${mrss},${wctime},${systime},${utime}" >> ${summary}
 
 #/usr/bin/time -o ${outprefix}_c${howmany}.out -v kmc -ci1 -k${kval} -fm @${apout}/c${howmany}.txt ${apout}/c${howmany}_k${kval}.kmc ${outdir}/kmc > ${apout}/c${howmany}_k${kval}.card
