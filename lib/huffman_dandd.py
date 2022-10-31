@@ -18,6 +18,7 @@ import pandas as pd
 
 DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
 codelib='/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
+RANGEK=100
 
 def retrieve_fasta_files(inputdir):
     '''return a list of all fasta files in a directory accounting for all the possible extensions'''
@@ -277,11 +278,11 @@ class SketchObj:
   
 class DeltaTreeNode:
     ''' A node in a Delta tree. 
-        symbol = name of input file or composite of inputfiles
+        node_title = name of input file or composite of inputfiles
+        children = the nodes that are this nodes children
         progeny = list of leaf nodes decended from the node
-        left = left child of non-leaf union nodes
-        right = right child of non-leaf union nodes
-        ngen = the number of genomes in the sketches for the node
+        ksweep = should ks 1-100 be explored even after delta is found?
+        
         '''
     def __init__(self, node_title, children, progeny=None ):
         self.node_title = node_title
@@ -293,7 +294,7 @@ class DeltaTreeNode:
         self.maxk = 0
         self.bestk = 0
         self.delta = 0
-        self.ksketches = [None] * 25
+        self.ksketches = [None] * RANGEK
         self.assign_progeny()
         self.fastas = [f.node_title for f in self.progeny]
         self.ngen = len(self.progeny)
@@ -370,6 +371,14 @@ class DeltaTreeNode:
         self.update_card(speciesinfo)
         return
 
+    def ksweep(self, speciesinfo, kmin, kmax):
+        if kmax > len(self.ksketches):
+            self.ksketches = self.ksketches.extend([None]* (kmax-len(self.ksketches)))
+        for kval in range(len(self.ksketches)):
+            if not self.ksketches[kval]:
+                self.update_node(speciesinfo,speciesinfo.registers,kval)
+        
+
     def plot_df(self):
         '''create a dataframe of all "possible" delta values that were examined during creation of the node for use in plotting'''
         nodevals=[]
@@ -416,6 +425,7 @@ class DeltaTree:
         self._build_tree(fasta_files, speciesinfo, nchildren)
         self.fill_tree(speciesinfo, registers)
         self.ngen = len(fasta_files)
+        self.root=self._dt[-1]
         self.delta = self.root_delta()
         self.fastas = fasta_files
         speciesinfo.kstart = self.root_k()
@@ -549,9 +559,9 @@ class DeltaTree:
         bestks = [k for k in bestks if k!=0  ]
         #print(bestks)
         bestks.sort()
-        #print(bestks)
+        print("Best ks before padding:", bestks)
         bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2]
-        #print(bestks)
+        print("Best ks after padding:", bestks)
         for k in bestks:
             root.update_node( speciesinfo, registers, k)
         
@@ -621,6 +631,8 @@ class DeltaTree:
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
    
+    def ksweep(self, speciesinfo, kmin=1, kmax=RANGEK):
+        self.root.ksweep(speciesinfo, kmin=kmin, kmax=kmax)
 
 
 class DeltaSpider(DeltaTree):
@@ -695,7 +707,7 @@ class DeltaSpider(DeltaTree):
 
 
 
-    def progressive_union(self, speciesinfo: SpeciesSpecifics, registers=20, flist_loc=None, count=30, ordering_file=None):
+    def progressive_union(self, speciesinfo: SpeciesSpecifics, flist_loc=None, count=30, ordering_file=None):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
         #TODO add speciesinfo as a property of tree object to be retrieved accordingly
 
@@ -726,6 +738,7 @@ class DeltaSpider(DeltaTree):
         # with open(ordering_file,"wb") as f:
         #     pickle.dump(orderings, f)
         # orderings=list(orderings)
+
         # create a sketch of the full union of the fastas
         smain = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo,registers=self.registers)
         results=[]
