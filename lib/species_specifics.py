@@ -1,9 +1,11 @@
 import pickle
 import os
 
+
+
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
-    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, registers=20):
+    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, registers, flist_loc=None):
         self.tag=tag
         self.sketchdir=os.path.join(sketchdir, tag)
         os.makedirs(self.sketchdir, exist_ok=True)
@@ -15,6 +17,7 @@ class SpeciesSpecifics:
         self.kstart = kstart
         self.orderings = None
         self.registers=registers
+        self.flist_loc=flist_loc
         
     def _read_hashkey(self):
         '''Recover species specific hashkey from pickle file'''
@@ -68,3 +71,4 @@ class SpeciesSpecifics:
         elif fullpath not in self.card0:
             self.card0.append(fullpath)
         return 0
+

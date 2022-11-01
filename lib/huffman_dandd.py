@@ -14,6 +14,7 @@ from random import sample
 from numpy import unique
 import pandas as pd
 from species_specifics import SpeciesSpecifics
+from glob import glob
 #import math
 #import glob
 
@@ -21,10 +22,13 @@ DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
 codelib='/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
 RANGEK=100
 
-def retrieve_fasta_files(inputdir):
+def retrieve_fasta_files(inputdir, full=True):
     '''return a list of all fasta files in a directory accounting for all the possible extensions'''
     reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
-    return [fasta for fasta in os.listdir(inputdir) if reg_compile]
+    fastas = [fasta for fasta in os.listdir(inputdir) if reg_compile]
+    if full:
+        fastas=[os.path.join(inputdir,fasta) for fasta in fastas]
+    return fastas
 
 def random_orderings(length, norder, preexist=set()):
     '''create norder NEW unique random orderings of numbers 0 through length in addition to those in provided preexisting set of orderings'''
@@ -39,76 +43,6 @@ def random_orderings(length, norder, preexist=set()):
     return newset
 
 
-# class SpeciesSpecifics:
-#     '''An object to store the specifics of a species file info'''
-#     def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, registers=20):
-#         self.tag=tag
-#         self.sketchdir=os.path.join(sketchdir, tag)
-#         os.makedirs(self.sketchdir, exist_ok=True)
-#         self.species=self._resolve_species()
-#         self.hashkey=self._read_hashkey()
-#         self.cardkey=self._read_cardkey()
-#         self.inputdir=self._locate_input(genomedir)
-#         self.card0 = []
-#         self.kstart = kstart
-#         self.orderings = None
-#         self.registers=registers
-        
-#     def _read_hashkey(self):
-#         '''Recover species specific hashkey from pickle file'''
-#         usual=os.path.join(self.sketchdir,self.tag+'_hashkey.pickle')
-#         if os.path.exists(usual):
-#             hashkey=pickle.load(open(usual, "rb", -1))
-#         else:
-#             hashkey=dict()
-#         return hashkey
-
-#     def save_hashkey(self):
-#         '''Store/Update/Overwrite species specific hashkey to pickle'''
-#         usual=os.path.join(self.sketchdir,self.tag+'_hashkey.pickle')
-#         with open(usual,"wb") as f:
-#             pickle.dump(file=f, obj=self.hashkey)
-    
-#     def _read_cardkey(self):
-#         '''Recover key of previously calculated cardinalities from pickle file'''
-#         usual=os.path.join(self.sketchdir, self.tag+'_cardinalities.pickle')
-#         if os.path.exists(usual):
-#             cardkey=pickle.load(open(usual, "rb", -1))
-#         else:
-#             cardkey=dict()
-#         return cardkey
-    
-#     def save_cardkey(self):
-#         '''Store cardinalities in species specific pickle'''
-#         usual=os.path.join(self.sketchdir, self.tag+'_cardinalities.pickle')
-#         with open(usual,"wb") as f:
-#             pickle.dump(file=f, obj=self.cardkey)
-            
-#     def _resolve_species(self):
-#         '''Parse the name of the species from the data description tag'''
-#         for title in ['HVSVC2','ecoli','salmonella','human']:
-#             if title in self.tag:
-#                 return title
-#         os.warnings("FOR SOME REASON I DON'T RECOGNIZE THAT SPECIES TAG!!!")
-#         return self.tag
-    
-#     def _locate_input(self, genomedir: str):
-#         '''Determine if there is a subdirectory structure in the input directory (current applies to HVSVC2 inputs)'''
-#         if self.species == 'HVSVC2':
-#             return os.path.join(genomedir, self.species, self.tag.replace('HVSVC2','consensus'))
-#         else:
-#             return os.path.join(genomedir, self.tag)
-        
-#     def check_cardinality(self, fullpath):
-#         '''Check if cardinality has already been calculated for a sketch. If so, return it, if not add it to a list of cardinalities to be calculated and then return 0'''
-#         if fullpath in self.cardkey.keys() and self.cardkey[fullpath] != 0:
-#             return float(self.cardkey[fullpath])
-#         elif fullpath not in self.card0:
-#             self.card0.append(fullpath)
-#         return 0
-
-    
-
 class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location
     filenames: list of filenames that will be used to make the sketch
@@ -117,7 +51,8 @@ class SketchFilePath:
     prefix: currently unused tag for filenames to differentiate between runs
     '''
     def __init__(self, filenames: list, kval: int, speciesinfo: SpeciesSpecifics, prefix=None):
-        self.files = filenames
+        self.ffiles = filenames
+        self.files= [os.path.basename(f) for f in self.ffiles]
         self.ngen = len(filenames)
         self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
         self.dir = os.path.join(speciesinfo.sketchdir,"k"+ str(kval), "ngen" + str(self.ngen))
@@ -126,7 +61,8 @@ class SketchFilePath:
         os.makedirs(self.dir, exist_ok=True) 
     
     def assign_hash_string(self, filename: str, speciesinfo: SpeciesSpecifics, length: int):
-        '''If filename already exists in hash/dict, look it up; otherwise create one and add to hash/dict using the full path as the key'''
+        '''If the basename of filename already exists in hash/dict, look it up; otherwise create one and add to hash/dict using the full path as the key'''
+        filename =os.path.basename(filename)
         if filename in speciesinfo.hashkey.keys():
             return speciesinfo.hashkey[filename]
         else:
@@ -605,6 +541,8 @@ class DeltaTree:
         majork = self.root_k()
         # create list of fastas that are in the original spider that are not in the subset provided
         fastas = [f for f in self.fastas if f not in fasta_subset]
+        if len(fastas) == 0:
+            fastas = [f for f in self.fastas if os.path.basename(f) not in fasta_subset]
         small_spider = DeltaSpider(fasta_files=fastas, speciesinfo=self.speciesinfo)
         print("Full Tree Delta: ", self.delta)
         print("Subtree Delta: ", small_spider.delta)
@@ -743,10 +681,10 @@ class DeltaSpider(DeltaTree):
         return output
 
 
-class ProgressiveUnion:
-    '''something'''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2):
-        self.hashkey = speciesinfo.hashkey
+# class ProgressiveUnion:
+#     '''something'''
+#     def __init__(self, fasta_files, speciesinfo, nchildren=2):
+#         self.hashkey = speciesinfo.hashkey
 
 def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
@@ -758,19 +696,27 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     registers = number of registers to use when sketching
     flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)'''
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
-    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers)
+    print("here1")
+    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers, flist_loc=flist_loc)
+    print("HERE")
     #inputdir = speciesinfo.inputdir
-    fastas = retrieve_fasta_files(speciesinfo.inputdir)
-    # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
     if flist_loc:
         with open(flist_loc) as file:
-            fsublist = [line.strip() for line in file]
-        fastas = [f for f in fastas if f in fsublist]
+            fastas = [line.strip() for line in file]
+    # right now we expect that if we are provided with a genome directory AND a file list the file list will only contain the basenames
+    elif speciesinfo.inputdir:
+        fastas = retrieve_fasta_files(speciesinfo.inputdir, full=True)
+        #fastas = [f for f in allfastas if f in fastas]
+    # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
+    # if flist_loc:
+    #     with open(flist_loc) as file:
+    #         fsublist = [line.strip() for line in file]
+    #     fastas = [f for f in fastas if f in fsublist]
     fastas.sort()
     if nchildren:
-        dtree = DeltaSpider(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren)
+        dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren)
     else:
-        dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo)
+        dtree = DeltaSpider(fasta_files=fastas,speciesinfo=speciesinfo)
     # Save the cardinality keys as well as the hashkey for the next run of the species
     speciesinfo.save_cardkey()
     speciesinfo.save_hashkey()

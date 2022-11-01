@@ -46,7 +46,7 @@ def parse_arguments():
     
     progressive_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="PICKLE", default=None, help="filepath to a pickle produced by the tree command")
 
-    progressive_parser.add_argument("-f", "--fastas", dest="flist_loc", default=None, help="filepath to a subset of fasta files from the original tree which should be analyzed using progressive union")
+    # progressive_parser.add_argument("-f", "--fastas", dest="flist_loc", default=None, help="filepath to a subset of fasta files from the original tree which should be analyzed using progressive union")
 
     progressive_parser.add_argument("-n", "--norderings", dest="norderings", default=None, help="number of random orderings to explore")
 
