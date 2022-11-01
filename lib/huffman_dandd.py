@@ -418,7 +418,7 @@ class DeltaTree:
         #self._code_words = []
         self.mink=0
         self.maxk=0
-        #self.speciesinfo=speciesinfo
+        
         self.kstart=speciesinfo.kstart
         self.registers=speciesinfo.registers
         print(nchildren)
@@ -429,6 +429,7 @@ class DeltaTree:
         self.delta = self.root_delta()
         self.fastas = fasta_files
         speciesinfo.kstart = self.root_k()
+        self.speciesinfo=speciesinfo
         #self.card0 = speciesinfo.card0
         #self.cardkey=speciesinfo.cardkey
     def __sub__(self, other):
@@ -565,36 +566,6 @@ class DeltaTree:
         for k in bestks:
             root.update_node( speciesinfo, k)
         
-
-    # def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None):
-    #     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
-    #     tag = species tag
-    #     genomedir = parent directory of species subdirectory
-    #     sketchdir = parent directory where species directory for output sketches should be created
-    #     kstart = starting k to use while searching for delta
-    #     nchildren = number of children that nodes should have (until they can't)
-    #     registers = number of registers to use when sketching
-    #     flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)'''
-    #     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
-    #     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers)
-    #     #inputdir = speciesinfo.inputdir
-    #     fastas = retrieve_fasta_files(speciesinfo.inputdir)
-    #     # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
-    #     if flist_loc:
-    #         with open(flist_loc) as file:
-    #             fsublist = [line.strip() for line in file]
-    #         fastas = [f for f in fastas if f in fsublist]
-    #     fastas.sort()
-    #     if nchildren:
-    #         print("I think nchilden is a thing?")
-    #         dtree = DeltaSpider(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren)
-    #     else:
-    #         dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo)
-    #     # Save the cardinality keys as well as the hashkey for the next run of the species
-    #     speciesinfo.save_cardkey()
-    #     speciesinfo.save_hashkey()
-    #     dtree.print_tree()
-    #     return dtree
         
     def save(self, outloc: str, tag: str, label=None):
         '''Save the delta tree for future retrieval
@@ -627,19 +598,19 @@ class DeltaTree:
         dflist= _delta_pos_recursive(root)
         return pd.concat(dflist)
 
-    def find_delta_delta(self, fasta_subset: list, speciesinfo: SpeciesSpecifics):
+    def find_delta_delta(self, fasta_subset: list):
         '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
         majord = self.delta
         majork = self.root_k()
         # create list of fastas that are in the original spider that are not in the subset provided
         fastas = [f for f in self.fastas if f not in fasta_subset]
-        small_spider = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo)
+        small_spider = DeltaSpider(fasta_files=fastas, speciesinfo=self.speciesinfo)
         print("Full Tree Delta: ", self.delta)
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
    
-    def ksweep(self, speciesinfo, kmin=1, kmax=RANGEK):
-        self.root.ksweep(speciesinfo, kmin=kmin, kmax=kmax)
+    def ksweep(self, kmin=1, kmax=RANGEK):
+        self.root.ksweep(self.speciesinfo, kmin=kmin, kmax=kmax)
 
 
 class DeltaSpider(DeltaTree):
@@ -665,7 +636,7 @@ class DeltaSpider(DeltaTree):
     #         if not os.path.exists(ordering_loc):
     #             pass
 
-    def orderings_list(self, speciesinfo: SpeciesSpecifics, ordering_file=None, flist_loc=None, count=None):
+    def orderings_list(self, ordering_file=None, flist_loc=None, count=None):
         '''create or retrieve a series of random orderings of fasta sketches. return also the expected "sorted" array of the files. A subset of the fastas in the tree can be provided by name (in a file). The ordering of this file will be used when count=1 and the list is provided.'''
         fastas=self.fastas
         fastas.sort()
@@ -683,7 +654,7 @@ class DeltaSpider(DeltaTree):
         
         # orderings are handled as sets to prevent duplication
         orderings=set()
-        default_ordering=os.path.join(speciesinfo.sketchdir,speciesinfo.tag + "_"+ str(len(fastas))+"orderings.pickle")
+        default_ordering=os.path.join(self.speciesinfo.sketchdir, self.speciesinfo.tag + "_"+ str(len(fastas))+"orderings.pickle")
         # if no ordering file is provided the default location is used
         if not ordering_file:
             ordering_file=default_ordering
@@ -715,7 +686,7 @@ class DeltaSpider(DeltaTree):
 
 
 
-    def progressive_union(self, speciesinfo: SpeciesSpecifics, flist_loc=None, count=30, ordering_file=None):
+    def progressive_union(self, flist_loc=None, count=30, ordering_file=None):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
         #TODO add speciesinfo as a property of tree object to be retrieved accordingly
 
@@ -723,7 +694,7 @@ class DeltaSpider(DeltaTree):
         
         #fastas = retrieve_fasta_files(speciesinfo.inputdir)
         #fastas=self.fastas
-        fastas, orderings = self.orderings_list(speciesinfo, ordering_file=ordering_file, flist_loc=flist_loc, count=count)
+        fastas, orderings = self.orderings_list(self.speciesinfo, ordering_file=ordering_file, flist_loc=flist_loc, count=count)
         # speciesinfo=self.speciesinfo
         
         # If a fasta file list is provided, subset the fastas from the species directory to only use the intersection
@@ -748,10 +719,10 @@ class DeltaSpider(DeltaTree):
         # orderings=list(orderings)
 
         # create a sketch of the full union of the fastas
-        smain = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo)
+        smain = DeltaSpider(fasta_files=fastas, speciesinfo=self.speciesinfo)
         results=[]
         for i in range(0,len(orderings)):
-            oresults=smain.sketch_ordering(speciesinfo, orderings[i])
+            oresults=smain.sketch_ordering(orderings[i])
             odf=pd.DataFrame(oresults,columns=["ngenomes","kval","delta"])
             odf['ordering']=i+1
             results.append(odf)
@@ -759,14 +730,14 @@ class DeltaSpider(DeltaTree):
         return pd.concat(results)
 
 
-    def sketch_ordering(self, speciesinfo, ordering):
+    def sketch_ordering(self, ordering):
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas in a dataframe'''
         flen=len(ordering)
         print(flen)
         output=[]
         for i in range(1,flen+1):
             sublist=[self.fastas[j] for j in ordering[:i]]
-            ospider=DeltaSpider(fasta_files=sublist, speciesinfo=speciesinfo)
+            ospider=DeltaSpider(fasta_files=sublist, speciesinfo=self.speciesinfo)
             output.append([i, ospider.root_k(), ospider.delta])
         return output
 
