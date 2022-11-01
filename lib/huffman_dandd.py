@@ -421,6 +421,7 @@ class DeltaTree:
         #self.speciesinfo=speciesinfo
         self.kstart=speciesinfo.kstart
         self.registers=speciesinfo.registers
+        print(nchildren)
         self._build_tree(fasta_files, speciesinfo, nchildren)
         self.fill_tree(speciesinfo)
         self.ngen = len(fasta_files)
@@ -565,31 +566,35 @@ class DeltaTree:
             root.update_node( speciesinfo, k)
         
 
-    def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None):
-        '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
-        tag = species tag
-        genomedir = parent directory of species subdirectory
-        sketchdir = parent directory where species directory for output sketches should be created
-        kstart = starting k to use while searching for delta
-        nchildren = number of children that nodes should have (until they can't)
-        registers = number of registers to use when sketching
-        flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)'''
-        # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
-        speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers)
-        #inputdir = speciesinfo.inputdir
-        fastas = retrieve_fasta_files(speciesinfo.inputdir)
-        # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
-        if flist_loc:
-            with open(flist_loc) as file:
-                fsublist = [line.strip() for line in file]
-            fastas = [f for f in fastas if f in fsublist]
-        fastas.sort()
-        dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren)
-        # Save the cardinality keys as well as the hashkey for the next run of the species
-        speciesinfo.save_cardkey()
-        speciesinfo.save_hashkey()
-        dtree.print_tree()
-        return dtree
+    # def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None):
+    #     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
+    #     tag = species tag
+    #     genomedir = parent directory of species subdirectory
+    #     sketchdir = parent directory where species directory for output sketches should be created
+    #     kstart = starting k to use while searching for delta
+    #     nchildren = number of children that nodes should have (until they can't)
+    #     registers = number of registers to use when sketching
+    #     flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)'''
+    #     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
+    #     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers)
+    #     #inputdir = speciesinfo.inputdir
+    #     fastas = retrieve_fasta_files(speciesinfo.inputdir)
+    #     # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
+    #     if flist_loc:
+    #         with open(flist_loc) as file:
+    #             fsublist = [line.strip() for line in file]
+    #         fastas = [f for f in fastas if f in fsublist]
+    #     fastas.sort()
+    #     if nchildren:
+    #         print("I think nchilden is a thing?")
+    #         dtree = DeltaSpider(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren)
+    #     else:
+    #         dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo)
+    #     # Save the cardinality keys as well as the hashkey for the next run of the species
+    #     speciesinfo.save_cardkey()
+    #     speciesinfo.save_hashkey()
+    #     dtree.print_tree()
+    #     return dtree
         
     def save(self, outloc: str, tag: str, label=None):
         '''Save the delta tree for future retrieval
@@ -600,6 +605,8 @@ class DeltaTree:
         filepath=os.path.join(outloc,  tag + label + "_" + str(self.ngen) + '_dtree.pickle')
         with open(filepath,"wb") as f:
             pickle.dump(obj=self, file=f)
+        print("Tree Pickle saved to: "+filepath)
+        return filepath
 
   
     def delta_pos(self):
@@ -638,6 +645,7 @@ class DeltaTree:
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
     def __init__(self, fasta_files, speciesinfo):
+        print("I made it to spider")
         nchildren=len(fasta_files)
         super().__init__(fasta_files, speciesinfo, nchildren=nchildren)
 
@@ -767,3 +775,32 @@ class ProgressiveUnion:
     '''something'''
     def __init__(self, fasta_files, speciesinfo, nchildren=2):
         self.hashkey = speciesinfo.hashkey
+
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None):
+    '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
+    tag = species tag
+    genomedir = parent directory of species subdirectory
+    sketchdir = parent directory where species directory for output sketches should be created
+    kstart = starting k to use while searching for delta
+    nchildren = number of children that nodes should have (until they can't)
+    registers = number of registers to use when sketching
+    flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)'''
+    # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
+    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers)
+    #inputdir = speciesinfo.inputdir
+    fastas = retrieve_fasta_files(speciesinfo.inputdir)
+    # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
+    if flist_loc:
+        with open(flist_loc) as file:
+            fsublist = [line.strip() for line in file]
+        fastas = [f for f in fastas if f in fsublist]
+    fastas.sort()
+    if nchildren:
+        dtree = DeltaSpider(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren)
+    else:
+        dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo)
+    # Save the cardinality keys as well as the hashkey for the next run of the species
+    speciesinfo.save_cardkey()
+    speciesinfo.save_hashkey()
+    dtree.print_tree()
+    return dtree
