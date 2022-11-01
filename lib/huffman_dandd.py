@@ -40,7 +40,7 @@ def random_orderings(length, norder, preexist=set()):
 
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
-    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int):
+    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, registers=20):
         self.tag=tag
         self.sketchdir=os.path.join(sketchdir, tag)
         os.makedirs(self.sketchdir, exist_ok=True)
@@ -51,6 +51,7 @@ class SpeciesSpecifics:
         self.card0 = []
         self.kstart = kstart
         self.orderings = None
+        self.registers=registers
         
     def _read_hashkey(self):
         '''Recover species specific hashkey from pickle file'''
@@ -111,17 +112,16 @@ class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location
     filenames: list of filenames that will be used to make the sketch
     kval: kvalue for the sketch
-    registers: number of registers to use during sketching
     speciesinfo: SpeciesSpecifics object for the species
     prefix: currently unused tag for filenames to differentiate between runs
     '''
-    def __init__(self, filenames: list, kval: int, registers: int, speciesinfo: SpeciesSpecifics, prefix=None):
+    def __init__(self, filenames: list, kval: int, speciesinfo: SpeciesSpecifics, prefix=None):
         self.files = filenames
         self.ngen = len(filenames)
-        self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval, registers=registers)
+        self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
         self.dir = os.path.join(speciesinfo.sketchdir,"k"+ str(kval), "ngen" + str(self.ngen))
         self.full = os.path.join(self.dir, self.base)
-        self.registers = registers
+        self.registers = speciesinfo.registers
         os.makedirs(self.dir, exist_ok=True) 
     
     def assign_hash_string(self, filename: str, speciesinfo: SpeciesSpecifics, length: int):
@@ -138,15 +138,15 @@ class SketchFilePath:
                 speciesinfo.hashkey[filename] = trunc
                 return trunc
     
-    def nameSketch(self, speciesinfo: SpeciesSpecifics, kval: int, registers: int):
+    def nameSketch(self, speciesinfo: SpeciesSpecifics, kval: int):
         '''Determine what the name of a sketch is/will be'''
         if self.ngen > 1:
             
             filehashes = [self.assign_hash_string(filename=onefile, speciesinfo=speciesinfo, length=1) for onefile in self.files]
             filehashes.sort()
-            outfile = speciesinfo.tag + "_" + "_".join(filehashes) + "_k" + str(kval) + "_r" + str(registers) + ".hll"
+            outfile = speciesinfo.tag + "_" + "_".join(filehashes) + "_k" + str(kval) + "_r" + str(speciesinfo.registers) + ".hll"
         else:
-            outfile=os.path.basename(self.files[0]) + ".w." + str(kval) + ".spacing." + str(registers) + ".hll"
+            outfile=os.path.basename(self.files[0]) + ".w." + str(kval) + ".spacing." + str(speciesinfo.registers) + ".hll"
         return outfile    
 
     def check_cardinality(self, speciesinfo: SpeciesSpecifics):
@@ -163,7 +163,6 @@ class SketchObj:
         Inputs:
             kval: kmer length
             sfp: SketchFilePath object
-            registers: number of registers to tell dashing to use
             speciesinfo: SpeciesSpecifics object containing path information for the species/tag
             presketches: list of sketches to use in union sketching
 
@@ -326,9 +325,9 @@ class DeltaTreeNode:
 #        for card in csv.DictReader(card_lines, delimiter='\t'):
 #            cards[card['#Path']] = card['Size (est.)']
 #        return cards
-    def find_delta_helper(self, speciesinfo, registers, kval, direction=1):
+    def find_delta_helper(self, speciesinfo, kval, direction=1):
         '''determine if there is a local maximum delta relative to the current k'''
-        self.update_node(speciesinfo, registers, kval)
+        self.update_node(speciesinfo, kval)
         if direction < 0:
             self.mink = kval
         else:
@@ -339,24 +338,24 @@ class DeltaTreeNode:
             speciesinfo.kstart = kval
             self.bestk = kval
             self.delta = new_d
-            self.find_delta_helper(speciesinfo, registers, kval+direction, direction)
+            self.find_delta_helper(speciesinfo=speciesinfo, kval=kval+direction, direction=direction)
         return
     
-    def find_delta(self, speciesinfo, registers, kval):
+    def find_delta(self, speciesinfo, kval):
         '''search in both directions of the provided kvalue to detect a local maximum'''
-        self.find_delta_helper(speciesinfo, registers, kval, direction=1)
-        self.find_delta_helper(speciesinfo, registers, kval, direction=-1)
+        self.find_delta_helper(speciesinfo=speciesinfo, kval=kval, direction=1)
+        self.find_delta_helper(speciesinfo=speciesinfo, kval=kval, direction=-1)
         return
 
-    def update_node(self, speciesinfo, registers, kval):
+    def update_node(self, speciesinfo, kval):
         '''Populate the sketch object for the given k at the self node as well as all children of the node'''
         if self.ksketches[kval] is None:
             #create sketch file path holding information relating to the sketch for that k 
-            sfp = SketchFilePath(filenames=self.fastas, kval=kval, registers = registers, speciesinfo=speciesinfo)
+            sfp = SketchFilePath(filenames=self.fastas, kval=kval, speciesinfo=speciesinfo)
             if self.ngen > 1:
                 presketches=[]
                 for i in range(len(self.children)):
-                    self.children[i].update_node(speciesinfo, registers, kval)
+                    self.children[i].update_node(speciesinfo, kval)
                     presketches= presketches + [self.children[i].ksketches[kval].sketch]
                 
                 self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp, speciesinfo=speciesinfo, presketches=presketches)
@@ -376,7 +375,7 @@ class DeltaTreeNode:
             self.ksketches = self.ksketches.extend([None]* (kmax-len(self.ksketches)))
         for kval in range(len(self.ksketches)):
             if not self.ksketches[kval]:
-                self.update_node(speciesinfo,speciesinfo.registers,kval)
+                self.update_node(speciesinfo, kval)
         
 
     def plot_df(self):
@@ -410,7 +409,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, registers=20, nchildren=2):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2):
         self.hashkey = speciesinfo.hashkey
         #self.files = self.fasta_files(speciesinfo.inputdir)
         #self.codebook = {}
@@ -419,11 +418,11 @@ class DeltaTree:
         #self._code_words = []
         self.mink=0
         self.maxk=0
-        #self._speciesinfo=speciesinfo
+        #self.speciesinfo=speciesinfo
         self.kstart=speciesinfo.kstart
-        self.registers=registers
+        self.registers=speciesinfo.registers
         self._build_tree(fasta_files, speciesinfo, nchildren)
-        self.fill_tree(speciesinfo, registers)
+        self.fill_tree(speciesinfo)
         self.ngen = len(fasta_files)
         self.root=self._dt[-1]
         self.delta = self.root_delta()
@@ -487,7 +486,7 @@ class DeltaTree:
             ) for s in symbol]
         inputs.sort()
         for n in inputs:
-            n.find_delta(speciesinfo, self.registers, speciesinfo.kstart)
+            n.find_delta(speciesinfo, speciesinfo.kstart)
         #inputs = [n.find_delta(speciesinfo, self.registers, speciesinfo.kstart) for n in inputs]
         # procs = []
         # for dnode in inputs:
@@ -513,7 +512,7 @@ class DeltaTree:
                 # children = [self._dt[idx_current],self._dt[idx_current+1]]
                 progeny=progeny
             )
-            new_node.find_delta(speciesinfo=speciesinfo, registers=self.registers, kval=speciesinfo.kstart)
+            new_node.find_delta(speciesinfo=speciesinfo, kval=speciesinfo.kstart)
             
             while idx_insert < len(self._dt)-increment and self._dt[idx_insert+increment].ngen <= new_node.ngen:
                 
@@ -552,7 +551,7 @@ class DeltaTree:
             nodes.append(f'\'{node.node_title}\'({node.ngen}\'({" ".join([i.node_title for i in node.progeny])})')
         print(' -> '.join(nodes))
 
-    def fill_tree(self, speciesinfo, registers):
+    def fill_tree(self, speciesinfo):
         '''Starting at the root make sure that all nodes in the tree contain the sketches for the argmax ks for every node as well as 2 less than the minimum and 2 greater than the maximum'''
         root = self._dt[-1]
         bestks = list(unique([n.bestk for n in self._dt]))
@@ -563,19 +562,20 @@ class DeltaTree:
         bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2]
         print("Best ks after padding:", bestks)
         for k in bestks:
-            root.update_node( speciesinfo, registers, k)
+            root.update_node( speciesinfo, k)
         
 
-    def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren, flist_loc=None):
+    def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None):
         '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
         tag = species tag
         genomedir = parent directory of species subdirectory
         sketchdir = parent directory where species directory for output sketches should be created
         kstart = starting k to use while searching for delta
         nchildren = number of children that nodes should have (until they can't)
+        registers = number of registers to use when sketching
         flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)'''
         # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
-        speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart)
+        speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers)
         #inputdir = speciesinfo.inputdir
         fastas = retrieve_fasta_files(speciesinfo.inputdir)
         # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
@@ -584,7 +584,7 @@ class DeltaTree:
                 fsublist = [line.strip() for line in file]
             fastas = [f for f in fastas if f in fsublist]
         fastas.sort()
-        dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo,nchildren=nchildren)
+        dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren)
         # Save the cardinality keys as well as the hashkey for the next run of the species
         speciesinfo.save_cardkey()
         speciesinfo.save_hashkey()
@@ -620,13 +620,13 @@ class DeltaTree:
         dflist= _delta_pos_recursive(root)
         return pd.concat(dflist)
 
-    def find_delta_delta(self, fasta_subset: list, speciesinfo: SpeciesSpecifics, registers=20):
+    def find_delta_delta(self, fasta_subset: list, speciesinfo: SpeciesSpecifics):
         '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
         majord = self.delta
         majork = self.root_k()
         # create list of fastas that are in the original spider that are not in the subset provided
         fastas = [f for f in self.fastas if f not in fasta_subset]
-        small_spider = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo, registers=registers)
+        small_spider = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo)
         print("Full Tree Delta: ", self.delta)
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
@@ -637,9 +637,9 @@ class DeltaTree:
 
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
-    def __init__(self, fasta_files, speciesinfo, registers=20):
+    def __init__(self, fasta_files, speciesinfo):
         nchildren=len(fasta_files)
-        super().__init__(fasta_files, speciesinfo, registers=registers, nchildren=nchildren)
+        super().__init__(fasta_files, speciesinfo, nchildren=nchildren)
 
     # def find_delta_delta(self, fasta_subset: list, speciesinfo: SpeciesSpecifics, registers=20):
     #     '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
@@ -740,7 +740,7 @@ class DeltaSpider(DeltaTree):
         # orderings=list(orderings)
 
         # create a sketch of the full union of the fastas
-        smain = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo,registers=self.registers)
+        smain = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo)
         results=[]
         for i in range(0,len(orderings)):
             oresults=smain.sketch_ordering(speciesinfo, orderings[i])
@@ -758,12 +758,12 @@ class DeltaSpider(DeltaTree):
         output=[]
         for i in range(1,flen+1):
             sublist=[self.fastas[j] for j in ordering[:i]]
-            ospider=DeltaSpider(fasta_files=sublist, speciesinfo=speciesinfo, registers=self.registers)
+            ospider=DeltaSpider(fasta_files=sublist, speciesinfo=speciesinfo)
             output.append([i, ospider.root_k(), ospider.delta])
         return output
 
 
 class ProgressiveUnion:
     '''something'''
-    def __init__(self, fasta_files, speciesinfo, registers=20, nchildren=2):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2):
         self.hashkey = speciesinfo.hashkey
