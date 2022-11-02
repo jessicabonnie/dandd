@@ -45,7 +45,11 @@ class SketchFilePath:
             
             filehashes = [self.assign_hash_string(filename=onefile, speciesinfo=speciesinfo, length=1) for onefile in self.files]
             filehashes.sort()
-            outfile = speciesinfo.tag + "_" + "_".join(filehashes) + "_k" + str(kval) + "_r" + str(speciesinfo.registers) + ".hll"
+            outfile_prefix = speciesinfo.tag + "_" + "_".join(filehashes) + "_k" + str(kval) + "_r" + str(speciesinfo.registers)
+            if len(outfile_prefix) >30:
+                alphanum=hashlib.md5(outfile_prefix.encode()).hexdigest()
+                outfile_prefix = alphanum
+            outfile=outfile_prefix + ".hll"
         else:
             outfile=os.path.basename(self.files[0]) + ".w." + str(kval) + ".spacing." + str(speciesinfo.registers) + ".hll"
         return outfile    
@@ -145,10 +149,6 @@ class SketchObj:
         self.sketch = sfp.full
         return self.sketch
     
-    # def __repr__(self):
-    #     ##TODO make this a __repr__ function instead
-    #     return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
-        # print("k : {0}; cardinality: {1}; pos delta: {2}; loc : {3}; cmd: {4}".format(self.kval, self.card, self.delta_pos, self.sketch, self.cmd))
     
     def individual_card(self, speciesinfo, debug=False):
         cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
