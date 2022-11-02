@@ -438,12 +438,12 @@ class DeltaSpider(DeltaTree):
             pickle.dump(orderings, f)
         return fastas, list(orderings)
 
-    def progressive_wrapper(self, flist_loc=None, count=30, ordering_file=None):
+    def progressive_wrapper(self, flist_loc=None, count=30, ordering_file=None,step=1):
         fastas, orderings = self.orderings_list( ordering_file=ordering_file, flist_loc=flist_loc, count=count)
 
-        return self.progressive_union(flist=fastas, orderings=orderings)
+        return self.progressive_union(flist=fastas, orderings=orderings, step=step)
 
-    def progressive_union(self, flist, orderings):
+    def progressive_union(self, flist, orderings, step):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
 
         #speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart)
@@ -458,7 +458,7 @@ class DeltaSpider(DeltaTree):
         smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo)
         results=[]
         for i in range(0,len(orderings)):
-            oresults=smain.sketch_ordering(orderings[i])
+            oresults=smain.sketch_ordering(orderings[i], step=step)
             odf=pd.DataFrame(oresults,columns=["ngenomes","kval","delta"])
             odf['ordering']=i+1
             results.append(odf)
@@ -466,15 +466,16 @@ class DeltaSpider(DeltaTree):
         return pd.concat(results)
 
 
-    def sketch_ordering(self, ordering):
+    def sketch_ordering(self, ordering, step=1):
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas in a dataframe'''
         flen=len(ordering)
         print(flen)
         output=[]
         for i in range(1,flen+1):
-            sublist=[self.fastas[j] for j in ordering[:i]]
-            ospider=DeltaSpider(fasta_files=sublist, speciesinfo=self.speciesinfo)
-            output.append([i, ospider.root_k(), ospider.delta])
+            if i % step == 0:
+                sublist=[self.fastas[j] for j in ordering[:i]]
+                ospider=DeltaSpider(fasta_files=sublist, speciesinfo=self.speciesinfo)
+                output.append([i, ospider.root_k(), ospider.delta])
         return output
 
 

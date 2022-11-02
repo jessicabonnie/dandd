@@ -4,6 +4,7 @@ import sys
 import pickle
 from tabulate import tabulate
 
+
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
 
 def tree_command(args):
@@ -12,7 +13,7 @@ def tree_command(args):
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
-    results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file)
+    results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
     if args.outfile:
         results.to_csv(args.outfile)
     else:
@@ -66,12 +67,16 @@ def parse_arguments():
 
     progressive_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table")
 
+    progressive_parser.add_argument("--step", dest="step", default=1, type=int, help="Number of sketches to include in each progression. Mostly used for a single ordered progression.")
+
+
+
     progressive_parser.set_defaults(func=progressive_command)
 
     # Make parser for "dand_cmd.py info ..."
     info_parser = subparsers.add_parser("info")
 
-    progressive_parser.add_argument("-t", "--tree", dest="delta_tree", metavar="PICKLE", default=None, help="filepath to a pickle produced by the tree command")
+    
 
     
 
@@ -84,11 +89,15 @@ def parse_arguments():
 
 
 def main():
+    # hashseed = os.getenv('PYTHONHASHSEED')
+    # if not hashseed:
+    #     os.environ['PYTHONHASHSEED'] = '0'
+    #     os.execv(sys.executable, [sys.executable] + sys.argv)
     parser=parse_arguments()
-    args = parser.parse_args(sys.argv)
+    args = parser.parse_args(sys.argv[1:])
     args.func(args)
 
 
 
-#if __name__ == '__main__':
-#    main()
+if __name__ == '__main__':
+    main()
