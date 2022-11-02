@@ -4,8 +4,8 @@ from ast import Str
 import sys
 import os
 import pickle
-import hashlib
-import warnings
+#import hashlib
+#import warnings
 import re
 import subprocess
 import csv
@@ -43,175 +43,6 @@ def random_orderings(length, norder, preexist=set()):
     return newset
 
 
-# class SketchFilePath:
-#     '''An object to prepare sketch and union naming and directory location
-#     filenames: list of filenames that will be used to make the sketch
-#     kval: kvalue for the sketch
-#     speciesinfo: SpeciesSpecifics object for the species
-#     prefix: currently unused tag for filenames to differentiate between runs
-#     '''
-#     def __init__(self, filenames: list, kval: int, speciesinfo: SpeciesSpecifics, prefix=None):
-#         self.ffiles = filenames
-#         self.files= [os.path.basename(f) for f in self.ffiles]
-#         self.ngen = len(filenames)
-#         self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
-#         self.dir = os.path.join(speciesinfo.sketchdir,"k"+ str(kval), "ngen" + str(self.ngen))
-#         self.full = os.path.join(self.dir, self.base)
-#         self.registers = speciesinfo.registers
-#         os.makedirs(self.dir, exist_ok=True) 
-    
-#     def assign_hash_string(self, filename: str, speciesinfo: SpeciesSpecifics, length: int):
-#         '''If the basename of filename already exists in hash/dict, look it up; otherwise create one and add to hash/dict using the full path as the key'''
-#         filename =os.path.basename(filename)
-#         if filename in speciesinfo.hashkey.keys():
-#             return speciesinfo.hashkey[filename]
-#         else:
-#             alphanum=hashlib.md5(filename.encode()).hexdigest()
-#             trunc=alphanum[:length]
-#             if trunc in speciesinfo.hashkey.values():
-#                 warnings.warn("Hashvalue " + trunc + " has 2 keys!! " + filename + " will be assigned to a longer hash.")
-#                 return self.assign_hash_string(filename, speciesinfo, length=length+1)
-#             else:
-#                 speciesinfo.hashkey[filename] = trunc
-#                 return trunc
-    
-#     def nameSketch(self, speciesinfo: SpeciesSpecifics, kval: int):
-#         '''Determine what the name of a sketch is/will be'''
-#         if self.ngen > 1:
-            
-#             filehashes = [self.assign_hash_string(filename=onefile, speciesinfo=speciesinfo, length=1) for onefile in self.files]
-#             filehashes.sort()
-#             outfile = speciesinfo.tag + "_" + "_".join(filehashes) + "_k" + str(kval) + "_r" + str(speciesinfo.registers) + ".hll"
-#         else:
-#             outfile=os.path.basename(self.files[0]) + ".w." + str(kval) + ".spacing." + str(speciesinfo.registers) + ".hll"
-#         return outfile    
-
-    # def check_cardinality(self, speciesinfo: SpeciesSpecifics):
-    #     '''NOT CURRENTLY USED?? retrieve cardinality if it exists, otherwise add the  full path (used as key in dictionary) to a list of cardinalities to be obtained later'''
-    #     if self.full in speciesinfo.cardkey.keys() and speciesinfo.cardkey[self.full] != 0:
-    #         return float(speciesinfo.cardkey[self.full])
-    #     else:
-    #         speciesinfo.card0.append(self.full)
-    #         return 0
-
-
-# class SketchObj:
-#     ''' A sketchobject.
-#         Inputs:
-#             kval: kmer length
-#             sfp: SketchFilePath object
-#             speciesinfo: SpeciesSpecifics object containing path information for the species/tag
-#             presketches: list of sketches to use in union sketching
-
-#         Properties:
-#             kval = the kvalue used to construct the sketch
-#             sketch = the location of the sketch file
-#             cmd = the command used to create the sketch
-#             card = the cardinality of the sketch
-#             delta_pos = possible delta value (to be compared to other ks of the same group of files)
-#     '''
-    
-#     def __init__(self, kval, sfp, speciesinfo, presketches=None):
-#         self.kval = kval
-#         self.sketch = None
-#         self.cmd = None
-#         self._sfp = sfp
-#         #self._registers = registers
-#         self._presketches = presketches
-#         #self._speciesinfo = speciesinfo
-#         self.create_sketch(sfp, speciesinfo)
-#         self.card = self.check_cardinality(speciesinfo)
-#         self.delta_pos = self.card/self.kval
-    
-#     def __lt__(self, other):
-#         # lt = less than
-#         return self.delta_pos < other.delta_pos
-#     def __gt__(self, other):
-#         # gt = greater than
-#         return self.delta_pos > other.delta_pos
-#     def __repr__(self):
-#         ##TODO make this a __repr__ function instead
-#         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
-    
-#     def leaf_sketch(self, sfp, speciesinfo, debug=False):
-#         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
-#         cmdlist = [DASHINGLOC, "sketch", "-k" + str(self.kval),
-#                    "-S",str(sfp.registers),
-#                    "-p10","--prefix", str(sfp.dir),
-#                    os.path.join(speciesinfo.inputdir, sfp.files[0])]
-#         cmd = " ".join(cmdlist)
-#         if debug:
-#                 print(cmd)
-#         if (not os.path.exists(sfp.full)) or os.stat(sfp.full).st_size == 0:
-#             print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
-#             subprocess.call(cmd, shell=True)
-#             self.cmd=cmd
-#             ##TODO Check if call raises error / returns 0
-#         else:
-#             self.cmd = cmd
-#         #print(self.cmd)
-#     #unionprefix <- file.path(sketchkndir,nameSketch(reorder[1:g], kval,registers=nregister))
-#      #command <- paste0("~/lib/dashing/dashing union -p ", parval," -z -o ", unionprefix, " ", alt_input1, " ", alt_input2)
-#         #print(command)
-#         #if (! file.exists(unionprefix) | file.size(unionprefix) == 0L){
-#         #  system(command, ignore.stdout = FALSE)
-#         #} 
-#         #sketch_call=subprocess.run([ "-p10","-o", str(sketchloc), left_sketch, right_sketch])
-#         #print(sketch_call)
-#     def union_sketch(self, sfp, debug=False):
-#         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
-#         cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(sfp.full)] + self._presketches
-#         cmd = " ".join(cmdlist)
-#         #print("SIZE of {0} is {1}".format(self._sfp.full, os.stat(sfp.full)))
-#         if (not os.path.exists(sfp.full)) or os.stat(sfp.full).st_size == 0:
-#             print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
-#             #self.cmd=subprocess.run(cmdlist)
-#             subprocess.call(cmd, shell=True)
-#             self.cmd=cmd
-#         else:
-#             self.cmd = cmd
-#             #" ".join(cmdlist)
-#         if debug:
-#             print(self.cmd)
-#     ##TODO: make leaf sketch and union sketch private
-        
-#     def create_sketch(self, sfp: SketchFilePath, speciesinfo: SpeciesSpecifics):
-#         ''' If sketch file exists, assign path to self.sketch and return path. 
-#             If not create sketch, assign, and then return path.'''
-#         #self.sketch = self._sfp.full
-#         if sfp.ngen == 1:
-#             self.leaf_sketch(sfp, speciesinfo)
-#         elif sfp.ngen > 1:
-#             self.union_sketch(sfp)
-#         else:
-#             raise RuntimeError("For some reason you are trying to sketch an empty list of files. Don't do that.")
-#         self.sketch = sfp.full
-#         return self.sketch
-    
-#     # def __repr__(self):
-#     #     ##TODO make this a __repr__ function instead
-#     #     return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
-#         # print("k : {0}; cardinality: {1}; pos delta: {2}; loc : {3}; cmd: {4}".format(self.kval, self.card, self.delta_pos, self.sketch, self.cmd))
-    
-#     def individual_card(self, speciesinfo, debug=False):
-#         cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
-#         cmd = " ".join(cmdlist)
-#         if debug:
-#             print(cmd)
-#         #print(cmd)
-#         card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-#         for card in csv.DictReader(card_lines, delimiter='\t'):
-#             speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-            
-#     def check_cardinality(self, speciesinfo: SpeciesSpecifics):
-#         if self._sfp.full not in speciesinfo.cardkey.keys() or speciesinfo.cardkey[self._sfp.full] == 0:
-#             self.individual_card(speciesinfo)     
-#         return float(speciesinfo.cardkey[self.sketch])
-
-#         #else:
-#         #    self.individual_card(speciesinfo)
-#         #return float(speciesinfo.cardkey[self._sfp.full])
-  
 class DeltaTreeNode:
     ''' A node in a Delta tree. 
         node_title = name of input file or composite of inputfiles
@@ -308,9 +139,10 @@ class DeltaTreeNode:
         return
 
     def ksweep(self, speciesinfo, kmin, kmax):
+        '''Sketch all of the ks for the node (and its decendent nodes)between kmin and kmax (even when they weren't needed to calculate delta'''
         if kmax > len(self.ksketches):
             self.ksketches = self.ksketches.extend([None]* (kmax-len(self.ksketches)))
-        for kval in range(len(self.ksketches)):
+        for kval in range(kmin, kmax+1):
             if not self.ksketches[kval]:
                 self.update_node(speciesinfo, kval)
         
@@ -375,6 +207,7 @@ class DeltaTree:
         print("Subtree Delta: ", other.delta)
         print("subtraction result: ", self.delta - other.delta)
         return self.delta - other.delta
+
     def batch_update_card(self, speciesinfo, debug=False):
         '''Update the cardinality dictionary for any sketches which have been added to the card0 list in speciesinfo '''
         if len(speciesinfo.card0) > 0:
@@ -574,7 +407,7 @@ class DeltaSpider(DeltaTree):
             fastas = [f for f in fsublist if f in fastas]
         # if count is one "sorted" ordering is returned with the reference list
         if count == 1:
-            return [fastas,[i for i in range(len(fastas))]]
+            return [fastas,[[i for i in range(len(fastas))]]]
         
         # orderings are handled as sets to prevent duplication
         orderings=set()
@@ -603,47 +436,26 @@ class DeltaSpider(DeltaTree):
         # save the orderings for use next run of species 
         with open(ordering_file,"wb") as f:
             pickle.dump(orderings, f)
-        return [fastas, list(orderings)]
-        
+        return fastas, list(orderings)
 
+    def progressive_wrapper(self, flist_loc=None, count=30, ordering_file=None):
+        fastas, orderings = self.orderings_list( ordering_file=ordering_file, flist_loc=flist_loc, count=count)
 
+        return self.progressive_union(flist=fastas, orderings=orderings)
 
-
-
-    def progressive_union(self, flist_loc=None, count=30, ordering_file=None):
+    def progressive_union(self, flist, orderings):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
-        #TODO add speciesinfo as a property of tree object to be retrieved accordingly
 
         #speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart)
         
         #fastas = retrieve_fasta_files(speciesinfo.inputdir)
         #fastas=self.fastas
-        fastas, orderings = self.orderings_list(self.speciesinfo, ordering_file=ordering_file, flist_loc=flist_loc, count=count)
+        # fastas, orderings = self.orderings_list( ordering_file=ordering_file, flist_loc=flist_loc, count=count)
         # speciesinfo=self.speciesinfo
         
-        # If a fasta file list is provided, subset the fastas from the species directory to only use the intersection
-        # if flist_loc:
-        #     with open(flist_loc) as file:
-        #         fsublist = [line.strip() for line in file]
-        #     fastas = [f for f in fastas if f in fsublist]
-        # fastas.sort()
-        # orderings=set()
-        # default_ordering=os.path.join(speciesinfo.sketchdir,speciesinfo.tag + "_"+ str(len(fastas))+"orderings.pickle")
-        # if not ordering_file:
-        #     ordering_file=default_ordering
-        # if os.path.exists(ordering_file):
-        #     with open(ordering_file,'rb') as f:
-        #         orderings=pickle.load(f)
-        # orderings = random_orderings(length=len(fastas), norder=additional, preexist=orderings)
-        # if len(orderings) == 0:
-        #     raise ValueError("You must provide a pickle of a set of random orderings or a value for additional. Right now the set of orderings is 0")
-        # # save the orderings for use next run of species 
-        # with open(ordering_file,"wb") as f:
-        #     pickle.dump(orderings, f)
-        # orderings=list(orderings)
 
         # create a sketch of the full union of the fastas
-        smain = DeltaSpider(fasta_files=fastas, speciesinfo=self.speciesinfo)
+        smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo)
         results=[]
         for i in range(0,len(orderings)):
             oresults=smain.sketch_ordering(orderings[i])
@@ -689,7 +501,8 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
         with open(flist_loc) as file:
             fastas = [line.strip() for line in file]
     # right now we expect that if we are provided with a genome directory AND a file list the file list will only contain the basenames
-    elif speciesinfo.inputdir:
+    elif os.path.exists(speciesinfo.inputdir):
+        print("I think the input directory exists")
         fastas = retrieve_fasta_files(speciesinfo.inputdir, full=True)
         #fastas = [f for f in allfastas if f in fastas]
     # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
