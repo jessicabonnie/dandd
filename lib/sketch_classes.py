@@ -1,6 +1,9 @@
 from species_specifics import SpeciesSpecifics
 import os
 import hashlib
+import warnings
+import subprocess
+import csv
 DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
 
 
@@ -91,7 +94,8 @@ class SketchObj:
         cmdlist = [DASHINGLOC, "sketch", "-k" + str(self.kval),
                    "-S",str(sfp.registers),
                    "-p10","--prefix", str(sfp.dir),
-                   os.path.join(speciesinfo.inputdir, sfp.files[0])]
+                    sfp.ffiles[0]]
+                #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
         cmd = " ".join(cmdlist)
         if debug:
                 print(cmd)
