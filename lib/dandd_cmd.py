@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 def tree_command(args):
     dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc)
-    dtree.save(outloc=args.sketchdir, tag=args.tag, label=args.label)
+    dtree.save(outloc=args.sketchdir, tag=args.tag, label=args.label, canonicalize=args.canonicalize)
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -26,6 +26,8 @@ def parse_arguments():
     # Arguments for top-level
 
     parser.add_argument("-v", "--verbose", action="count", default=0)
+    parser.add_argument("-C", "--no-canon", action="store_false", default=True, dest="canonicalize", help="instruct dashing to use non-canonicalized kmers")
+
 
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
 

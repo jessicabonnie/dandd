@@ -5,7 +5,7 @@ import os
 
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
-    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, registers, flist_loc=None):
+    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, registers, flist_loc=None, canonicalize=True):
         self.tag=tag
         self.sketchdir=os.path.join(sketchdir, tag)
         os.makedirs(self.sketchdir, exist_ok=True)
@@ -18,6 +18,7 @@ class SpeciesSpecifics:
         self.orderings = None
         self.registers=registers
         self.flist_loc=flist_loc
+        self.canonicalize=canonicalize
         
     def _read_hashkey(self):
         '''Recover species specific hashkey from pickle file'''

@@ -51,7 +51,7 @@ class DeltaTreeNode:
         ksweep = should ks 1-100 be explored even after delta is found?
         
         '''
-    def __init__(self, node_title, children, progeny=None ):
+    def __init__(self, node_title: str, children: list, progeny=None ):
         self.node_title = node_title
         self.progeny = progeny
         # self.left = left
@@ -93,7 +93,7 @@ class DeltaTreeNode:
 #        for card in csv.DictReader(card_lines, delimiter='\t'):
 #            cards[card['#Path']] = card['Size (est.)']
 #        return cards
-    def find_delta_helper(self, speciesinfo, kval, direction=1):
+    def find_delta_helper(self, speciesinfo: SpeciesSpecifics, kval: int, direction=1):
         '''determine if there is a local maximum delta relative to the current k'''
         self.update_node(speciesinfo, kval)
         if direction < 0:
@@ -109,7 +109,7 @@ class DeltaTreeNode:
             self.find_delta_helper(speciesinfo=speciesinfo, kval=kval+direction, direction=direction)
         return
     
-    def find_delta(self, speciesinfo, kval):
+    def find_delta(self, speciesinfo: SpeciesSpecifics, kval: int):
         '''search in both directions of the provided kvalue to detect a local maximum'''
         self.find_delta_helper(speciesinfo=speciesinfo, kval=kval, direction=1)
         self.find_delta_helper(speciesinfo=speciesinfo, kval=kval, direction=-1)
@@ -138,7 +138,7 @@ class DeltaTreeNode:
         self.update_card(speciesinfo)
         return
 
-    def ksweep(self, speciesinfo, kmin, kmax):
+    def ksweep(self, speciesinfo: SpeciesSpecifics, kmin: int, kmax: int):
         '''Sketch all of the ks for the node (and its decendent nodes)between kmin and kmax (even when they weren't needed to calculate delta'''
         if kmax > len(self.ksketches):
             self.ksketches = self.ksketches.extend([None]* (kmax-len(self.ksketches)))
@@ -484,7 +484,7 @@ class DeltaSpider(DeltaTree):
 #     def __init__(self, fasta_files, speciesinfo, nchildren=2):
 #         self.hashkey = speciesinfo.hashkey
 
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None, canonicalize=True):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
@@ -495,7 +495,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)'''
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     print("here1")
-    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers, flist_loc=flist_loc)
+    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers, flist_loc=flist_loc, canonicalize=canonicalize)
     print("HERE")
     #inputdir = speciesinfo.inputdir
     if flist_loc:

@@ -6,7 +6,11 @@ import subprocess
 import csv
 DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
 
-
+def canon_command(canon:bool):
+        outstr=''
+        if not canon:
+            outstr=' --no-canon '
+        return outstr
 class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location
     filenames: list of filenames that will be used to make the sketch
@@ -73,6 +77,7 @@ class SketchObj:
     
     def __init__(self, kval, sfp, speciesinfo, presketches=None):
         self.kval = kval
+        self.canon=canon_command(speciesinfo.canonicalize)
         self.sketch = None
         self.cmd = None
         self._sfp = sfp
@@ -93,9 +98,10 @@ class SketchObj:
         ##TODO make this a __repr__ function instead
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
+    
     def leaf_sketch(self, sfp, speciesinfo, debug=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
-        cmdlist = [DASHINGLOC, "sketch", "-k" + str(self.kval),
+        cmdlist = [DASHINGLOC, "sketch", "-k" + self.canon + str(self.kval),
                    "-S",str(sfp.registers),
                    "-p10","--prefix", str(sfp.dir),
                     sfp.ffiles[0]]
