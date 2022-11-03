@@ -9,7 +9,7 @@ import pickle
 import re
 import subprocess
 import csv
-from multiprocessing import Process
+from multiprocessing import Process, Pool
 from random import sample
 from numpy import unique
 import pandas as pd
@@ -42,6 +42,9 @@ def random_orderings(length, norder, preexist=set()):
         newset.update(set([tuple(sample(rlist,length)) for i in range(needed)]))
     return newset
 
+def _update_helper(node, specinfo, kval):
+    node.find_delta(specinfo, kval)
+    return node.ksketches[kval].sketch
 
 class DeltaTreeNode:
     ''' A node in a Delta tree. 
@@ -110,12 +113,13 @@ class DeltaTreeNode:
         return
     
     def find_delta(self, speciesinfo: SpeciesSpecifics, kval: int):
-        '''search in both directions of the provided kvalue to detect a local maximum'''
+        '''search in both directions of provided kvalue to detect a local maximum'''
         self.find_delta_helper(speciesinfo=speciesinfo, kval=kval, direction=1)
+        #TODO maybe this one should reference the species kstart
         self.find_delta_helper(speciesinfo=speciesinfo, kval=kval, direction=-1)
         return
 
-    def update_node(self, speciesinfo, kval):
+    def update_node(self, speciesinfo, kval, parallel=False):
         '''Populate the sketch object for the given k at the self node as well as all children of the node'''
         if self.ksketches[kval] is None:
             #create sketch file path holding information relating to the sketch for that k 
@@ -125,9 +129,16 @@ class DeltaTreeNode:
                 presketches=[]
                 # update each of the child nodes 
                 # TODO can be done in parallel
-                for i in range(len(self.children)):
-                    self.children[i].update_node(speciesinfo, kval)
-                    presketches= presketches + [self.children[i].ksketches[kval].sketch]
+                if parallel:
+                    pool2 = Pool(processes=4)
+                    results = [pool2.apply(_update_helper, args=(child, speciesinfo, kval, )) for child in self.children]
+                    presketches=presketches + results
+                else:
+                    for i in range(len(self.children)):
+                        self.children[i].update_node(speciesinfo, kval)
+                        presketches= presketches + [self.children[i].ksketches[kval].sketch]
+
+                #print(presketches)
                 
                 self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp, speciesinfo=speciesinfo, presketches=presketches)
 
@@ -240,7 +251,8 @@ class DeltaTree:
         root=self._dt[-1]
         return root.bestk
 
-    def _build_tree(self, symbol: list, speciesinfo: SpeciesSpecifics, nchildren: int) -> None:
+
+    def _build_tree(self, symbol: list, speciesinfo: SpeciesSpecifics, nchildren: int, parallel=False) -> None:
         '''
         Build a DeltaTree. The depth first nodes will have the provided number of children until there are only k<n input fastas left. A python list of nodes is returned with pointers to child nodes where applicable.
 
@@ -262,16 +274,18 @@ class DeltaTree:
                 node_title=s, children=None
             ) for s in symbol]
         inputs.sort()
-        for n in inputs:
-            n.find_delta(speciesinfo, speciesinfo.kstart)
+        ## TODO: parallelize right here
+        #for n in inputs:
+        #    n.find_delta(speciesinfo, speciesinfo.kstart)
         #inputs = [n.find_delta(speciesinfo, self.registers, speciesinfo.kstart) for n in inputs]
-        # procs = []
-        # for dnode in inputs:
-        #     proc = Process(target=DeltaTreeNode.find_delta, args=[dnode, speciesinfo, self.registers, speciesinfo.kstart])
-        #     procs.append(proc)
-        #     proc.start()
-        # for proc in procs:
-        #     proc.join()
+        # 
+        if parallel:
+            pool = Pool(processes=4)
+            results = [pool.apply(_update_helper, args=(dnode, speciesinfo,speciesinfo.kstart,  )) for dnode in inputs]
+        else:
+            for n in inputs:
+                n.find_delta(speciesinfo, speciesinfo.kstart)
+        
         
         self._dt = inputs
         idx_insert = 0
