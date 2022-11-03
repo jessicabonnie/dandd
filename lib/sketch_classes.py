@@ -9,7 +9,7 @@ DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
 def canon_command(canon:bool):
         outstr=''
         if not canon:
-            outstr=' --no-canon '
+            outstr='--no-canon'
         return outstr
 class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location
@@ -101,7 +101,7 @@ class SketchObj:
     
     def leaf_sketch(self, sfp, speciesinfo, debug=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
-        cmdlist = [DASHINGLOC, "sketch", "-k" + self.canon + str(self.kval),
+        cmdlist = [DASHINGLOC, "sketch", self.canon,"-k" + str(self.kval),
                    "-S",str(sfp.registers),
                    "-p10","--prefix", str(sfp.dir),
                     sfp.ffiles[0]]

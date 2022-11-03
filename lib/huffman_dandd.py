@@ -120,14 +120,18 @@ class DeltaTreeNode:
         if self.ksketches[kval] is None:
             #create sketch file path holding information relating to the sketch for that k 
             sfp = SketchFilePath(filenames=self.fastas, kval=kval, speciesinfo=speciesinfo)
+            # if this isn't a leaf node then collect the sketches for unioning
             if self.ngen > 1:
                 presketches=[]
+                # update each of the child nodes 
+                # TODO can be done in parallel
                 for i in range(len(self.children)):
                     self.children[i].update_node(speciesinfo, kval)
                     presketches= presketches + [self.children[i].ksketches[kval].sketch]
                 
                 self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp, speciesinfo=speciesinfo, presketches=presketches)
-                
+
+            # if this is a leaf node, sketch from fasta    
             elif self.ngen == 1:
                 #print("Inside ngen=1 of update_node")
                 self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp,  speciesinfo=speciesinfo)
@@ -252,6 +256,7 @@ class DeltaTree:
             - speciesinfo: SpeciesSpecifics object containing information specific to the overall species
             - nchildren: number of children of each node in the tree (or at least as many nodes as it works for)
         '''
+        # create leaf nodes for all the provided fastas
         inputs = [
             DeltaTreeNode(
                 node_title=s, children=None
