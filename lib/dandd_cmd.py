@@ -26,8 +26,7 @@ def parse_arguments():
     # Arguments for top-level
 
     parser.add_argument("-v", "--verbose", action="count", default=0)
-    parser.add_argument("-C", "--no-canon", action="store_false", default=True, dest="canonicalize", help="instruct dashing to use non-canonicalized kmers")
-
+    
 
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
 
@@ -52,6 +51,8 @@ def parse_arguments():
     tree_parser.add_argument("-n", "--nchildren", dest="nchildren", metavar="INTEGER", type=int, default=None, help="number of children for each node in the delta tree -- default is to create a tree of only 2 levels with all individual sketches as the children of the root node.")
 
     tree_parser.add_argument("-r", "--registers", dest="registers", metavar="INTEGER", default=20, help="number of registers to use during sketching")
+
+    tree_parser.add_argument("-C", "--no-canon", action="store_false", default=True,  dest="canonicalize", help="instruct dashing to use non-canonicalized kmers")
 
     tree_parser.set_defaults(func=tree_command)
 
