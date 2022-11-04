@@ -55,7 +55,7 @@ class SpeciesSpecifics:
         for title in ['HVSVC2','ecoli','salmonella','human']:
             if title in self.tag:
                 return title
-        os.warnings("FOR SOME REASON I DON'T RECOGNIZE THAT SPECIES TAG!!!")
+        # os.warnings("FOR SOME REASON I DON'T RECOGNIZE THAT SPECIES TAG!!!")
         return self.tag
     
     def _locate_input(self, genomedir: str):
