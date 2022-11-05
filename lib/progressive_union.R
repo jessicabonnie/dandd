@@ -402,7 +402,7 @@ results.save[[paste0("ng",gcount)]] = list(
 save(results.save,file=resultsfile)
 print("SAVED RESULTS FILE!")
 
-tp <- plotProgressiveUnion(species=tag, out = sketchdir, ngenome=gcount, delta.table)
+tp <- plotProgressiveUnion(species=tag, out = sketchdir, delta.table, nshow=5)
 
 # tp <-
 #   delta.table %>%
