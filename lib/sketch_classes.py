@@ -75,7 +75,7 @@ class SketchObj:
             delta_pos = possible delta value (to be compared to other ks of the same group of files)
     '''
     
-    def __init__(self, kval, sfp, speciesinfo, presketches=None):
+    def __init__(self, kval, sfp, speciesinfo, presketches=None, delay=False):
         self.kval = kval
         self.canon=canon_command(speciesinfo.canonicalize)
         self.sketch = None
@@ -99,7 +99,7 @@ class SketchObj:
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
     
-    def leaf_sketch(self, sfp, speciesinfo, debug=False):
+    def leaf_sketch(self, sfp, speciesinfo, debug=False, delay=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmdlist = [DASHINGLOC, "sketch", self.canon,"-k" + str(self.kval),
                    "-S",str(sfp.registers),
@@ -114,6 +114,7 @@ class SketchObj:
             subprocess.call(cmd, shell=True)
             self.cmd=cmd
             ##TODO Check if call raises error / returns 0
+            ##TODO pass back the command so that it can be done in parallel?
         else:
             self.cmd = cmd
         #print(self.cmd)
