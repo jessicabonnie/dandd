@@ -76,7 +76,7 @@ gzip -v consensus/allvar_${i}_?.fasta
 done
 realpath consensus/*.gz > consensus_fastas.txt
 grep -vE "(_HG00514_|_HG00733_|_NA19240_)" consensus_fastas.txt > consensus_fastas_nonrel.txt
-grep -vEf raw/SampleIds_male.txt consensus_fastas_nonrel.txt > consensus_fastas_nonrel_female.txt
+grep -vEf raw/SampleIds_male.txt consensus_fastas_nonrel.txt | sort > consensus_fastas_nonrel_female.txt
 #grep -vE "(_HG00514_|_HG00733_|_NA19240_)" ${sortprefix}_out.txt > ${sortprefix}_nonrel.txt
 #grep -vEf /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/raw/SampleIds_male.txt ${sortprefix}_nonrel.txt > ${sortprefix}_nonrel_female.txt
 
@@ -97,7 +97,7 @@ done
 
 realpath consensus_snv_sv/*.gz > consensus_snv_sv_fastas.txt
 grep -vE "(_HG00514_|_HG00733_|_NA19240_)" consensus_snv_sv_fastas.txt > consensus_snv_sv_fastas_nonrel.txt
-grep -vEf raw/SampleIds_male.txt consensus_snv_sv_fastas_nonrel.txt > consensus_snv_sv_fastas_nonrel_female.txt
+grep -vEf raw/SampleIds_male.txt consensus_snv_sv_fastas_nonrel.txt | sort > consensus_snv_sv_fastas_nonrel_female.txt
 
 ```
 
@@ -117,7 +117,7 @@ done
 
 realpath consensus_snv_indel/*.gz > consensus_snv_indel_fastas.txt
 grep -vE "(_HG00514_|_HG00733_|_NA19240_)" consensus_snv_indel_fastas.txt > consensus_snv_indel_fastas_nonrel.txt
-grep -vEf raw/SampleIds_male.txt consensus_snv_indel_fastas_nonrel.txt > consensus_snv_indel_fastas_nonrel_female.txt
+grep -vEf raw/SampleIds_male.txt consensus_snv_indel_fastas_nonrel.txt | sort > consensus_snv_indel_fastas_nonrel_female.txt
 
 
 ```
@@ -142,7 +142,7 @@ done
 
 realpath consensus_snv/*.gz > consensus_snv_fastas.txt
 grep -vE "(_HG00514_|_HG00733_|_NA19240_)" consensus_snv_fastas.txt > consensus_snv_fastas_nonrel.txt
-grep -vEf raw/SampleIds_male.txt consensus_snv_fastas_nonrel.txt > consensus_snv_fastas_nonrel_female.txt
+grep -vEf raw/SampleIds_male.txt consensus_snv_fastas_nonrel.txt | sort > consensus_snv_fastas_nonrel_female.txt
 
 
 ```
@@ -165,7 +165,7 @@ done
 
 realpath consensus_indel/*.gz > consensus_indel_fastas.txt
 grep -vE "(_HG00514_|_HG00733_|_NA19240_)" consensus_indel_fastas.txt > consensus_indel_fastas_nonrel.txt
-grep -vEf raw/SampleIds_male.txt consensus_indel_fastas_nonrel.txt > consensus_indel_fastas_nonrel_female.txt
+grep -vEf raw/SampleIds_male.txt consensus_indel_fastas_nonrel.txt | sort > consensus_indel_fastas_nonrel_female.txt
 
 ```
 
@@ -188,7 +188,7 @@ done
 
 realpath consensus_sv/*.gz > consensus_sv_fastas.txt
 grep -vE "(_HG00514_|_HG00733_|_NA19240_)" consensus_sv_fastas.txt > consensus_sv_fastas_nonrel.txt
-grep -vEf raw/SampleIds_male.txt consensus_sv_fastas_nonrel.txt > consensus_sv_fastas_nonrel_female.txt
+grep -vEf raw/SampleIds_male.txt consensus_sv_fastas_nonrel.txt | sort > consensus_sv_fastas_nonrel_female.txt
 
 
 ```
@@ -206,7 +206,7 @@ gzip -v consensus_autosomes/allvar_autosomes_${i}_?.fasta
 done
 realpath consensus/*.gz > consensus_fastas.txt
 grep -vE "(_HG00514_|_HG00733_|_NA19240_)" consensus_fastas.txt > consensus_fastas_nonrel.txt
-grep -vEf raw/SampleIds_male.txt consensus_fastas_nonrel.txt > consensus_fastas_nonrel_female.txt
+grep -vEf raw/SampleIds_male.txt consensus_fastas_nonrel.txt | sort > consensus_fastas_nonrel_female.txt
 
 
 
