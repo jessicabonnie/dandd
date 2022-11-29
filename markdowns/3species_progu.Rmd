@@ -1,0 +1,143 @@
+---
+title: "Progressive Union"
+author: "Jessica Bonnie"
+date: "5/10/2022"
+output: html_document
+---
+
+```{r prep, echo=FALSE,warning=FALSE,include=FALSE}
+
+require(tidyr)
+require(ggplot2)
+require(data.table)
+require(openssl)
+require(dplyr)
+require(optparse)
+require(callr)
+codelib<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
+source(file.path(codelib,'plot_progressive.R'))
+
+outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union'
+
+```
+
+
+```{bash}
+tag=ecoli
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
+sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds/sketches
+
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -c ${sketchdir} -k 14 
+
+tree_pick=${sketchdir}/${tag}_10_dtree.pickle
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 120 -o ${outdir}/${tag}_progu.csv
+```
+
+
+```{r draw_ecoli, cache=TRUE}
+tag='ecoli'
+outdir='/home/jbonnie1/scr16_blangme2/jessica/dandd/bds'
+
+delta_ecoli<- fread(file.path(outdir,paste0(tag,"_progu.csv"))) %>%
+  select(-V1) %>% rename(delta_pos=delta)
+
+plotProgressiveUnion(species=tag, out = outdir, delta_ecoli, nshow=120)
+
+```
+
+
+
+```{bash}
+tag=salmonella
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
+sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds/sketches
+
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -c ${sketchdir} -k 15 
+
+tree_pick=${sketchdir}/${tag}_10_dtree.pickle
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 120 -o ${outdir}/${tag}_progu.csv
+```
+
+
+```{r draw_salmon6, cache=TRUE}
+tag='salmonella'
+outdir='/home/jbonnie1/scr16_blangme2/jessica/dandd/bds'
+
+#fread("/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/progressive_union/sketches/testplot.csv")
+delta_salmon<- fread(file.path(outdir,paste0(tag,"_progu.csv"))) %>%
+  select(-V1) %>% rename(delta_pos=delta)
+
+salmon.gg<-plotProgressiveUnion(species=tag, out = outdir, delta = delta_salmon, nshow=5)
+salmon.gg + scale_y_log10()
+salmon.gg + ylim(min(c(delta_salmon$delta_pos,delta_human$delta_pos, delta_ecoli$delta_pos), na.rm=TRUE),max(c(delta_salmon$delta_pos,delta_human$delta_pos, delta_ecoli$delta_pos), na.rm=TRUE)/340)
+salmon.gg
+
+```
+
+
+
+```{bash}
+tag=human
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
+sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds/sketches
+
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -c ${sketchdir} -k 20 
+
+tree_pick=${sketchdir}/${tag}_12_dtree.pickle
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu.csv
+```
+
+
+
+```{r draw_human, cache=TRUE}
+tag='human'
+
+delta_human<- fread(file.path(outdir,paste0(tag,"_progu.csv"))) %>%
+  select(-V1) %>% rename(delta_pos=delta)
+
+
+plotProgressiveUnion(species=tag, out = outdir, delta = delta_human, nshow=120)
+
+humanprogu<-plotProgressiveUnion(species=tag, out = outdir, delta = delta_human, nshow=8) + guides(linetype = 'none')
+
+ggsave(filename='human_progu.pdf',
+       plot=humanprogu ,
+       device = cairo_pdf, 
+       dpi = 1200, 
+       width = 16,
+       height = 10, 
+       units = "cm")
+
+```
+
+
+
+```{r humanloess}
+
+loess_human<-loess(formula=delta_pos~ngenomes,data = delta_human)
+delta_human %>% filter(delta_pos<.975*predict(loess_human,ngenomes)) %>% View()
+
+human.dt <- delta_human %>% data.table() %>%
+  group_by(ordering) %>% 
+  # add column holding slope of delta from each genome to the next in an ordering
+  mutate(slope = (delta_pos - lag(delta_pos)) / (ngenomes - lag(ngenomes))) %>% 
+  mutate(global_mean=(max(delta_pos)-min(delta_pos))/(max(ngenomes)-min(ngenomes))) %>%
+  # mutate(mean=mean(slope,na.rm = TRUE)) %>%
+  filter((slope < (24/25)*global_mean | slope > (26/25)*global_mean ) & slope !=0) %>%
+  #mutate(gset=list(order_human[[ordering]][1:ngenomes])) %>%
+  ungroup() 
+test <- unlist(lapply(seq(1,12), function(x){
+  human.tmp<- human.dt %>% rowwise() %>% mutate(tmp=unlist(x %in% gset))
+  return(sum(unlist(human.tmp$tmp)))
+}))
+test
+which(test > max(test)-2)
+
+
+```
