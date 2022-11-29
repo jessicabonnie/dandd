@@ -1,0 +1,167 @@
+---
+title: "r v z v d"
+author: "Jessica Bonnie"
+date: "11/2/2022"
+output: html_document
+---
+
+```{r prep, echo=FALSE,warning=FALSE,include=FALSE}
+
+require(tidyr)
+require(ggplot2)
+require(data.table)
+require(openssl)
+require(dplyr)
+require(optparse)
+require(callr)
+codelib<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
+source(file.path(codelib,'plot_progressive.R'))
+
+```
+
+```{bash, include=FALSE}
+tag=salmonellarz
+sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/r_z_d/sketch
+filelist=/scratch16/blangme2/jessica/data/salmonellarz_filelist.txt
+
+python lib/dandd_cmd.py tree -s ${tag} --no-canon -f ${filelist} -c $sketchdir
+
+```
+
+
+
+```{bash partest}
+/home/jbonnie1/scr16_blangme2/jessica/dandd/r_z_d/sketch/partest_500_dtree.pickle
+
+```
+
+
+### salmonella
+
+```{bash pickle}
+tag=salmonellarz
+sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/r_z_d/sketch
+stree=${sketchdir}/${tag}_500_dtree.pickle
+outcsv=${sketchdir}/${tag}_pu_plot.csv
+filelist=/scratch16/blangme2/jessica/data/${tag}_filelist.txt
+python lib/dandd_cmd.py progressive -d ${stree} -o ${outcsv} -f ${filelist} -n 1
+```
+
+```{r salmonellarz}
+salmonellarz=read.csv('/home/jbonnie1/scr16_blangme2/jessica/dandd/r_z_d/sketch/salmonellarz_pu_plot.csv')
+salmonellarz <- salmonellarz %>% select(-X) %>% filter(ngenomes %% 2 == 0)
+
+omar100<-read.csv('/home/jbonnie1/scr16_blangme2/jessica/dandd/r_z_d/omar_100.csv') %>% mutate(ngenomes=numgenomes)
+
+deltarz<-full_join(salmonellarz,omar100) %>% filter(ngenomes<=100)
+
+gg_dr <- ggplot(data=omar100) + 
+  geom_line(mapping=aes(x=ngenomes,y=r, color="r"), size=1.25) 
+gg_dr
+```
+
+
+```{r deltar, echo=FALSE}
+
+deltar = max(deltarz$r)/max(deltarz$delta)
+rshift=min(deltarz$d) - min(deltarz$r)/deltar
+
+gg_dr <- ggplot() + 
+  geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=delta, color="delta"), size=1.25) +
+  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=r/deltar+rshift, color="r"), size=1.25) +
+  scale_y_continuous(
+    name = "Value of \u03b4*",
+    sec.axis = sec_axis(~.*deltar- min(deltarz$r)/deltar, name="Value of r (scaled to \u03b4)")
+  ) +
+  theme_bw() +
+  labs( title="Growth of r and \u03b4 with number of salmonella genomes") +
+  xlab("# genomes") +
+  #geom_text(aes(x=100,y=2.5e6, color="delta"),label='\u03b4', size=6) +
+  #geom_text(aes(x=220,y=3.32e6, color="r"),label='r', size=6) +
+  guides(color="none")
+  
+gg_dr
+```
+
+
+```{r deltaz, echo=FALSE}
+
+deltaz = max(deltarz$z)/max(deltarz$delta)
+zshift=min(deltarz$delta) - min(deltarz$z)/deltaz
+
+gg_dz <- ggplot() + 
+  geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=delta, color="delta"), size=1.25) +
+  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=z/deltaz+zshift, color="z"), size=1.25) +
+  scale_y_continuous(
+    name = "Value of \u03b4*",
+    sec.axis = sec_axis(~.*deltaz- min(deltarz$z)/deltaz, name="Value of z (scaled to \u03b4)")
+  ) +
+  theme_bw() +
+  labs( title="Growth of z and \u03b4* with number of salmonella genomes") +
+  xlab("# genomes") +
+  #geom_text(aes(x=100,y=2.5e6, color="delta"),label='\u03b4', size=6) +
+  #geom_text(aes(x=220,y=3.32e6, color="r"),label='r', size=6) +
+  guides(color="none")
+  
+gg_dz
+```
+
+
+```{r rz, echo=FALSE}
+
+rz = max(deltarz$z)/max(deltarz$r)
+#min(deltarz$r)/deltar
+
+
+#min(deltarz$z)/deltaz
+zrshift=min(deltarz$r) - min(deltarz$z)/rz
+
+gg_rz <- ggplot() + 
+  geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=r, color="r"), size=1.25) +
+  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=z/rz - zrshift, color="z"), size=1.25) +
+  scale_y_continuous(
+    name = "Value of r*",
+    sec.axis = sec_axis(~.*rz+ min(deltarz$z)/rz, name="Value of z")
+  ) +
+  theme_bw() +
+  labs( title="Growth of z and r with number of salmonella genomes") +
+  xlab("# genomes") +
+  #geom_text(aes(x=100,y=2.5e6, color="delta"),label='\u03b4', size=6) +
+  #geom_text(aes(x=220,y=3.32e6, color="r"),label='r', size=6) +
+  guides(color="none")
+  
+gg_rz
+```
+
+```{r deltarz, echo=FALSE}
+
+deltar = max(deltarz$r)/max(deltarz$delta)
+deltaz = max(deltarz$z)/max(deltarz$delta)
+
+#min(deltarz$r)/deltar
+rshift=min(deltarz$delta) - min(deltarz$r)/deltar
+
+#min(deltarz$z)/deltaz
+zshift=min(deltarz$delta) - min(deltarz$z)/deltaz
+
+gg_dzr <- ggplot() + 
+  geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=delta, color="\u03b4*"), size=1.25) +
+  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=z/deltaz+zshift, color="z"), size=1.25) +
+  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=r/deltar+rshift, color="r"), size=1.25) +
+  scale_y_continuous(
+    name = "Value of \u03b4 and r,z scaled to \u03b4*") +
+# ,
+#     sec.axis = sec_axis(~.*deltar, name="Value of r")
+#   ) + 
+  # sec.axis = sec_axis(~.*deltaz, name="Value of z") +
+  
+  theme_bw() +
+  labs( title="Growth of r, z, and \u03b4* with number of salmonella genomes") +
+  xlab("# genomes") 
+#+
+  #geom_text(aes(x=100,y=2.5e6, color="delta"),label='\u03b4', size=6) +
+  #geom_text(aes(x=220,y=3.32e6, color="r"),label='r', size=6) +
+ # guides(color="none")
+  
+gg_dzr
+```
