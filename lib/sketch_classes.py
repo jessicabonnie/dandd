@@ -43,6 +43,7 @@ class SketchFilePath:
                 speciesinfo.hashkey[filename] = trunc
                 return trunc
     
+    ##TODO: implement naming function for kmc
     def nameSketch(self, speciesinfo: SpeciesSpecifics, kval: int):
         '''Determine what the name of a sketch is/will be'''
         if self.ngen > 1:
@@ -105,6 +106,11 @@ class SketchObj:
     /usr/bin/time -o ${outprefix}.out -v sh -c "kmc -v -t${nthreads} -k${kval} -ci1 -fm ${datadir}/${fasta} ${apout}/${fasta}.kmc ${outdir}/kmc > ${cardloc}"
     card=$(grep "No. of unique counted k-mers" ${cardloc} | awk '{print $NF}')
     '''
+    def leaf_count(self, sfp, speciesinfo, debug=False, delay=False):
+        ''' If leaf kmc database exists, record the command that would have been used. If not run the command and store it.'''
+        ##TODO: determine canonicalization argument for kmc
+        cmdlist = ['kmc','-ci1','-k'+str(self.kval),'-fm', sfp.ffiles[0]]
+        pass
     
     def leaf_sketch(self, sfp, speciesinfo, debug=False, delay=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
