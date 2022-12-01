@@ -18,7 +18,7 @@ from sketch_classes import SketchFilePath
 from sketch_classes import SketchObj
 
 
-DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
+DASHINGLOC="dashing"
 codelib='/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
 RANGEK=100
 
@@ -185,12 +185,12 @@ class DeltaTreeNode:
                 speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
         #print(self._speciesinfo.cardkey)
         for sketch in self.ksketches:
-            if sketch:
+            if sketch is not None:
                 if sketch.sketch in sketches:
                     sketch.check_cardinality(speciesinfo)
                     sketch.delta_pos=sketch.card/sketch.kval
 
-
+# TODO add argument for dashing v kmc --> estimate=True
 class DeltaTree:
     ''' Delta tree data structure. '''
     def __init__(self, fasta_files, speciesinfo, nchildren=2):
@@ -223,9 +223,11 @@ class DeltaTree:
         print("subtraction result: ", self.delta - other.delta)
         return self.delta - other.delta
 
+    ## NOTE batch_update_card not in use
     def batch_update_card(self, speciesinfo, debug=False):
         '''Update the cardinality dictionary for any sketches which have been added to the card0 list in speciesinfo '''
         if len(speciesinfo.card0) > 0:
+            # TODO check for kmc v dashing
             cmdlist = [DASHINGLOC,"card --presketched -p10"] +  speciesinfo.card0
             cmd = " ".join(cmdlist)
             if debug:
@@ -284,6 +286,7 @@ class DeltaTree:
             results = [pool.apply(_update_helper, args=(dnode, speciesinfo,speciesinfo.kstart,  )) for dnode in inputs]
         else:
             for n in inputs:
+                
                 n.find_delta(speciesinfo, speciesinfo.kstart)
         
         
@@ -474,6 +477,7 @@ class DeltaSpider(DeltaTree):
         
 
         # create a sketch of the full union of the fastas
+        print(flist)
         smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo)
         results=[]
         for i in range(0,len(orderings)):
@@ -481,6 +485,8 @@ class DeltaSpider(DeltaTree):
             odf=pd.DataFrame(oresults,columns=["ngenomes","kval","delta"])
             odf['ordering']=i+1
             results.append(odf)
+            self.speciesinfo.save_hashkey()
+        
         #rdf=pd.DataFrame(results,columns=["k","delta"])
         return pd.concat(results)
 
@@ -502,7 +508,7 @@ class DeltaSpider(DeltaTree):
 #     '''something'''
 #     def __init__(self, fasta_files, speciesinfo, nchildren=2):
 #         self.hashkey = speciesinfo.hashkey
-
+# TODO: add arg for dashing vs kmc
 def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None, canonicalize=True):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
@@ -513,7 +519,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     registers = number of registers to use when sketching
     flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)'''
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
-    print("here1")
+    
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers, flist_loc=flist_loc, canonicalize=canonicalize)
     print("HERE")
     #inputdir = speciesinfo.inputdir

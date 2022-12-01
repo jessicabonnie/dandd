@@ -4,7 +4,7 @@ import hashlib
 import warnings
 import subprocess
 import csv
-DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
+DASHINGLOC="dashing"
 
 def canon_command(canon:bool):
         outstr=''
