@@ -162,6 +162,7 @@ for howmany in $(seq 1 $nfasta); do
       curunion=${sketched[0]}
       
       # using the previous created sketch, get the cardinality for the first db in the random ordering
+      # TODO : update to use info command 
       cmd="kmc_tools -t${nthreads} transform ${curunion} histogram ${newhist}"
       echo ${cmd}
       /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
@@ -175,6 +176,8 @@ for howmany in $(seq 1 $nfasta); do
       echo Next addition ${newguy}
       
       # benchmark timing for progressive union of sketches
+      # TODO : update to use info command 
+
       cmd="kmc_tools -t${nthreads} simple ${curunion} ${newguy} union ${newunion}" 
       echo ${cmd}
       /usr/bin/time -o ${timeout} -v sh -c "$cmd"
@@ -229,6 +232,8 @@ if [ $approach == 'kmc' ]; then
   echo ${string} >> ${apout}/complex_union.txt
   
   #Benchmarch the process
+  # TODO : update to use info command 
+
   cmd="kmc_tools -t${nthreads} complex ${apout}/complex_union.txt" 
   echo ${cmd}
   /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
