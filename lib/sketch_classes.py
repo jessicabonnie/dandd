@@ -98,6 +98,13 @@ class SketchObj:
         ##TODO make this a __repr__ function instead
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
+    '''TODO: implement kmc
+    CODE from benchmarking to create individual databases:
+    if [ $approach == 'kmc' ]; then
+    outsketch=${apout}/${fasta}.kmc
+    /usr/bin/time -o ${outprefix}.out -v sh -c "kmc -v -t${nthreads} -k${kval} -ci1 -fm ${datadir}/${fasta} ${apout}/${fasta}.kmc ${outdir}/kmc > ${cardloc}"
+    card=$(grep "No. of unique counted k-mers" ${cardloc} | awk '{print $NF}')
+    '''
     
     def leaf_sketch(self, sfp, speciesinfo, debug=False, delay=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
@@ -118,14 +125,29 @@ class SketchObj:
         else:
             self.cmd = cmd
         #print(self.cmd)
-    #unionprefix <- file.path(sketchkndir,nameSketch(reorder[1:g], kval,registers=nregister))
-     #command <- paste0("~/lib/dashing/dashing union -p ", parval," -z -o ", unionprefix, " ", alt_input1, " ", alt_input2)
-        #print(command)
-        #if (! file.exists(unionprefix) | file.size(unionprefix) == 0L){
-        #  system(command, ignore.stdout = FALSE)
-        #} 
-        #sketch_call=subprocess.run([ "-p10","-o", str(sketchloc), left_sketch, right_sketch])
-        #print(sketch_call)
+    
+
+    '''TODO: implement kmc
+    CODE from benchmarking to create union from database list
+ 
+  #Create an instruction file for kmc_tools complex
+  echo "INPUT:" > ${apout}/complex_union.txt
+  echo ${sketched[@]} | sed 's/ /\n/g' | awk '{print "input"NR" = ",$0, "-ci1"}'>> ${apout}/complex_union.txt
+  echo "OUTPUT:" >> ${apout}/complex_union.txt
+  string="${fullunion} = input1"
+  for i in $(seq 2 $nfasta); do string="${string} + input$i"; done
+  echo ${string} >> ${apout}/complex_union.txt
+  
+  #Benchmarch the process
+  # TODO : update to use info command 
+
+  cmd="kmc_tools -t${nthreads} complex ${apout}/complex_union.txt" 
+  echo ${cmd}
+  /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
+  kmc_tools -t${nthreads} transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}
+  
+    
+    '''
     def union_sketch(self, sfp, debug=False):
         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(sfp.full)] + self._presketches
@@ -156,7 +178,7 @@ class SketchObj:
         self.sketch = sfp.full
         return self.sketch
     
-    
+
     def individual_card(self, speciesinfo, debug=False):
         cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
         cmd = " ".join(cmdlist)
@@ -169,7 +191,7 @@ class SketchObj:
             
     def check_cardinality(self, speciesinfo: SpeciesSpecifics):
         if self._sfp.full not in speciesinfo.cardkey.keys() or speciesinfo.cardkey[self._sfp.full] == 0:
-            self.individual_card(speciesinfo)     
+            self.individual_card(speciesinfo)   
         return float(speciesinfo.cardkey[self.sketch])
 
         #else:
