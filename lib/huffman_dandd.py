@@ -544,5 +544,5 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     # Save the cardinality keys as well as the hashkey for the next run of the species
     speciesinfo.save_cardkey()
     speciesinfo.save_hashkey()
-    dtree.print_tree()
+    print(dtree)
     return dtree
