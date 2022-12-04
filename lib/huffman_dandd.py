@@ -213,6 +213,7 @@ class DeltaTree:
         self.fastas = fasta_files
         speciesinfo.kstart = self.root_k()
         self.speciesinfo=speciesinfo
+        self.speciesinfo.save_hashkey()
         #self.card0 = speciesinfo.card0
         #self.cardkey=speciesinfo.cardkey
     def __sub__(self, other):
