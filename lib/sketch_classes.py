@@ -4,6 +4,7 @@ import hashlib
 import warnings
 import subprocess
 import csv
+#This assumes that dashing binary has been aliased
 DASHINGLOC="dashing"
 
 def canon_command(canon:bool):

@@ -17,9 +17,8 @@ from species_specifics import SpeciesSpecifics
 from sketch_classes import SketchFilePath
 from sketch_classes import SketchObj
 
-
+#This is assuming that the command for dashing has been aliased
 DASHINGLOC="dashing"
-codelib='/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
 RANGEK=100
 
 def retrieve_fasta_files(inputdir, full=True):
