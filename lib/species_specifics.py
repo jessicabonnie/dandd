@@ -60,10 +60,14 @@ class SpeciesSpecifics:
     
     def _locate_input(self, genomedir: str):
         '''Determine if there is a subdirectory structure in the input directory (current applies to HVSVC2 inputs)'''
-        if self.species == 'HVSVC2':
-            return os.path.join(genomedir, self.species, self.tag.replace('HVSVC2','consensus'))
+        
+        #grandfather in some old code
+        if os.path.exists(os.path.join(genomedir, self.species)):
+            if self.species == 'HVSVC2':
+                return os.path.join(genomedir, self.species, self.tag.replace('HVSVC2','consensus'))
+            return(os.path.join(genomedir, self.tag))
         else:
-            return os.path.join(genomedir, self.tag)
+            return os.path.join(genomedir)
         
     def check_cardinality(self, fullpath):
         '''Check if cardinality has already been calculated for a sketch. If so, return it, if not add it to a list of cardinalities to be calculated and then return 0'''

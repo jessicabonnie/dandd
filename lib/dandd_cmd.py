@@ -36,7 +36,7 @@ def parse_arguments():
     tree_parser.add_argument("-s", "--species", dest="tag", help="species tagname used to locate data directory",  metavar="SPECIESNAME", type=str, required=False)
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
 
-    tree_parser.add_argument("-g", "--genomedir", dest="genomedir", default='/home/jbonnie1/scr16_blangme2/jessica/data',help="data directory containing the species subdirectories of fasta files", type=str, metavar="DATADIR")
+    tree_parser.add_argument("-g", "--genomedir", dest="genomedir", default='~/scr16_blangme2/jessica/data', help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="DATADIR")
 
     tree_parser.add_argument("-c", "--sketchdir", dest="sketchdir", default='/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches',help="parent directory containing the species subdirectories of sketches", type=str, metavar="DATADIR")
 
