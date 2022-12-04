@@ -223,6 +223,23 @@ class DeltaTree:
         print("subtraction result: ", self.delta - other.delta)
         return self.delta - other.delta
 
+        
+    def __repr__(self) -> None:
+        ''' Traverse the DeltaTree in a depth-first way.'''
+        root = self._dt[-1]
+        print(root)
+        def _print_tree_recursive(node) -> None:
+            if node.children:
+                nchild=len(node.children)
+                print("NUMBER OF CHILDREN",nchild)
+                for i in range(nchild):
+                    
+                    print(i)
+                    n=node.children[i]
+                    print("Child {}:".format(i),n)
+                    _print_tree_recursive(n)
+        _print_tree_recursive(root)
+
     ## NOTE batch_update_card not in use
     def batch_update_card(self, speciesinfo, debug=False):
         '''Update the cardinality dictionary for any sketches which have been added to the card0 list in speciesinfo '''
@@ -322,22 +339,6 @@ class DeltaTree:
         #self.batch_update_card()
         #self.compute_code()
     
-    ## TODO: make this __repr__
-    def __repr__(self) -> None:
-        ''' Traverse the DeltaTree in a depth-first way.'''
-        root = self._dt[-1]
-        print(root)
-        def _print_tree_recursive(node) -> None:
-            if node.children:
-                nchild=len(node.children)
-                print("NUMBER OF CHILDREN",nchild)
-                for i in range(nchild):
-                    
-                    print(i)
-                    n=node.children[i]
-                    print("Child {}:".format(i),n)
-                    _print_tree_recursive(n)
-        _print_tree_recursive(root)
 
     def print_list(self) -> None:
         nodes = []
