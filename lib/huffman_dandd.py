@@ -322,8 +322,8 @@ class DeltaTree:
         #self.batch_update_card()
         #self.compute_code()
     
-    
-    def print_tree(self) -> None:
+    ## TODO: make this __repr__
+    def __repr__(self) -> None:
         ''' Traverse the DeltaTree in a depth-first way.'''
         root = self._dt[-1]
         print(root)
