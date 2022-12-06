@@ -514,11 +514,14 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
-    sketchdir = parent directory where species directory for output sketches should be created
+    sketchdir = parent directory where output sketches should be created
     kstart = starting k to use while searching for delta
     nchildren = number of children that nodes should have (until they can't)
     registers = number of registers to use when sketching
-    flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)'''
+    flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)
+    canonicalize = T/F indicating whether kmers should be canonicalized
+    tool = string indicating which tool to use for kmer cardinality
+    choices=["dashing","kmc"] '''
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers, flist_loc=flist_loc, canonicalize=canonicalize)
