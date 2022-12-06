@@ -7,8 +7,8 @@ class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
     def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, registers, flist_loc=None, canonicalize=True):
         self.tag=tag
-        self.sketchdir=os.path.join(sketchdir, tag)
-        os.makedirs(self.sketchdir, exist_ok=True)
+        self.sketchdir=sketchdir
+        #os.makedirs(self.sketchdir, exist_ok=True)
         self.species=self._resolve_species()
         self.hashkey=self._read_hashkey()
         self.cardkey=self._read_cardkey()
