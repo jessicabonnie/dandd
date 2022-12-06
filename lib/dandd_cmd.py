@@ -12,7 +12,11 @@ def tree_command(args):
     if not args.sketchdir:
         args.sketchdir=os.path.join(args.outdir,args.tag,"sketchdb")
         os.makedirs(args.sketchdir, exist_ok=True)
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, exact=args.exact)
+    if exact:
+        tool='kmc'
+    else:
+        tool='dashing'
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool)
     dtree.save(outloc=os.path.join(args.outdir,args.tag), tag=args.tag, label=args.label)
 
 def progressive_command(args):

@@ -510,7 +510,7 @@ class DeltaSpider(DeltaTree):
 #     def __init__(self, fasta_files, speciesinfo, nchildren=2):
 #         self.hashkey = speciesinfo.hashkey
 # TODO: add arg for dashing vs kmc
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None, canonicalize=True):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None, canonicalize=True, tool='dashing'):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
