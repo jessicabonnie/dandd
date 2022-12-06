@@ -71,7 +71,7 @@ class DeltaTreeNode:
         #self.speciesinfo=speciesinfo
 
     def __repr__(self):
-        return f"['{self.node_title}', k: {self.bestk}, delta: {self.delta}, ngen: {self.ngen} ]"
+        return f"{self.__class__.__name__}['{self.node_title}', k: {self.bestk}, delta: {self.delta}, ngen: {self.ngen}, children: {repr(self.children)} ]"
         
     def __lt__(self, other):
         # lt = less than
