@@ -7,7 +7,7 @@ import csv
 #This assumes that dashing binary has been aliased
 DASHINGLOC="dashing"
 
-def canon_command(canon:bool):
+def canon_command(canon:bool, tool='dashing'):
         outstr=''
         if not canon:
             outstr='--no-canon'
