@@ -97,7 +97,6 @@ class SketchObj:
         # gt = greater than
         return self.delta_pos > other.delta_pos
     def __repr__(self):
-        ##TODO make this a __repr__ function instead
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
     '''TODO: implement kmc
