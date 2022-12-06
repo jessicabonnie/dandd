@@ -18,7 +18,7 @@ from sketch_classes import SketchFilePath
 from sketch_classes import SketchObj
 
 #This is assuming that the command for dashing has been aliased
-DASHINGLOC="dashing"
+DASHINGLOC="/scratch16/blangme2/jessica/lib/dashing/dashing"
 RANGEK=100
 
 def retrieve_fasta_files(inputdir, full=True):
