@@ -12,7 +12,7 @@ def tree_command(args):
     if not args.sketchdir:
         args.sketchdir=os.path.join(args.outdir,args.tag,"sketchdb")
         os.makedirs(args.sketchdir, exist_ok=True)
-    if exact:
+    if args.exact:
         tool='kmc'
     else:
         tool='dashing'
@@ -43,7 +43,7 @@ def parse_arguments():
 
     tree_parser.add_argument("-s", "--species", dest="tag", help="species tagname used to locate data directory",  metavar="SPECIESNAME", type=str, required=True)
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
-    tree_parser.add_argument("-x", "--exact", dest="exact", help="instead of estimating, count kmers using kmc3", default=False, action="store_true" type=str, required=False)
+    tree_parser.add_argument("-x", "--exact", dest="exact", help="instead of estimating, count kmers using kmc3", default=False, action="store_true", required=False)
 
     tree_parser.add_argument("-g", "--genomedir", dest="genomedir", default='/scratch16/blangme2/jessica/data', help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="FASTADIR")
 
