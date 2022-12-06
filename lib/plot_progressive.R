@@ -51,9 +51,10 @@ tp <-
   mutate(ngenomes=as.integer(ngenomes),kval=as.factor(kval))  %>%
   ggplot(.) +
   geom_smooth(aes(y=delta_pos, x=ngenomes, linetype="Loess"), method='loess',formula=y~x) +
-  geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=2) +
+  geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=.5) +
   scale_linetype_manual(name=paste0("Fit (",norder," Orderings)"),values=c(2)) +
-  geom_line(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, group=ordering,color=as.factor(ordering)), size=.5) +
+  geom_line(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes,
+                                                     group=ordering, color=as.factor(ordering)), size=.5) +
   theme_bw() +
   scale_x_continuous(breaks= scales::pretty_breaks(10)) +
   scale_shape_discrete(name="argmax(k)")+
@@ -61,7 +62,8 @@ tp <-
   xlab("Number of Genomes in Set") +
   ylab("Value of \u03b4") +
   ggtitle(label=paste0("Values of \u03b4 over orderings of ",gcount," ",stringr::str_to_title(tag)," Genomes")) +
-  guides(color = 'none')
+  guides(color = 'none') +
+  scale_y_continuous(labels = scales::label_number_auto())
 
 
 ggplot2::ggsave(filename = file.path(outdir,paste0("plot_",tag,"_",item,"_",norder,".pdf")), 
