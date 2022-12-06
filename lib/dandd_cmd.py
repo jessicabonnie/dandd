@@ -2,14 +2,18 @@ import argparse
 import huffman_dandd
 import sys
 import pickle
+import os
 from tabulate import tabulate
 
 
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
 
 def tree_command(args):
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize)
-    dtree.save(outloc=args.sketchdir, tag=args.tag, label=args.label)
+    if not args.sketchdir:
+        args.sketchdir=os.path.join(args.outdir,args.tag,"sketchdb")
+        os.makedirs(args.sketchdir, exist_ok=True)
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, exact=args.exact)
+    dtree.save(outloc=os.path.join(args.outdir,args.tag), tag=args.tag, label=args.label)
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -33,12 +37,15 @@ def parse_arguments():
     # Make parser for "dand_cmd.py tree ..."
     tree_parser = subparsers.add_parser("tree")
 
-    tree_parser.add_argument("-s", "--species", dest="tag", help="species tagname used to locate data directory",  metavar="SPECIESNAME", type=str, required=False)
+    tree_parser.add_argument("-s", "--species", dest="tag", help="species tagname used to locate data directory",  metavar="SPECIESNAME", type=str, required=True)
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
+    tree_parser.add_argument("-x", "--exact", dest="exact", help="instead of estimating, count kmers using kmc3", default=False, action="store_true" type=str, required=False)
 
-    tree_parser.add_argument("-g", "--genomedir", dest="genomedir", default='~/scr16_blangme2/jessica/data', help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="DATADIR")
+    tree_parser.add_argument("-g", "--genomedir", dest="genomedir", default='/scratch16/blangme2/jessica/data', help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="FASTADIR")
 
-    tree_parser.add_argument("-c", "--sketchdir", dest="sketchdir", default='/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches',help="parent directory containing the species subdirectories of sketches", type=str, metavar="DATADIR")
+    tree_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the species directory after running", type=str, metavar="OUTDIRPATH")
+
+    tree_parser.add_argument("-c", "--sketchdir", dest="sketchdir", default=None, help="sketch directory for species", type=str, metavar="SKETCHDIR")
 
     tree_parser.add_argument("-k", "--kstart", dest="kstart", default=12, help="kmer length at which to start the search for delta (different species have different optimal k values)", type=int, metavar="INT")
     
@@ -46,7 +53,7 @@ def parse_arguments():
 
     tree_parser.add_argument("-f", "--fastas", dest="flist_loc", metavar="FILE", type=str, default=None, help="filepath to a subset of fasta files to use in the species directory -- no title, one per line")
 
-    tree_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default=None, help="label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list)")
+    tree_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default=None, help="label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list)", required=False)
 
     tree_parser.add_argument("-n", "--nchildren", dest="nchildren", metavar="INTEGER", type=int, default=None, help="number of children for each node in the delta tree -- default is to create a tree of only 2 levels with all individual sketches as the children of the root node.")
 
@@ -60,7 +67,7 @@ def parse_arguments():
     # Make parser for "dand_cmd.py progressive ..."
     progressive_parser = subparsers.add_parser("progressive")
     
-    progressive_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="PICKLE", default=None, help="filepath to a pickle produced by the tree command")
+    progressive_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", default=None, help="filepath to a pickle produced by the tree command")
 
     progressive_parser.add_argument("-r", "--orderings", dest="ordering_file", metavar="PICKLE", type=str, default=None, help="filepath to a pickle of orderings if different from default named using tag")
 
