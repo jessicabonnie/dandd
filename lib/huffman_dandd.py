@@ -222,13 +222,18 @@ class DeltaTree:
         print("Subtree Delta: ", other.delta)
         print("subtraction result: ", self.delta - other.delta)
         return self.delta - other.delta
+    def __repr__(self):
+       """Return a string which when eval'ed will rebuild tree"""
+       return '{}(fastas: {}, Nodes: {})'.format(
+                self.__class__.__name__,
+                self.fastas,
+                repr(self._dt[-1]))
 
-        
-    def __repr__(self) -> None:
+    def print_tree(self):
         ''' Traverse the DeltaTree in a depth-first way.'''
         root = self._dt[-1]
         print(root)
-        def _print_tree_recursive(node) -> None:
+        def _print_tree_recursive(node):
             if node.children:
                 nchild=len(node.children)
                 print("NUMBER OF CHILDREN",nchild)
@@ -548,5 +553,5 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     # Save the cardinality keys as well as the hashkey for the next run of the species
     speciesinfo.save_cardkey()
     speciesinfo.save_hashkey()
-    print(dtree)
+    print(dtree)#.print_tree()
     return dtree
