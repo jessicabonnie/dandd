@@ -33,7 +33,7 @@ class SketchFilePath:
         self.ngen = len(filenames)
         self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
         self.base2 =self.assign_base(speciesinfo=speciesinfo, kval=kval)
-        self.dir = os.path.join(speciesinfo.sketchdir,"k"+ str(kval), "ngen" + str(self.ngen))
+        self.dir = os.path.join(speciesinfo.sketchdir, "ngen" + str(self.ngen),"k"+ str(kval))
         self.full = os.path.join(self.dir, self.base2)+ extension
         #self.registers = speciesinfo.registers
         os.makedirs(self.dir, exist_ok=True) 
