@@ -25,14 +25,14 @@ outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union'
 ```{bash}
 tag=ecoli
 outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
-sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds/sketches
+sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/arg_tests/${tag}/sketchdb
+genomedir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
 
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -c ${sketchdir} -o ${outdir} -k 14 -g ${genomedir}
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -c ${sketchdir} -k 14 
+tree_pick=${outdir}/${tag}_10_dtree.pickle
 
-tree_pick=${sketchdir}/${tag}_10_dtree.pickle
-
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 120 -o ${outdir}/${tag}_progu.csv
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu.csv
 ```
 
 
@@ -43,7 +43,7 @@ outdir='/home/jbonnie1/scr16_blangme2/jessica/dandd/bds'
 delta_ecoli<- fread(file.path(outdir,paste0(tag,"_progu.csv"))) %>%
   select(-V1) %>% rename(delta_pos=delta)
 
-plotProgressiveUnion(species=tag, out = outdir, delta_ecoli, nshow=120)
+plotProgressiveUnion(species=tag, out = outdir, delta_ecoli, nshow=30)
 
 ```
 
@@ -52,14 +52,14 @@ plotProgressiveUnion(species=tag, out = outdir, delta_ecoli, nshow=120)
 ```{bash}
 tag=salmonella
 outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
-sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds/sketches
+genomedir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
 
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -c ${sketchdir} -k 15 
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -k 15 -g ${genomedir} -o ${outdir}
 
-tree_pick=${sketchdir}/${tag}_10_dtree.pickle
+tree_pick=${outdir}/${tag}_10_dtree.pickle
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 120 -o ${outdir}/${tag}_progu.csv
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu.csv
 ```
 
 
@@ -72,8 +72,8 @@ delta_salmon<- fread(file.path(outdir,paste0(tag,"_progu.csv"))) %>%
   select(-V1) %>% rename(delta_pos=delta)
 
 salmon.gg<-plotProgressiveUnion(species=tag, out = outdir, delta = delta_salmon, nshow=5)
-salmon.gg + scale_y_log10()
-salmon.gg + ylim(min(c(delta_salmon$delta_pos,delta_human$delta_pos, delta_ecoli$delta_pos), na.rm=TRUE),max(c(delta_salmon$delta_pos,delta_human$delta_pos, delta_ecoli$delta_pos), na.rm=TRUE)/340)
+#salmon.gg + scale_y_log10()
+#salmon.gg + ylim(min(c(delta_salmon$delta_pos,delta_human$delta_pos, delta_ecoli$delta_pos), na.rm=TRUE),max(c(delta_salmon$delta_pos,delta_human$delta_pos, delta_ecoli$delta_pos), na.rm=TRUE)/340)
 salmon.gg
 
 ```
@@ -83,14 +83,14 @@ salmon.gg
 ```{bash}
 tag=human
 outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
-sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds/sketches
+genomedir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
 
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -c ${sketchdir} -k 20 
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -g ${genomedir} -s ${tag} -o ${outdir} -k 20 
 
-tree_pick=${sketchdir}/${tag}_12_dtree.pickle
+tree_pick=${outdir}/${tag}_12_dtree.pickle
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu.csv
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 5 -o ${outdir}/${tag}_progu.csv
 ```
 
 
@@ -102,7 +102,7 @@ delta_human<- fread(file.path(outdir,paste0(tag,"_progu.csv"))) %>%
   select(-V1) %>% rename(delta_pos=delta)
 
 
-plotProgressiveUnion(species=tag, out = outdir, delta = delta_human, nshow=120)
+plotProgressiveUnion(species=tag, out = outdir, delta = delta_human, nshow=5)
 
 humanprogu<-plotProgressiveUnion(species=tag, out = outdir, delta = delta_human, nshow=8) + guides(linetype = 'none')
 
