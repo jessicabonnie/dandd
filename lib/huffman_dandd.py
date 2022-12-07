@@ -193,7 +193,7 @@ class DeltaTreeNode:
 class DeltaTree:
     ''' Delta tree data structure. '''
     def __init__(self, fasta_files, speciesinfo, nchildren=2):
-        self.hashkey = speciesinfo.hashkey
+        self.fastahex = speciesinfo.fastahex
         #self.files = self.fasta_files(speciesinfo.inputdir)
         #self.codebook = {}
         #self._code_lengths = []
@@ -204,7 +204,6 @@ class DeltaTree:
         
         self.kstart=speciesinfo.kstart
         self.registers=speciesinfo.registers
-        print(nchildren)
         self._build_tree(fasta_files, speciesinfo, nchildren)
         self.fill_tree(speciesinfo)
         self.ngen = len(fasta_files)
@@ -213,7 +212,7 @@ class DeltaTree:
         self.fastas = fasta_files
         speciesinfo.kstart = self.root_k()
         self.speciesinfo=speciesinfo
-        self.speciesinfo.save_hashkey()
+        self.speciesinfo.save_fastahex()
         #self.card0 = speciesinfo.card0
         #self.cardkey=speciesinfo.cardkey
     def __sub__(self, other):
@@ -484,7 +483,6 @@ class DeltaSpider(DeltaTree):
         
 
         # create a sketch of the full union of the fastas
-        print(flist)
         smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo)
         results=[]
         for i in range(0,len(orderings)):
@@ -492,7 +490,7 @@ class DeltaSpider(DeltaTree):
             odf=pd.DataFrame(oresults,columns=["ngenomes","kval","delta"])
             odf['ordering']=i+1
             results.append(odf)
-            self.speciesinfo.save_hashkey()
+            self.speciesinfo.save_fastahex()
         
         #rdf=pd.DataFrame(results,columns=["k","delta"])
         return pd.concat(results)
@@ -501,7 +499,6 @@ class DeltaSpider(DeltaTree):
     def sketch_ordering(self, ordering, step=1):
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas in a dataframe'''
         flen=len(ordering)
-        print(flen)
         output=[]
         for i in range(1,flen+1):
             if i % step == 0:
@@ -531,7 +528,6 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers, flist_loc=flist_loc, canonicalize=canonicalize)
-    print("HERE")
     #inputdir = speciesinfo.inputdir
     if flist_loc:
         with open(flist_loc) as file:
@@ -553,8 +549,8 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
         dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren)
     else:
         dtree = DeltaSpider(fasta_files=fastas,speciesinfo=speciesinfo)
-    # Save the cardinality keys as well as the hashkey for the next run of the species
+    # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
     speciesinfo.save_cardkey()
-    speciesinfo.save_hashkey()
+    speciesinfo.save_fastahex()
     print(dtree)#.print_tree()
     return dtree

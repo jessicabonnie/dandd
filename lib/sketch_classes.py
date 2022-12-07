@@ -31,33 +31,29 @@ class SketchFilePath:
         self.ffiles = filenames
         self.files= [os.path.basename(f) for f in self.ffiles]
         self.ngen = len(filenames)
-        self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
-        self.base2 =self.assign_base(speciesinfo=speciesinfo, kval=kval)
+        #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
+        self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval)
         self.dir = os.path.join(speciesinfo.sketchdir, "ngen" + str(self.ngen),"k"+ str(kval))
-        self.full = os.path.join(self.dir, self.base2)+ extension
+        self.full = os.path.join(self.dir, self.base)+ extension
         #self.registers = speciesinfo.registers
         os.makedirs(self.dir, exist_ok=True) 
     
     def __repr__(self):
-        return f"{self.__class__.__name__}['fullpath inputs: {self.ffiles}', ngen: {self.ngen}, basename: {self.base}, dir: {self.dir}, fullpath: {self.full} ]"
+        return f"{self.__class__.__name__}[basename: {self.base}, 'fullpath inputs: {self.ffiles}', ngen: {self.ngen}, dir: {self.dir}, fullpath: {self.full} ]"
         
     def hashsum(self, speciesinfo):
         if self.ngen == 1:
             output= blake2b(self.ffiles[0])
         else:
-            print("more than one filename")
             sum = int("0",16)
             for fasta in self.files:
                 sum += int(speciesinfo.fastahex[fasta],16)
             output= hex(sum)
-            print(output)
         return output
         
     def assign_base(self, speciesinfo, kval):
         fnames_key=''.join(self.files)
-        print(fnames_key)
         if fnames_key not in speciesinfo.fastahex.keys():
-            print("no key")
             speciesinfo.fastahex[fnames_key]= self.hashsum(speciesinfo)   
             stored_val=speciesinfo.fastahex[fnames_key]
         else:
@@ -79,37 +75,37 @@ class SketchFilePath:
         return sketchbase
 
 
-    def assign_hash_string(self, filename: str, speciesinfo: SpeciesSpecifics, length: int):
-        '''If the basename of filename already exists in hash/dict, look it up; otherwise create one and add to hash/dict using the full path as the key'''
-        ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
-        filename =os.path.basename(filename)
-        if filename in speciesinfo.hashkey.keys():
-            return speciesinfo.hashkey[filename]
-        else:
-            alphanum=hashlib.md5(filename.encode()).hexdigest()
-            trunc=alphanum[:length]
-            if trunc in speciesinfo.hashkey.values():
-                #warnings.warn("Hashvalue " + trunc + " has 2 keys!! " + filename + " will be assigned to a longer hash.")
-                return self.assign_hash_string(filename, speciesinfo, length=length+1)
-            else:
-                speciesinfo.hashkey[filename] = trunc
-                return trunc
+    # def assign_hash_string(self, filename: str, speciesinfo: SpeciesSpecifics, length: int):
+    #     '''If the basename of filename already exists in hash/dict, look it up; otherwise create one and add to hash/dict using the full path as the key'''
+    #     ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
+    #     filename =os.path.basename(filename)
+    #     if filename in speciesinfo.hashkey.keys():
+    #         return speciesinfo.hashkey[filename]
+    #     else:
+    #         alphanum=hashlib.md5(filename.encode()).hexdigest()
+    #         trunc=alphanum[:length]
+    #         if trunc in speciesinfo.hashkey.values():
+    #             #warnings.warn("Hashvalue " + trunc + " has 2 keys!! " + filename + " will be assigned to a longer hash.")
+    #             return self.assign_hash_string(filename, speciesinfo, length=length+1)
+    #         else:
+    #             speciesinfo.hashkey[filename] = trunc
+    #             return trunc
     
     ##TODO: implement naming function for kmc
-    def nameSketch(self, speciesinfo: SpeciesSpecifics, kval: int):
-        '''Determine what the name of a sketch is/will be'''
-        if self.ngen > 1:
+    # def nameSketch(self, speciesinfo: SpeciesSpecifics, kval: int):
+    #     '''Determine what the name of a sketch is/will be'''
+    #     if self.ngen > 1:
             
-            filehashes = [self.assign_hash_string(filename=onefile, speciesinfo=speciesinfo, length=1) for onefile in self.files]
-            filehashes.sort()
-            outfile_prefix = speciesinfo.tag + "_" + "_".join(filehashes) + "_k" + str(kval) + "_r" + str(speciesinfo.registers)
-            if len(outfile_prefix) >30:
-                alphanum=hashlib.md5(outfile_prefix.encode()).hexdigest()
-                outfile_prefix = alphanum
-            outfile=outfile_prefix + ".hll"
-        else:
-            outfile=os.path.basename(self.files[0]) + ".w." + str(kval) + ".spacing." + str(speciesinfo.registers) + ".hll"
-        return outfile    
+    #         filehashes = [self.assign_hash_string(filename=onefile, speciesinfo=speciesinfo, length=1) for onefile in self.files]
+    #         filehashes.sort()
+    #         outfile_prefix = speciesinfo.tag + "_" + "_".join(filehashes) + "_k" + str(kval) + "_r" + str(speciesinfo.registers)
+    #         if len(outfile_prefix) >30:
+    #             alphanum=hashlib.md5(outfile_prefix.encode()).hexdigest()
+    #             outfile_prefix = alphanum
+    #         outfile=outfile_prefix + ".hll"
+    #     else:
+    #         outfile=os.path.basename(self.files[0]) + ".w." + str(kval) + ".spacing." + str(speciesinfo.registers) + ".hll"
+    #     return outfile    
 
 
 class SketchObj:
@@ -182,6 +178,9 @@ class SketchObj:
         else:
             self.cmd = cmd
         #print(self.cmd)
+
+    ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
+    #     filename =os.path.basename(filename)
     
 
     '''TODO: implement kmc

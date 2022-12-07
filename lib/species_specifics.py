@@ -10,7 +10,7 @@ class SpeciesSpecifics:
         self.sketchdir=sketchdir
         #os.makedirs(self.sketchdir, exist_ok=True)
         self.species=self._resolve_species()
-        self.hashkey=self._read_hashkey()
+        self.fastahex=self._read_fastahex()
         self.cardkey=self._read_cardkey()
         self.inputdir=self._locate_input(genomedir)
         self.card0 = []
@@ -19,25 +19,30 @@ class SpeciesSpecifics:
         self.registers=registers
         self.flist_loc=flist_loc
         self.canonicalize=canonicalize
-        self.fastahex=dict()
         self.sketchinfo=dict()
 
 
     
-    def _read_hashkey(self):
-        '''Recover species specific hashkey from pickle file'''
-        usual=os.path.join(self.sketchdir,self.tag+'_hashkey.pickle')
+    def _read_fastahex(self):
+        '''Recover species specific fasta to hexidecimal dictionary from pickle file'''
+        usual=os.path.join(self.sketchdir,self.tag+'_fastahex.pickle')
         if os.path.exists(usual):
-            hashkey=pickle.load(open(usual, "rb", -1))
+            fastahex=pickle.load(open(usual, "rb", -1))
         else:
-            hashkey=dict()
-        return hashkey
+            fastahex=dict()
+        return fastahex
 
-    def save_hashkey(self):
+    def save_fastahex(self):
         '''Store/Update/Overwrite species specific hashkey to pickle'''
-        usual=os.path.join(self.sketchdir,self.tag+'_hashkey.pickle')
+        usual=os.path.join(self.sketchdir,self.tag+'_fastahex.pickle')
         with open(usual,"wb") as f:
-            pickle.dump(file=f, obj=self.hashkey)
+            pickle.dump(file=f, obj=self.fastahex)
+    
+    def save_sketchinfo(self):
+        '''Store/Update/Overwrite sketchinfo lookup to pickle'''
+        usual=os.path.join(self.sketchdir,self.tag+'_sketchinfo.pickle')
+        with open(usual,"wb") as f:
+            pickle.dump(file=f, obj=self.sketchinfo)
     
     def _read_cardkey(self):
         '''Recover key of previously calculated cardinalities from pickle file'''
