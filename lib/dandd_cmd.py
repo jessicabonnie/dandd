@@ -16,8 +16,10 @@ def tree_command(args):
         tool='kmc'
     else:
         tool='dashing'
+    os.makedirs(args.outdir, exist_ok=True)
     dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool)
-    dtree.save(outloc=os.path.join(args.outdir,args.tag), tag=args.tag, label=args.label)
+
+    dtree.save(outdir=args.outdir, tag=args.tag, label=args.label)
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))

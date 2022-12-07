@@ -365,13 +365,14 @@ class DeltaTree:
             root.update_node( speciesinfo, k)
         
         
-    def save(self, outloc: str, tag: str, label=None):
+    def save(self, outdir: str, tag: str, label=None):
         '''Save the delta tree for future retrieval
         '''
         if label is None:
             label = ""
-        else: label = "_"+label
-        filepath=os.path.join(outloc,  tag + label + "_" + str(self.ngen) + '_dtree.pickle')
+        else:
+            label = "_"+label
+        filepath=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + '_dtree.pickle')
         with open(filepath,"wb") as f:
             pickle.dump(obj=self, file=f)
         print("Tree Pickle saved to: "+filepath)
