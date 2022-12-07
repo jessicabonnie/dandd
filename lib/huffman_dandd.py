@@ -1,6 +1,6 @@
 #import parallel
 #import random
-from ast import Str
+#from ast import Str
 import sys
 import os
 import pickle
