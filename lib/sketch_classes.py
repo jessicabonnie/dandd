@@ -31,6 +31,7 @@ class SketchFilePath:
     
     def assign_hash_string(self, filename: str, speciesinfo: SpeciesSpecifics, length: int):
         '''If the basename of filename already exists in hash/dict, look it up; otherwise create one and add to hash/dict using the full path as the key'''
+        ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
         filename =os.path.basename(filename)
         if filename in speciesinfo.hashkey.keys():
             return speciesinfo.hashkey[filename]
