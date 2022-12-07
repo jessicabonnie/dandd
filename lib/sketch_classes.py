@@ -5,7 +5,7 @@ import warnings
 import subprocess
 import csv
 
-DASHINGLOC="/scratch16/blangme2/jessica/lib/dashing/dashing"
+DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
 
 def canon_command(canon:bool, tool='dashing'):
         outstr=''
