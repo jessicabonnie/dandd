@@ -19,7 +19,11 @@ class SpeciesSpecifics:
         self.registers=registers
         self.flist_loc=flist_loc
         self.canonicalize=canonicalize
-        
+        self.fastahex=dict()
+        self.sketchinfo=dict()
+
+
+    
     def _read_hashkey(self):
         '''Recover species specific hashkey from pickle file'''
         usual=os.path.join(self.sketchdir,self.tag+'_hashkey.pickle')

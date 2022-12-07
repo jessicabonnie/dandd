@@ -7,11 +7,19 @@ import csv
 
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
 
+def blake2b(fname):
+    hash_blake2b = hashlib.blake2b()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_blake2b.update(chunk)
+    return hash_blake2b.hexdigest()
+
 def canon_command(canon:bool, tool='dashing'):
         outstr=''
         if not canon:
             outstr='--no-canon'
         return outstr
+
 class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location
     filenames: list of filenames that will be used to make the sketch
@@ -19,16 +27,58 @@ class SketchFilePath:
     speciesinfo: SpeciesSpecifics object for the species
     prefix: currently unused tag for filenames to differentiate between runs
     '''
-    def __init__(self, filenames: list, kval: int, speciesinfo: SpeciesSpecifics, prefix=None):
+    def __init__(self, filenames: list, kval: int, speciesinfo: SpeciesSpecifics, prefix=None, extension=".hll"):
         self.ffiles = filenames
         self.files= [os.path.basename(f) for f in self.ffiles]
         self.ngen = len(filenames)
         self.base = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
+        self.base2 =self.assign_base(speciesinfo=speciesinfo, kval=kval)
         self.dir = os.path.join(speciesinfo.sketchdir,"k"+ str(kval), "ngen" + str(self.ngen))
-        self.full = os.path.join(self.dir, self.base)
-        self.registers = speciesinfo.registers
+        self.full = os.path.join(self.dir, self.base2)+ extension
+        #self.registers = speciesinfo.registers
         os.makedirs(self.dir, exist_ok=True) 
     
+    def __repr__(self):
+        return f"{self.__class__.__name__}['fullpath inputs: {self.ffiles}', ngen: {self.ngen}, basename: {self.base}, dir: {self.dir}, fullpath: {self.full} ]"
+        
+    def hashsum(self, speciesinfo):
+        if self.ngen == 1:
+            output= blake2b(self.ffiles[0])
+        else:
+            print("more than one filename")
+            sum = int("0",16)
+            for fasta in self.files:
+                sum += int(speciesinfo.fastahex[fasta],16)
+            output= hex(sum)
+            print(output)
+        return output
+        
+    def assign_base(self, speciesinfo, kval):
+        fnames_key=''.join(self.files)
+        print(fnames_key)
+        if fnames_key not in speciesinfo.fastahex.keys():
+            print("no key")
+            speciesinfo.fastahex[fnames_key]= self.hashsum(speciesinfo)   
+            stored_val=speciesinfo.fastahex[fnames_key]
+        else:
+            checkval=self.hashsum(speciesinfo)
+            stored_val=speciesinfo.fastahex[fnames_key]
+            if checkval != stored_val:
+               error(f"Checksum does not match stored value for {fnames_key}: {checkval}, {stored_val}")
+        if self.ngen == 1:
+            sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(speciesinfo.registers)
+        else:
+            sketchbase = stored_val[:15] + "_" + str(speciesinfo.registers) + str(self.ngen) + str(kval)
+        # store information relating to this basename to be given to user later as table or obj
+        info = [self.files,self.ngen,kval,speciesinfo.registers]
+        if sketchbase not in speciesinfo.sketchinfo.keys():
+            speciesinfo.sketchinfo[sketchbase] = info
+        else:
+              if speciesinfo.sketchinfo[sketchbase] != info:
+                  error(f"Duplicate keys but not duplicate values: {sketchbase}")
+        return sketchbase
+
+
     def assign_hash_string(self, filename: str, speciesinfo: SpeciesSpecifics, length: int):
         '''If the basename of filename already exists in hash/dict, look it up; otherwise create one and add to hash/dict using the full path as the key'''
         ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
@@ -39,7 +89,7 @@ class SketchFilePath:
             alphanum=hashlib.md5(filename.encode()).hexdigest()
             trunc=alphanum[:length]
             if trunc in speciesinfo.hashkey.values():
-                warnings.warn("Hashvalue " + trunc + " has 2 keys!! " + filename + " will be assigned to a longer hash.")
+                #warnings.warn("Hashvalue " + trunc + " has 2 keys!! " + filename + " will be assigned to a longer hash.")
                 return self.assign_hash_string(filename, speciesinfo, length=length+1)
             else:
                 speciesinfo.hashkey[filename] = trunc
@@ -116,7 +166,7 @@ class SketchObj:
     def leaf_sketch(self, sfp, speciesinfo, debug=False, delay=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmdlist = [DASHINGLOC, "sketch", self.canon,"-k" + str(self.kval),
-                   "-S",str(sfp.registers),
+                   "-S",str(speciesinfo.registers),
                    "-p10","--prefix", str(sfp.dir),
                     sfp.ffiles[0]]
                 #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
