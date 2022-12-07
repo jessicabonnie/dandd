@@ -539,6 +539,8 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     elif os.path.exists(speciesinfo.inputdir):
         print("I think the input directory exists")
         fastas = retrieve_fasta_files(speciesinfo.inputdir, full=True)
+    else:
+        ValueError("You must provide either an existing directory of fastas or a file listing the paths of the desired fastas. The directory you provided was {speciesinfo.inputdir}.")
         #fastas = [f for f in allfastas if f in fastas]
     # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
     # if flist_loc:
