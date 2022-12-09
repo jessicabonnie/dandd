@@ -193,7 +193,6 @@ class DeltaTreeNode:
                     sketch.check_cardinality()
                     sketch.delta_pos=sketch.card/sketch.kval
 
-# TODO add argument for dashing v kmc --> estimate=True
 class DeltaTree:
     ''' Delta tree data structure. '''
     def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True}):
