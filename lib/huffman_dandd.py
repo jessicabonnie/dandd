@@ -53,9 +53,10 @@ class DeltaTreeNode:
         ksweep = should ks 1-100 be explored even after delta is found?
         
         '''
-    def __init__(self, node_title: str, children: list, progeny=None ):
+    def __init__(self, node_title: str, children: list, experiment:dict, progeny=None):
         self.node_title = node_title
         self.progeny = progeny
+        self.experiment=experiment
         # self.left = left
         # self.right = right
         self.children=children
@@ -122,7 +123,7 @@ class DeltaTreeNode:
         '''Populate the sketch object for the given k at the self node as well as all children of the node'''
         if self.ksketches[kval] is None:
             #create sketch file path holding information relating to the sketch for that k 
-            sfp = SketchFilePath(filenames=self.fastas, kval=kval, speciesinfo=speciesinfo)
+            sfp = SketchFilePath(filenames=self.fastas, kval=kval, speciesinfo=speciesinfo, experiment=self.experiment)
             # if this isn't a leaf node then collect the sketches for unioning
             if self.ngen > 1:
                 presketches=[]
@@ -139,12 +140,12 @@ class DeltaTreeNode:
 
                 #print(presketches)
                 
-                self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp, speciesinfo=speciesinfo, presketches=presketches)
+                self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp, speciesinfo=speciesinfo, experiment=self.experiment, presketches=presketches)
 
             # if this is a leaf node, sketch from fasta    
             elif self.ngen == 1:
                 #print("Inside ngen=1 of update_node")
-                self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp,  speciesinfo=speciesinfo)
+                self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp,  speciesinfo=speciesinfo, experiment=self.experiment)
                 self.update_card(speciesinfo)
             else:
                 raise ValueError("For some reason you are trying to sketch ngen that is not >= 1. Something is amiss.")
@@ -192,8 +193,9 @@ class DeltaTreeNode:
 # TODO add argument for dashing v kmc --> estimate=True
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True}):
         self.fastahex = speciesinfo.fastahex
+        self.experiment=experiment
         #self.files = self.fasta_files(speciesinfo.inputdir)
         #self.codebook = {}
         #self._code_lengths = []
@@ -203,7 +205,7 @@ class DeltaTree:
         self.maxk=0
         
         self.kstart=speciesinfo.kstart
-        self.registers=speciesinfo.registers
+        #self.registers=speciesinfo.registers
         self._build_tree(fasta_files, speciesinfo, nchildren)
         self.fill_tree(speciesinfo)
         self.ngen = len(fasta_files)
@@ -294,7 +296,7 @@ class DeltaTree:
         # create leaf nodes for all the provided fastas
         inputs = [
             DeltaTreeNode(
-                node_title=s, children=None
+                node_title=s, children=None, experiment=self.experiment
             ) for s in symbol]
         inputs.sort()
         ## TODO: parallelize right here
@@ -325,7 +327,8 @@ class DeltaTree:
                 node_title="_".join(child_titles),
                 children = children,
                 # children = [self._dt[idx_current],self._dt[idx_current+1]]
-                progeny=progeny
+                progeny=progeny,
+                experiment=self.experiment
             )
             new_node.find_delta(speciesinfo=speciesinfo, kval=speciesinfo.kstart)
             
@@ -415,7 +418,7 @@ class DeltaTree:
 
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
-    def __init__(self, fasta_files, speciesinfo):
+    def __init__(self, fasta_files, speciesinfo, experiment):
         print("I made it to spider")
         nchildren=len(fasta_files)
         super().__init__(fasta_files, speciesinfo, nchildren=nchildren)
@@ -513,7 +516,7 @@ class DeltaSpider(DeltaTree):
 #     def __init__(self, fasta_files, speciesinfo, nchildren=2):
 #         self.hashkey = speciesinfo.hashkey
 # TODO: add arg for dashing vs kmc
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=None, flist_loc=None, canonicalize=True, tool='dashing'):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None, canonicalize=True, tool='dashing'):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
@@ -525,9 +528,11 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     canonicalize = T/F indicating whether kmers should be canonicalized
     tool = string indicating which tool to use for kmer cardinality
     choices=["dashing","kmc"] '''
+    # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
+    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool}
+
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
-    
-    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, registers=registers, flist_loc=flist_loc, canonicalize=canonicalize)
+    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, flist_loc=flist_loc)
     #inputdir = speciesinfo.inputdir
     if flist_loc:
         with open(flist_loc) as file:
@@ -546,9 +551,9 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     #     fastas = [f for f in fastas if f in fsublist]
     fastas.sort()
     if nchildren:
-        dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren)
+        dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren, experiment=experiment)
     else:
-        dtree = DeltaSpider(fasta_files=fastas,speciesinfo=speciesinfo)
+        dtree = DeltaSpider(fasta_files=fastas,speciesinfo=speciesinfo, experiment=experiment)
     # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
     speciesinfo.save_cardkey()
     speciesinfo.save_fastahex()

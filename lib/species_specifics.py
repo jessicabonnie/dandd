@@ -5,7 +5,7 @@ import os
 
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
-    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, registers, flist_loc=None, canonicalize=True):
+    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, flist_loc=None):
         self.tag=tag
         self.sketchdir=sketchdir
         #os.makedirs(self.sketchdir, exist_ok=True)
@@ -16,10 +16,12 @@ class SpeciesSpecifics:
         self.card0 = []
         self.kstart = kstart
         self.orderings = None
-        self.registers=registers
+        # self.registers=registers
         self.flist_loc=flist_loc
-        self.canonicalize=canonicalize
+        # self.canonicalize=canonicalize
         self.sketchinfo=dict()
+        # self.tool=tool
+        # self.experiment={tool:tool,canonicalize:canonicalize,registers:registers}
 
 
     
@@ -31,7 +33,9 @@ class SpeciesSpecifics:
         else:
             fastahex=dict()
         return fastahex
-
+    ##TODO: Consider creating self.keys dict object to track the keys and writing a single save function
+    # def save_key(self,obj,name):
+    #     pass
     def save_fastahex(self):
         '''Store/Update/Overwrite species specific hashkey to pickle'''
         usual=os.path.join(self.sketchdir,self.tag+'_fastahex.pickle')

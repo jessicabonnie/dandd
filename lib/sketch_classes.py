@@ -17,7 +17,10 @@ def blake2b(fname):
 def canon_command(canon:bool, tool='dashing'):
         outstr=''
         if not canon:
-            outstr='--no-canon'
+            if tool == 'dashing':
+                outstr='--no-canon'
+            if tool == 'kmc':
+                outstr='-b'
         return outstr
 
 class SketchFilePath:
@@ -27,21 +30,28 @@ class SketchFilePath:
     speciesinfo: SpeciesSpecifics object for the species
     prefix: currently unused tag for filenames to differentiate between runs
     '''
-    def __init__(self, filenames: list, kval: int, speciesinfo: SpeciesSpecifics, prefix=None, extension=".hll"):
+    def __init__(self, filenames: list, kval: int, speciesinfo: SpeciesSpecifics, experiment:dict, prefix=None ):
         self.ffiles = filenames
         self.files= [os.path.basename(f) for f in self.ffiles]
         self.ngen = len(filenames)
         #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
-        self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval)
+        self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'])
         self.dir = os.path.join(speciesinfo.sketchdir, "ngen" + str(self.ngen),"k"+ str(kval))
-        self.full = os.path.join(self.dir, self.base)+ extension
+        self.full = os.path.join(self.dir, self.base)+ self._get_ext(experiment['tool'])
         #self.registers = speciesinfo.registers
         os.makedirs(self.dir, exist_ok=True) 
-    
+    #TODO: WHY IS ngen10 happening without the sketch
+    #WHAT K/D are reported when tree node is reported.
     def __repr__(self):
         return f"{self.__class__.__name__}[basename: {self.base}, 'fullpath inputs: {self.ffiles}', ngen: {self.ngen}, dir: {self.dir}, fullpath: {self.full} ]"
+    def _get_ext(self,tool)->str:
+        if tool == 'dashing':
+            ext='.hll'
+        if tool == 'kmc':
+            ext=''
+        return ext
         
-    def hashsum(self, speciesinfo):
+    def hashsum(self, speciesinfo:SpeciesSpecifics):
         if self.ngen == 1:
             output= blake2b(self.ffiles[0])
         else:
@@ -51,7 +61,7 @@ class SketchFilePath:
             output= hex(sum)
         return output
         
-    def assign_base(self, speciesinfo, kval):
+    def assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool):
         fnames_key=''.join(self.files)
         if fnames_key not in speciesinfo.fastahex.keys():
             speciesinfo.fastahex[fnames_key]= self.hashsum(speciesinfo)   
@@ -60,18 +70,21 @@ class SketchFilePath:
             checkval=self.hashsum(speciesinfo)
             stored_val=speciesinfo.fastahex[fnames_key]
             if checkval != stored_val:
-               error(f"Checksum does not match stored value for {fnames_key}: {checkval}, {stored_val}")
+               raise RuntimeError(f"Checksum does not match stored value for {fnames_key}: {checkval}, {stored_val}")
         if self.ngen == 1:
-            sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(speciesinfo.registers)
+            sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
         else:
-            sketchbase = stored_val[:15] + "_" + str(speciesinfo.registers) + str(self.ngen) + str(kval)
+            suffix = str(registers) + "n" + str(self.ngen) + "k" + str(kval)
+            if not canonicalize:
+                suffix=suffix+'nc'
+            sketchbase = stored_val[:15] + "_" + suffix
         # store information relating to this basename to be given to user later as table or obj
-        info = [self.files,self.ngen,kval,speciesinfo.registers]
+        info = [self.files,self.ngen, kval, registers ]
         if sketchbase not in speciesinfo.sketchinfo.keys():
             speciesinfo.sketchinfo[sketchbase] = info
         else:
               if speciesinfo.sketchinfo[sketchbase] != info:
-                  error(f"Duplicate keys but not duplicate values: {sketchbase}")
+                  raise RuntimeError(f"Duplicate keys but not duplicate values: {sketchbase}")
         return sketchbase
 
 
@@ -124,16 +137,19 @@ class SketchObj:
             delta_pos = possible delta value (to be compared to other ks of the same group of files)
     '''
     
-    def __init__(self, kval, sfp, speciesinfo, presketches=None, delay=False):
+    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=None, delay=False):
         self.kval = kval
-        self.canon=canon_command(speciesinfo.canonicalize)
+        self.experiment=experiment
+        # self.tool=speciesinfo.tool
+        # self.canonicalize=speciesinfo.canonicalize
+        # self.canon=canon_command(speciesinfo.canonicalize, tool=speciesinfo.tool)
         self.sketch = None
         self.cmd = None
         self._sfp = sfp
         #self._registers = registers
         self._presketches = presketches
         #self._speciesinfo = speciesinfo
-        self.create_sketch(sfp, speciesinfo)
+        self.create_sketch(sfp)
         self.card = self.check_cardinality(speciesinfo)
         self.delta_pos = self.card/self.kval
     
@@ -153,16 +169,26 @@ class SketchObj:
     /usr/bin/time -o ${outprefix}.out -v sh -c "kmc -v -t${nthreads} -k${kval} -ci1 -fm ${datadir}/${fasta} ${apout}/${fasta}.kmc ${outdir}/kmc > ${cardloc}"
     card=$(grep "No. of unique counted k-mers" ${cardloc} | awk '{print $NF}')
     '''
-    def leaf_count(self, sfp, speciesinfo, debug=False, delay=False):
+    def leaf_count(self, sfp, debug=False, delay=False, nthreads=10):
         ''' If leaf kmc database exists, record the command that would have been used. If not run the command and store it.'''
-        ##TODO: determine canonicalization argument for kmc
-        cmdlist = ['kmc','-ci1','-k'+str(self.kval),'-fm', sfp.ffiles[0]]
-        pass
+        ##TODO: is this the right working directory to create/use?
+        tmpdir="/tmp/dandD"
+        os.makedirs(tmpdir,exist_ok=True)
+        cmdlist = ['kmc -t'+ str(nthreads),'-ci1',f'-k{str(self.kval)}',canon_command(self.experiment['canonicalize'], "kmc"),'-fm', sfp.ffiles[0], sfp.full, tmpdir]
+        cmd = " ".join(cmdlist)
+        if debug:
+                print(cmd)
+        if (not os.path.exists(sfp.full +".kmc_pre")) or (not os.path.exists(sfp.full +".kmc_suf")) or os.stat(sfp.full +".kmc_suf").st_size == 0:
+            print("The sketch file {0} either doesn't exist or is empty".format(sfp.full +".kmc_suf"))
+            subprocess.call(cmd, shell=True)
+            self.cmd=cmd
+
     
-    def leaf_sketch(self, sfp, speciesinfo, debug=False, delay=False):
+    def leaf_sketch(self, sfp, debug=False, delay=False, nthreads=10):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
-        cmdlist = [DASHINGLOC, "sketch", self.canon,"-k" + str(self.kval),
-                   "-S",str(speciesinfo.registers),
+        cmdlist = [DASHINGLOC, "sketch", canon_command(self.experiment['canonicalize'], "dashing"),"-k" + str(self.kval),
+        #TODO: get registers another way maybe
+                   "-S",str(self.experiment['registers']),
                    "-p10","--prefix", str(sfp.dir),
                     sfp.ffiles[0]]
                 #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
@@ -202,8 +228,15 @@ class SketchObj:
   /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
   kmc_tools -t${nthreads} transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}
   
+  ## -ci1 -cs2
     
     '''
+    def union_count(self, sfp, nthreads=10, debug=False):
+        ''' If union database file exists, record the command that would have been used. If not run the command and store it.'''
+        #create a command file for use with complex 
+        ##TODO: store this file text somehow?
+        cmdlist = ["kmc_tools","t"+str(nthreads), "complex", "-p 10 ","-z -o", str(sfp.full)] + self._presketches
+
     def union_sketch(self, sfp, debug=False):
         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(sfp.full)] + self._presketches
@@ -221,12 +254,12 @@ class SketchObj:
             print(self.cmd)
     ##TODO: make leaf sketch and union sketch private
         
-    def create_sketch(self, sfp: SketchFilePath, speciesinfo: SpeciesSpecifics):
+    def create_sketch(self, sfp: SketchFilePath):
         ''' If sketch file exists, assign path to self.sketch and return path. 
             If not create sketch, assign, and then return path.'''
         #self.sketch = self._sfp.full
         if sfp.ngen == 1:
-            self.leaf_sketch(sfp, speciesinfo)
+            self.leaf_sketch(sfp)
         elif sfp.ngen > 1:
             self.union_sketch(sfp)
         else:
