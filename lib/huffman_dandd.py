@@ -105,19 +105,13 @@ class DeltaTreeNode:
             self.mink = kval
         else:
             self.maxk = kval
-        print(f"first check of {self.delta}")
         old_d = self.delta
         new_d = self.ksketches[kval].delta_pos
         
         if old_d <= new_d:
-            print(f"I think that {old_d} is less than {new_d}")
             self.speciesinfo.kstart = kval
-
             self.bestk = kval
-            print(f"I think bestk is {kval}")
-            print(f"Delta is {new_d}")
             self.delta = new_d
-            print(f"self.delta = {self.delta}")
             self.find_delta_helper(kval=kval+direction, direction=direction)
         return
     
