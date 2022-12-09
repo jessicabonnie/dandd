@@ -357,7 +357,7 @@ class DeltaTree:
             nodes.append(f'\'{node.node_title}\'({node.ngen}\'({" ".join([i.node_title for i in node.progeny])})')
         print(' -> '.join(nodes))
 
-    def fill_tree(self, speciesinfo):
+    def fill_tree(self):
         '''Starting at the root make sure that all nodes in the tree contain the sketches for the argmax ks for every node as well as 2 less than the minimum and 2 greater than the maximum'''
         root = self._dt[-1]
         bestks = list(unique([n.bestk for n in self._dt]))
