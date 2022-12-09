@@ -33,6 +33,7 @@ class SketchFilePath:
     def __init__(self, filenames: list, kval: int, speciesinfo: SpeciesSpecifics, experiment:dict, prefix=None ):
         self.ffiles = filenames
         self.files= [os.path.basename(f) for f in self.ffiles]
+        self.files.sort()
         self.ngen = len(filenames)
         #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
         self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'])
@@ -83,8 +84,10 @@ class SketchFilePath:
         if sketchbase not in speciesinfo.sketchinfo.keys():
             speciesinfo.sketchinfo[sketchbase] = info
         else:
-              if speciesinfo.sketchinfo[sketchbase] != info:
-                  raise RuntimeError(f"Duplicate keys but not duplicate values: {sketchbase}")
+            stored_info=speciesinfo.sketchinfo[sketchbase]
+            for index in range(len(stored_info)):
+              if stored_info[index] != info[index]:
+                  raise RuntimeError(f"Duplicate keys but not duplicate values: {sketchbase}: (1) {stored_info}, (2) {info}")
         return sketchbase
 
 
