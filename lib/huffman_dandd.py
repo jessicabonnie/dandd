@@ -104,7 +104,7 @@ class DeltaTreeNode:
             self.maxk = kval
         old_d = self.delta
         new_d = self.ksketches[kval].delta_pos
-        if old_d < new_d:
+        if old_d <= new_d:
             speciesinfo.kstart = kval
             self.bestk = kval
             self.delta = new_d
