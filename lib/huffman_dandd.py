@@ -170,7 +170,7 @@ class DeltaTreeNode:
         nodevals=[]
         for kval in range(len(self.ksketches)):
             if self.ksketches[kval]:
-                linelist=[self.ngen,kval,self.ksketches[kval].delta_pos, self.node_title]
+                linelist=[self.ngen,kval, self.ksketches[kval].delta_pos, self.node_title]
                 nodevals.append(linelist)
         ndf=pd.DataFrame(nodevals,columns=["ngenomes","kval","delta_pos", "title"])
         return ndf
@@ -239,7 +239,7 @@ class DeltaTree:
         root = self._dt[-1]
         print(root)
         def _print_tree_recursive(node):
-            if node.children:
+            if not node.children.is_empty():
                 nchild=len(node.children)
                 print("NUMBER OF CHILDREN",nchild)
                 for i in range(nchild):
@@ -300,7 +300,7 @@ class DeltaTree:
         # create leaf nodes for all the provided fastas
         inputs = [
             DeltaTreeNode(
-                node_title=s, children=None, speciesinfo=self.speciesinfo, experiment=self.experiment
+                node_title=s, children=[], speciesinfo=self.speciesinfo, experiment=self.experiment
             ) for s in symbol]
         inputs.sort()
         ## TODO: parallelize right here
@@ -392,7 +392,7 @@ class DeltaTree:
         def _delta_pos_recursive(node):
             tmplist=[node.plot_df()]
             
-            if node.children:
+            if not node.children.is_empty():
                 nchild=len(node.children)
                 for i in range(nchild):
                     #print(i)
