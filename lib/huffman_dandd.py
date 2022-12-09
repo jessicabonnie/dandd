@@ -211,7 +211,7 @@ class DeltaTree:
         self.speciesinfo=speciesinfo
         #self.registers=speciesinfo.registers
         self._build_tree(fasta_files, nchildren)
-        self.fill_tree(speciesinfo)
+        self.fill_tree()
         self.ngen = len(fasta_files)
         self.root=self._dt[-1]
         self.delta = self.root_delta()
