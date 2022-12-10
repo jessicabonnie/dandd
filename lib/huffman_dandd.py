@@ -41,9 +41,9 @@ def random_orderings(length, norder, preexist=set()):
         newset.update(set([tuple(sample(rlist,length)) for i in range(needed)]))
     return newset
 
-def _update_helper(node, specinfo, kval):
-    node.find_delta(specinfo, kval)
-    return node.ksketches[kval].sketch
+# def _update_helper(node, kval):
+#     node.find_delta(kval=kval)
+#     return node.ksketches[kval].sketch
 
 class DeltaTreeNode:
     ''' A node in a Delta tree. 
@@ -76,7 +76,7 @@ class DeltaTreeNode:
         return self.ngen < other.ngen
     
     def assign_progeny(self):
-        '''something'''
+        '''If a node doesn't have progeny, it is it's own progeny'''
         if not self.progeny:
             self.progeny=[self]
     
@@ -108,7 +108,7 @@ class DeltaTreeNode:
 
     def update_node(self, kval, parallel=False):
         '''Populate the sketch object for the given k at the self node as well as all children of the node'''
-        if self.ksketches[kval] is None:
+        if not self.ksketches[kval]:
             #create sketch file path holding information relating to the sketch for that k 
             sfp = SketchFilePath(filenames=self.fastas, kval=kval, speciesinfo=self.speciesinfo, experiment=self.experiment)
             # if this isn't a leaf node then collect the sketches for unioning
@@ -118,9 +118,10 @@ class DeltaTreeNode:
                 # update each of the child nodes 
                 # TODO can be done in parallel
                 if parallel:
-                    pool2 = Pool(processes=4)
-                    results = [pool2.apply(_update_helper, args=(child, self.speciesinfo, kval, )) for child in self.children]
-                    presketches=presketches + results
+                    pass
+                    # pool2 = Pool(processes=4)
+                    # results = [pool2.apply(_update_helper, args=(child, self.speciesinfo, kval, )) for child in self.children]
+                    # presketches=presketches + results
                 else:
                     for i in range(len(self.children)):
                         self.children[i].update_node(kval)
@@ -145,7 +146,8 @@ class DeltaTreeNode:
     def ksweep(self, kmin: int, kmax: int):
         '''Sketch all of the ks for the node (and its decendent nodes)between kmin and kmax (even when they weren't needed to calculate delta'''
         if kmax > len(self.ksketches):
-            self.ksketches = self.ksketches.extend([None]* (kmax-len(self.ksketches)))
+            self.ksketches = self.ksketches + [None]* (kmax-len(self.ksketches))
+            #self.ksketches.extend([None]* (kmax-len(self.ksketches)))
         for kval in range(kmin, kmax+1):
             if not self.ksketches[kval]:
                 self.update_node(kval)     
