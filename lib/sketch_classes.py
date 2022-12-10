@@ -143,15 +143,10 @@ class SketchObj:
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[], delay=False, debug=True):
         self.kval = kval
         self.experiment=experiment
-        # self.tool=speciesinfo.tool
-        # self.canonicalize=speciesinfo.canonicalize
-        # self.canon=canon_command(speciesinfo.canonicalize, tool=speciesinfo.tool)
         self.sketch = None
         self.cmd = None
         self._sfp = sfp
-        #self._registers = registers
         self._presketches = presketches
-        #self._speciesinfo = speciesinfo
         self.create_sketch(debug=debug)
         self.card = self.check_cardinality(speciesinfo=speciesinfo, debug=debug)
         self.delta_pos = self.card/self.kval
@@ -172,20 +167,7 @@ class SketchObj:
     /usr/bin/time -o ${outprefix}.out -v sh -c "kmc -v -t${nthreads} -k${kval} -ci1 -fm ${datadir}/${fasta} ${apout}/${fasta}.kmc ${outdir}/kmc > ${cardloc}"
     card=$(grep "No. of unique counted k-mers" ${cardloc} | awk '{print $NF}')
     '''
-    # def leaf_builddb(self, sfp, delay=False, nthreads=10, debug=False):
-    #     ''' If leaf kmc database exists, record the command that would have been used. If not run the command and store it.'''
-    #     ##TODO: is this the right working directory to create/use?
-    #     tmpdir="/tmp/dandD"
-    #     os.makedirs(tmpdir,exist_ok=True)
-    #     cmdlist = ['kmc -t'+ str(nthreads),'-ci1 -cs2',f'-k{str(self.kval)}',canon_command(canon=self.experiment['canonicalize'], tool="kmc"),'-fm', sfp.ffiles[0], sfp.full, tmpdir]
-    #     cmd = " ".join(cmdlist)
-    #     if debug:
-    #             print(cmd)
-    #     if (not os.path.exists(sfp.full +".kmc_pre")) or (not os.path.exists(sfp.full +".kmc_suf")) or os.stat(sfp.full +".kmc_suf").st_size == 0:
-    #         print("The sketch file {0} either doesn't exist or is empty".format(sfp.full +".kmc_suf"))
-    #         subprocess.call(cmd, shell=True)
-    #         self.cmd=cmd
-
+    
     def sketch_check(self):
         if (os.path.exists(self._sfp.full +".kmc_pre")) and (os.path.exists(self._sfp.full +".kmc_suf")) and os.stat(self._sfp.full +".kmc_suf").st_size == 0:
             return True
@@ -239,37 +221,10 @@ class SketchObj:
     def union_command(self,debug=False):
         pass
 
-    # def union_count(self, sfp, nthreads=10, debug=False):
-    #     ''' If union database file exists, record the command that would have been used. If not run the command and store it.'''
-    #     #create a command file for use with complex 
-    #     ##TODO: store this file text somehow?
-    #     complex_input = "INPUT: \n"
-    #     inputn=1
-    #     for sketch in self._presketches:
-    #         complex_input = complex_input + f"input{inputn} = {sketch} -ci1   \n"
-    #         inputn+=1
-    #     complex_input = complex_input + f"OUTPUT:\n{sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
-    #     cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-t"+ str(nthreads), "complex", "/dev/stdin"]
-    #     cmd = " ".join(cmdlist)
-    #     print (cmd)
-    #     #print("SIZE of {0} is {1}".format(self._sfp.full, os.stat(sfp.full)))
-    #     if (not os.path.exists(sfp.full)) or os.stat(sfp.full).st_size == 0:
-    #         # print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
-    #         #self.cmd=subprocess.run(cmdlist)
-    #         subprocess.call(cmd, shell=True)
-    #         self.cmd=cmd
-    #     else:
-    #         self.cmd = cmd
-    #         #" ".join(cmdlist)
-    #     if debug:
-    #         print(self.cmd)
-
+    
     def union_sketch(self, debug=False):
         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmd = self.union_command()
-        # cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(sfp.full)] + self._presketches
-        # cmd = " ".join(cmdlist)
-        #print("SIZE of {0} is {1}".format(self._sfp.full, os.stat(sfp.full)))
         if not self.sketch_check():
             print(f"The sketch file {self._sfp.full} either doesn't exist or is empty")
             #self.cmd=subprocess.run(cmdlist)
@@ -285,21 +240,13 @@ class SketchObj:
     def create_sketch(self, debug=False):
         ''' If sketch file exists, assign path to self.sketch and return path. 
             If not create sketch, assign, and then return path.'''
-        #self.sketch = self._sfp.full
-        # if self.experiment["tool"] == "dashing":
         if self._sfp.ngen == 1:
             self.leaf_sketch(debug=debug)
         elif self._sfp.ngen > 1:
             self.union_sketch(debug=debug)
         else:
             raise RuntimeError("For some reason you are trying to sketch an empty list of files. Don't do that.")
-        # elif self.experiment["tool"] == "kmc":
-        #     if sfp.ngen == 1:
-        #         self.leaf_builddb(sfp=sfp,debug=debug)
-        #     elif sfp.ngen > 1:
-        #         self.union_count(sfp)
-        #     else:
-        #         raise RuntimeError("For some reason you are trying to sketch an empty list of files. Don't do that.")
+        
         self.sketch = self._sfp.full
         return self.sketch
     
@@ -307,36 +254,11 @@ class SketchObj:
     def individual_card(self, speciesinfo:SpeciesSpecifics, debug:bool=False):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
         pass
-        # if self.experiment["tool"] == "dashing":
-        #     cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
-        #     cmd = " ".join(cmdlist)
-        #     if debug:
-        #         print(cmd)
-        #     #print(cmd)
-        #     card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-        #     for card in csv.DictReader(card_lines, delimiter='\t'):
-        #         speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-        # elif self.experiment["tool"] == "kmc":
-        #     cmdlist = ["kmc_tools","info"] +  [self.sketch]
-        #     cmd = " ".join(cmdlist)
-        #     if debug:
-        #         print(cmd)
-        #     card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-        #     for line in card_lines:
-        #         print(line)
-        #         key, value = line.strip().split(':')
-        #         print (f"{key},{value}")
-        #         if key.strip() == 'total k-mers':
-        #             speciesinfo.cardkey[self.sketch] = value.strip()
-            
+        
     def check_cardinality(self, speciesinfo: SpeciesSpecifics, debug=False):
         if self._sfp.full not in speciesinfo.cardkey.keys() or speciesinfo.cardkey[self._sfp.full] == 0:
             self.individual_card(speciesinfo=speciesinfo, debug=debug)   
         return float(speciesinfo.cardkey[self.sketch])
-
-        #else:
-        #    self.individual_card(speciesinfo)
-        #return float(speciesinfo.cardkey[self._sfp.full])
 
 class DashSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[], delay=False, debug=True):
@@ -359,6 +281,7 @@ class DashSketchObj(SketchObj):
             return True
         else:
             return False
+    
     def leaf_command(self):
         cmdlist = [DASHINGLOC, "sketch", 
         canon_command(self.experiment['canonicalize'], "dashing"),
@@ -458,13 +381,13 @@ class KMCSketchObj(SketchObj):
     #         subprocess.call(cmd, shell=True)
     #         self.cmd=cmd
 
-    # def union_command(self, debug=False, nthreads=10):
-    #     complex_input = "INPUT: \n"
-    #     inputn=1
-    #     for sketch in self._presketches:
-    #         complex_input = complex_input + f"input{inputn} = {sketch} -ci1   \n"
-    #         inputn+=1
-    #     complex_input = complex_input + f"OUTPUT:\n{self._sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
-    #     cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-t"+ str(nthreads), "complex", "/dev/stdin"]
-    #     cmd = " ".join(cmdlist)
-    #     return cmd
+    def union_command(self, debug=False, nthreads=10):
+        complex_input = "INPUT: \n"
+        inputn=1
+        for sketch in self._presketches:
+            complex_input = complex_input + f"input{inputn} = {sketch} -ci1   \n"
+            inputn+=1
+        complex_input = complex_input + f"OUTPUT:\n{self._sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
+        cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-t"+ str(nthreads), "complex", "/dev/stdin"]
+        cmd = " ".join(cmdlist)
+        return cmd
