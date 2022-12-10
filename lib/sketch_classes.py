@@ -95,7 +95,7 @@ class SketchFilePath:
     
 
 ##TODO create superclasses for precise vs estimate classes which have same function names
-class SketchObj:
+class SketchObj(object):
     ''' A sketchobject.
         Inputs:
             kval: kmer length
@@ -132,17 +132,17 @@ class SketchObj:
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
     
-    def sketch_check(self):
-        pass
+    def sketch_check(self)->bool:
+        raise NotImplementedError("Subclass needs to define this.")
         
-    def leaf_command(self):
-        pass
+    def leaf_command(self) -> str:
+        raise NotImplementedError("Subclass needs to define this.")
     
     def leaf_sketch(self):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmd = self.leaf_command()
         if self.experiment['debug']:
-                print(cmd)
+            print(cmd)
         if not self.sketch_check():
             print("The sketch file {0} either doesn't exist or is empty".format(self._sfp.full))
             subprocess.call(cmd, shell=True)
@@ -156,8 +156,8 @@ class SketchObj:
     ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
     #     filename =os.path.basename(filename)
     
-    def union_command(self):
-        pass
+    def union_command(self)->str:
+        raise NotImplementedError("Subclass needs to define this.")
 
     
     def union_sketch(self):
@@ -204,7 +204,7 @@ class DashSketchObj(SketchObj):
     
     def individual_card(self, speciesinfo: SpeciesSpecifics):
         '''Run cardinality for an individual sketch. Add it to a dictionary {path:value}'''
-        cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
+        cmdlist = [DASHINGLOC,"card --presketched -p10", self.sketch]
         cmd = " ".join(cmdlist)
         if self.experiment['debug']:
             print(cmd)
@@ -215,6 +215,7 @@ class DashSketchObj(SketchObj):
         #return super().individual_card(speciesinfo, debug)
 
     def sketch_check(self) -> bool:
+        '''Check that sketch at full path exists and is not empty'''
         if (os.path.exists(self._sfp.full)) and os.stat(self._sfp.full).st_size != 0:
             return True
         else:
@@ -233,32 +234,33 @@ class DashSketchObj(SketchObj):
 
     
     def union_command(self) -> str:
+        '''Returns bash command to create a union sketch'''
         cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(self._sfp.full)] + self._presketches
         cmd = " ".join(cmdlist)
         return cmd
         
-    def union_sketch(self):
-        ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
-        cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(self._sfp.full)] + self._presketches
-        cmd = " ".join(cmdlist)
-        #print("SIZE of {0} is {1}".format(self._sfp.full, os.stat(sfp.full)))
-        if (not os.path.exists(self._sfp.full)) or os.stat(self._sfp.full).st_size == 0:
-            # print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
-            #self.cmd=subprocess.run(cmdlist)
-            subprocess.call(cmd, shell=True)
-            self.cmd=cmd
-        else:
-            self.cmd = cmd
-            #" ".join(cmdlist)
-        if self.experiment['debug']:
-            print(self.cmd)
+    # def union_sketch(self):
+    #     ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
+    #     cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(self._sfp.full)] + self._presketches
+    #     cmd = " ".join(cmdlist)
+    #     #print("SIZE of {0} is {1}".format(self._sfp.full, os.stat(sfp.full)))
+    #     if (not os.path.exists(self._sfp.full)) or os.stat(self._sfp.full).st_size == 0:
+    #         # print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
+    #         #self.cmd=subprocess.run(cmdlist)
+    #         subprocess.call(cmd, shell=True)
+    #         self.cmd=cmd
+    #     else:
+    #         self.cmd = cmd
+    #         #" ".join(cmdlist)
+    #     if self.experiment['debug']:
+    #         print(self.cmd)
 
 class KMCSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
 
     def individual_card(self, speciesinfo: SpeciesSpecifics):
-        cmdlist = ["kmc_tools","info"] +  [self.sketch]
+        cmdlist = ["kmc_tools","info",self.sketch]
         cmd = " ".join(cmdlist)
         if self.experiment['debug']:
             print(cmd)
