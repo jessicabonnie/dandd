@@ -21,7 +21,7 @@ from sketch_classes import SketchObj, DashSketchObj, KMCSketchObj
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
 RANGEK=100
 
-def retrieve_fasta_files(inputdir, full=True):
+def retrieve_fasta_files(inputdir, full=True)->list:
     '''return a list of all fasta files in a directory accounting for all the possible extensions'''
     reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
     fastas = [fasta for fasta in os.listdir(inputdir) if reg_compile]
@@ -207,7 +207,7 @@ class DeltaTree:
         return self.delta - other.delta
     def __repr__(self):
        """Return a string which when eval'ed will rebuild tree"""
-       return '{}(fastas: {}, Nodes: {})'.format(
+       return '{}(FASTAS: {}, NODES: {})'.format(
                 self.__class__.__name__,
                 self.fastas,
                 repr(self._dt[-1]))
@@ -286,8 +286,9 @@ class DeltaTree:
         #inputs = [n.find_delta(speciesinfo, self.registers, speciesinfo.kstart) for n in inputs]
         # 
         if parallel:
-            pool = Pool(processes=4)
-            results = [pool.apply(_update_helper, args=(dnode, self.speciesinfo,self.speciesinfo.kstart,  )) for dnode in inputs]
+            pass
+            # pool = Pool(processes=4)
+            # results = [pool.apply(_update_helper, args=(dnode, self.speciesinfo,self.speciesinfo.kstart,  )) for dnode in inputs]
         else:
             for n in inputs:
                 
@@ -352,7 +353,7 @@ class DeltaTree:
             label = ""
         else:
             label = "_"+label
-        filepath=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + '_dtree.pickle')
+        filepath=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_dtree.pickle')
         with open(filepath,"wb") as f:
             pickle.dump(obj=self, file=f)
         print("Tree Pickle saved to: "+filepath)
@@ -379,8 +380,8 @@ class DeltaTree:
 
     def find_delta_delta(self, fasta_subset: list):
         '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
-        majord = self.delta
-        majork = self.root_k()
+        # majord = self.delta
+        # majork = self.root_k()
         # create list of fastas that are in the original spider that are not in the subset provided
         fastas = [f for f in self.fastas if f not in fasta_subset]
         if len(fastas) == 0:
@@ -498,6 +499,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, flist_loc=flist_loc)
     #inputdir = speciesinfo.inputdir
+    fastas=[]
     if flist_loc:
         with open(flist_loc) as file:
             fastas = [line.strip() for line in file]
