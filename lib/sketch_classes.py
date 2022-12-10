@@ -215,7 +215,7 @@ class DashSketchObj(SketchObj):
         #return super().individual_card(speciesinfo, debug)
 
     def sketch_check(self) -> bool:
-        if (os.path.exists(self._sfp.full)) and os.stat(self._sfp.full).st_size == 0:
+        if (os.path.exists(self._sfp.full)) and os.stat(self._sfp.full).st_size != 0:
             return True
         else:
             return False
@@ -272,7 +272,7 @@ class KMCSketchObj(SketchObj):
         #return super().individual_card(speciesinfo, debug)
     
     def sketch_check(self) -> bool:
-        if (os.path.exists(self._sfp.full +".kmc_pre")) and (os.path.exists(self._sfp.full +".kmc_suf")) and os.stat(self._sfp.full +".kmc_suf").st_size == 0:
+        if (os.path.exists(self._sfp.full +".kmc_pre")) and (os.path.exists(self._sfp.full +".kmc_suf")) and os.stat(self._sfp.full +".kmc_suf").st_size != 0:
             return True
         else:
             return False
