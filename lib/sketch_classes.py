@@ -48,8 +48,10 @@ class SketchFilePath:
     def _get_ext(self,tool)->str:
         if tool == 'dashing':
             ext='.hll'
-        if tool == 'kmc':
+        elif tool == 'kmc':
             ext=''
+        else:
+            raise ValueError("is there another option for tool other than kmc or dashing?")
         return ext
         
     def hashsum(self, speciesinfo:SpeciesSpecifics):
@@ -90,38 +92,7 @@ class SketchFilePath:
                   raise RuntimeError(f"Duplicate keys but not duplicate values: {sketchbase}: (1) {stored_info}, (2) {info}")
         return sketchbase
 
-
-    # def assign_hash_string(self, filename: str, speciesinfo: SpeciesSpecifics, length: int):
-    #     '''If the basename of filename already exists in hash/dict, look it up; otherwise create one and add to hash/dict using the full path as the key'''
-    #     ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
-    #     filename =os.path.basename(filename)
-    #     if filename in speciesinfo.hashkey.keys():
-    #         return speciesinfo.hashkey[filename]
-    #     else:
-    #         alphanum=hashlib.md5(filename.encode()).hexdigest()
-    #         trunc=alphanum[:length]
-    #         if trunc in speciesinfo.hashkey.values():
-    #             #warnings.warn("Hashvalue " + trunc + " has 2 keys!! " + filename + " will be assigned to a longer hash.")
-    #             return self.assign_hash_string(filename, speciesinfo, length=length+1)
-    #         else:
-    #             speciesinfo.hashkey[filename] = trunc
-    #             return trunc
     
-    ##TODO: implement naming function for kmc
-    # def nameSketch(self, speciesinfo: SpeciesSpecifics, kval: int):
-    #     '''Determine what the name of a sketch is/will be'''
-    #     if self.ngen > 1:
-            
-    #         filehashes = [self.assign_hash_string(filename=onefile, speciesinfo=speciesinfo, length=1) for onefile in self.files]
-    #         filehashes.sort()
-    #         outfile_prefix = speciesinfo.tag + "_" + "_".join(filehashes) + "_k" + str(kval) + "_r" + str(speciesinfo.registers)
-    #         if len(outfile_prefix) >30:
-    #             alphanum=hashlib.md5(outfile_prefix.encode()).hexdigest()
-    #             outfile_prefix = alphanum
-    #         outfile=outfile_prefix + ".hll"
-    #     else:
-    #         outfile=os.path.basename(self.files[0]) + ".w." + str(kval) + ".spacing." + str(speciesinfo.registers) + ".hll"
-    #     return outfile    
 
 ##TODO create superclasses for precise vs estimate classes which have same function names
 class SketchObj:
@@ -140,15 +111,15 @@ class SketchObj:
             delta_pos = possible delta value (to be compared to other ks of the same group of files)
     '''
     
-    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[], delay=False, debug=True):
+    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
         self.kval = kval
         self.experiment=experiment
         self.sketch = None
         self.cmd = None
         self._sfp = sfp
         self._presketches = presketches
-        self.create_sketch(debug=debug)
-        self.card = self.check_cardinality(speciesinfo=speciesinfo, debug=debug)
+        self.create_sketch()
+        self.card = self.check_cardinality(speciesinfo=speciesinfo)
         self.delta_pos = self.card/self.kval
     
     def __lt__(self, other):
@@ -160,27 +131,17 @@ class SketchObj:
     def __repr__(self):
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
-    '''TODO: implement kmc
-    CODE from benchmarking to create individual databases:
-    if [ $approach == 'kmc' ]; then
-    outsketch=${apout}/${fasta}.kmc
-    /usr/bin/time -o ${outprefix}.out -v sh -c "kmc -v -t${nthreads} -k${kval} -ci1 -fm ${datadir}/${fasta} ${apout}/${fasta}.kmc ${outdir}/kmc > ${cardloc}"
-    card=$(grep "No. of unique counted k-mers" ${cardloc} | awk '{print $NF}')
-    '''
     
     def sketch_check(self):
-        if (os.path.exists(self._sfp.full +".kmc_pre")) and (os.path.exists(self._sfp.full +".kmc_suf")) and os.stat(self._sfp.full +".kmc_suf").st_size == 0:
-            return True
-        else:
-            return False
+        pass
         
     def leaf_command(self):
         pass
     
-    def leaf_sketch(self, debug=False, delay=False, nthreads=10):
+    def leaf_sketch(self):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmd = self.leaf_command()
-        if debug:
+        if self.experiment['debug']:
                 print(cmd)
         if not self.sketch_check():
             print("The sketch file {0} either doesn't exist or is empty".format(self._sfp.full))
@@ -195,34 +156,11 @@ class SketchObj:
     ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
     #     filename =os.path.basename(filename)
     
-
-    '''TODO: implement kmc
-    CODE from benchmarking to create union from database list
- 
-  #Create an instruction file for kmc_tools complex
-  echo "INPUT:" > ${apout}/complex_union.txt
-  echo ${sketched[@]} | sed 's/ /\n/g' | awk '{print "input"NR" = ",$0, "-ci1"}'>> ${apout}/complex_union.txt
-  echo "OUTPUT:" >> ${apout}/complex_union.txt
-  string="${fullunion} = input1"
-  for i in $(seq 2 $nfasta); do string="${string} + input$i"; done
-  echo ${string} >> ${apout}/complex_union.txt
-  
-  #Benchmarch the process
-  # TODO : update to use info command 
-
-  cmd="kmc_tools -t${nthreads} complex ${apout}/complex_union.txt" 
-  echo ${cmd}
-  /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
-  kmc_tools -t${nthreads} transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}
-  
-  ## -ci1 -cs2
-    
-    '''
-    def union_command(self,debug=False):
+    def union_command(self):
         pass
 
     
-    def union_sketch(self, debug=False):
+    def union_sketch(self):
         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmd = self.union_command()
         if not self.sketch_check():
@@ -233,17 +171,17 @@ class SketchObj:
         else:
             self.cmd = cmd
             #" ".join(cmdlist)
-        if debug:
+        if self.experiment['debug']:
             print(self.cmd)
     ##TODO: make leaf sketch and union sketch private
         
-    def create_sketch(self, debug=False):
+    def create_sketch(self):
         ''' If sketch file exists, assign path to self.sketch and return path. 
             If not create sketch, assign, and then return path.'''
         if self._sfp.ngen == 1:
-            self.leaf_sketch(debug=debug)
+            self.leaf_sketch()
         elif self._sfp.ngen > 1:
-            self.union_sketch(debug=debug)
+            self.union_sketch()
         else:
             raise RuntimeError("For some reason you are trying to sketch an empty list of files. Don't do that.")
         
@@ -251,24 +189,24 @@ class SketchObj:
         return self.sketch
     
 
-    def individual_card(self, speciesinfo:SpeciesSpecifics, debug:bool=False):
+    def individual_card(self, speciesinfo:SpeciesSpecifics):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
         pass
         
-    def check_cardinality(self, speciesinfo: SpeciesSpecifics, debug=False):
+    def check_cardinality(self, speciesinfo: SpeciesSpecifics):
         if self._sfp.full not in speciesinfo.cardkey.keys() or speciesinfo.cardkey[self._sfp.full] == 0:
-            self.individual_card(speciesinfo=speciesinfo, debug=debug)   
+            self.individual_card(speciesinfo=speciesinfo)   
         return float(speciesinfo.cardkey[self.sketch])
 
 class DashSketchObj(SketchObj):
-    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[], delay=False, debug=True):
-        super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches, delay=delay, debug=debug)
+    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
+        super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
     
-    def individual_card(self, speciesinfo: SpeciesSpecifics, debug: bool = False):
+    def individual_card(self, speciesinfo: SpeciesSpecifics):
         '''Run cardinality for an individual sketch. Add it to a dictionary {path:value}'''
         cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
         cmd = " ".join(cmdlist)
-        if debug:
+        if self.experiment['debug']:
             print(cmd)
         #print(cmd)
         card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
@@ -276,13 +214,13 @@ class DashSketchObj(SketchObj):
             speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
         #return super().individual_card(speciesinfo, debug)
 
-    def sketch_check(self):
+    def sketch_check(self) -> bool:
         if (os.path.exists(self._sfp.full)) and os.stat(self._sfp.full).st_size == 0:
             return True
         else:
             return False
     
-    def leaf_command(self):
+    def leaf_command(self) -> str:
         cmdlist = [DASHINGLOC, "sketch", 
         canon_command(self.experiment['canonicalize'], "dashing"),
         "-k" + str(self.kval), 
@@ -293,36 +231,18 @@ class DashSketchObj(SketchObj):
         cmd = " ".join(cmdlist)
         return cmd
 
-    # def leaf_sketch(self, debug=False, delay=False, nthreads=10):
-    #         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
-    #         cmdlist = [DASHINGLOC, "sketch", canon_command(self.experiment['canonicalize'], "dashing"),"-k" + str(self.kval),
-    #         #TODO: get registers another way maybe
-    #                 "-S",str(self.experiment['registers']),
-    #                 "-p10","--prefix", str(self._sfp.dir),
-    #                     self._sfp.ffiles[0]]
-    #                 #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
-    #         cmd = " ".join(cmdlist)
-    #         if debug:
-    #                 print(cmd)
-    #         if (not os.path.exists(self._sfp.full)) or os.stat(self._sfp.full).st_size == 0:
-    #             print("The sketch file {0} either doesn't exist or is empty".format(self._sfp.full))
-    #             subprocess.call(cmd, shell=True)
-    #             self.cmd=cmd
-    #             ##TODO Check if call raises error / returns 0
-    #             ##TODO pass back the command so that it can be done in parallel?
-    #         else:
-    #             self.cmd = cmd
-    def union_command(self, debug=False):
+    
+    def union_command(self) -> str:
         cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(self._sfp.full)] + self._presketches
         cmd = " ".join(cmdlist)
-        return(cmd)
+        return cmd
         
-    def union_sketch(self, sfp, debug=False):
+    def union_sketch(self):
         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
-        cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(sfp.full)] + self._presketches
+        cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(self._sfp.full)] + self._presketches
         cmd = " ".join(cmdlist)
         #print("SIZE of {0} is {1}".format(self._sfp.full, os.stat(sfp.full)))
-        if (not os.path.exists(sfp.full)) or os.stat(sfp.full).st_size == 0:
+        if (not os.path.exists(self._sfp.full)) or os.stat(self._sfp.full).st_size == 0:
             # print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
             #self.cmd=subprocess.run(cmdlist)
             subprocess.call(cmd, shell=True)
@@ -330,17 +250,17 @@ class DashSketchObj(SketchObj):
         else:
             self.cmd = cmd
             #" ".join(cmdlist)
-        if debug:
+        if self.experiment['debug']:
             print(self.cmd)
 
 class KMCSketchObj(SketchObj):
-    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[], delay=False, debug=True):
-        super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches, delay=delay, debug=debug)
+    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
+        super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
 
-    def individual_card(self, speciesinfo: SpeciesSpecifics, debug: bool = False):
+    def individual_card(self, speciesinfo: SpeciesSpecifics):
         cmdlist = ["kmc_tools","info"] +  [self.sketch]
         cmd = " ".join(cmdlist)
-        if debug:
+        if self.experiment['debug']:
             print(cmd)
         card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
         for line in card_lines:
@@ -351,43 +271,29 @@ class KMCSketchObj(SketchObj):
                 speciesinfo.cardkey[self.sketch] = value.strip()
         #return super().individual_card(speciesinfo, debug)
     
-    def sketch_check(self):
+    def sketch_check(self) -> bool:
         if (os.path.exists(self._sfp.full +".kmc_pre")) and (os.path.exists(self._sfp.full +".kmc_suf")) and os.stat(self._sfp.full +".kmc_suf").st_size == 0:
             return True
         else:
             return False
 
-    def leaf_command(self, nthreads=10, debug=False):
+    def leaf_command(self) -> str:
         tmpdir="/tmp/dandD"
         os.makedirs(tmpdir,exist_ok=True)
-        cmdlist = ['kmc -t'+ str(nthreads),
+        cmdlist = ['kmc -t'+ str(self.experiment['nthreads']),
         '-ci1 -cs2',f'-k{str(self.kval)}',
         canon_command(canon=self.experiment['canonicalize'], tool="kmc"),
         '-fm', self._sfp.ffiles[0], self._sfp.full, tmpdir]
         cmd = " ".join(cmdlist)
         return cmd
 
-    # def leaf_sketch(self, delay=False, nthreads=10, debug=False):
-    #     ''' If leaf kmc database exists, record the command that would have been used. If not run the command and store it.'''
-    #     ##TODO: is this the right working directory to create/use?
-    #     tmpdir="/tmp/dandD"
-    #     os.makedirs(tmpdir,exist_ok=True)
-    #     cmdlist = ['kmc -t'+ str(nthreads),'-ci1 -cs2',f'-k{str(self.kval)}',canon_command(canon=self.experiment['canonicalize'], tool="kmc"),'-fm', self._sfp.ffiles[0], self._sfp.full, tmpdir]
-    #     cmd = " ".join(cmdlist)
-    #     if debug:
-    #             print(cmd)
-    #     if (not os.path.exists(self._sfp.full +".kmc_pre")) or (not os.path.exists(self._sfp.full +".kmc_suf")) or os.stat(self._sfp.full +".kmc_suf").st_size == 0:
-    #         print("The sketch file {0} either doesn't exist or is empty".format(self._sfp.full +".kmc_suf"))
-    #         subprocess.call(cmd, shell=True)
-    #         self.cmd=cmd
-
-    def union_command(self, debug=False, nthreads=10):
+    def union_command(self) -> str:
         complex_input = "INPUT: \n"
         inputn=1
         for sketch in self._presketches:
             complex_input = complex_input + f"input{inputn} = {sketch} -ci1   \n"
             inputn+=1
         complex_input = complex_input + f"OUTPUT:\n{self._sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
-        cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-t"+ str(nthreads), "complex", "/dev/stdin"]
+        cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-t"+ str(self.experiment['nthreads']), "complex", "/dev/stdin"]
         cmd = " ".join(cmdlist)
         return cmd

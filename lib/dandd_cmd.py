@@ -5,7 +5,6 @@ import pickle
 import os
 from tabulate import tabulate
 
-
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
 
 def tree_command(args):
@@ -85,30 +84,17 @@ def parse_arguments():
 
     progressive_parser.add_argument("--step", dest="step", default=1, type=int, help="Number of sketches to include in each progression. Mostly used for a single ordered progression.")
 
-
-
     progressive_parser.set_defaults(func=progressive_command)
 
     # Make parser for "dand_cmd.py info ..."
     info_parser = subparsers.add_parser("info")
 
-    
-
-    
 
     return parser
-
-#tag: str, genomedir: str, sketchdir: str, kstart: int
-
-
 
 
 
 def main():
-    # hashseed = os.getenv('PYTHONHASHSEED')
-    # if not hashseed:
-    #     os.environ['PYTHONHASHSEED'] = '0'
-    #     os.execv(sys.executable, [sys.executable] + sys.argv)
     parser=parse_arguments()
     args = parser.parse_args(sys.argv[1:])
     args.func(args)

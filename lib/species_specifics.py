@@ -16,15 +16,9 @@ class SpeciesSpecifics:
         self.card0 = []
         self.kstart = kstart
         self.orderings = None
-        # self.registers=registers
         self.flist_loc=flist_loc
-        # self.canonicalize=canonicalize
         self.sketchinfo=dict()
-        # self.tool=tool
-        # self.experiment={tool:tool,canonicalize:canonicalize,registers:registers}
-
-
-    
+        
     def _read_fastahex(self):
         '''Recover species specific fasta to hexidecimal dictionary from pickle file'''
         usual=os.path.join(self.sketchdir,self.tag+'_fastahex.pickle')

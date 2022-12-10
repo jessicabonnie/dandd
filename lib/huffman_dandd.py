@@ -201,9 +201,6 @@ class DeltaTree:
     def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True}):
         self.fastahex = speciesinfo.fastahex
         self.experiment=experiment
-        #self.files = self.fasta_files(speciesinfo.inputdir)
-        #self.codebook = {}
-        #self._code_lengths = []
         self._symbols = []
         #self._code_words = []
         self.mink=0
@@ -211,7 +208,6 @@ class DeltaTree:
         
         self.kstart=speciesinfo.kstart
         self.speciesinfo=speciesinfo
-        #self.registers=speciesinfo.registers
         self._build_tree(fasta_files, nchildren)
         self.fill_tree()
         self.ngen = len(fasta_files)
@@ -219,10 +215,7 @@ class DeltaTree:
         self.delta = self.root_delta()
         self.fastas = fasta_files
         speciesinfo.kstart = self.root_k()
-        # self.speciesinfo=speciesinfo
         self.speciesinfo.save_fastahex()
-        #self.card0 = speciesinfo.card0
-        #self.cardkey=speciesinfo.cardkey
     def __sub__(self, other):
         # sub = subtraction
         print("Larger Tree Delta: ", self.delta)
@@ -253,13 +246,13 @@ class DeltaTree:
         _print_tree_recursive(root)
 
     ## NOTE batch_update_card not in use
-    def batch_update_card(self, debug=False):
+    def batch_update_card(self):
         '''Update the cardinality dictionary for any sketches which have been added to the card0 list in speciesinfo '''
         if len(self.speciesinfo.card0) > 0:
             # TODO check for kmc v dashing
             cmdlist = [DASHINGLOC,"card --presketched -p10"] +  self.speciesinfo.card0
             cmd = " ".join(cmdlist)
-            if debug:
+            if self.experiment['debug']:
                 print(cmd)
             card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
             for card in csv.DictReader(card_lines, delimiter='\t'):
@@ -517,12 +510,8 @@ class DeltaSpider(DeltaTree):
         return output
 
 
-# class ProgressiveUnion:
-#     '''something'''
-#     def __init__(self, fasta_files, speciesinfo, nchildren=2):
-#         self.hashkey = speciesinfo.hashkey
 
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None, canonicalize=True, tool='dashing'):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
@@ -535,7 +524,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     tool = string indicating which tool to use for kmer cardinality
     choices=["dashing","kmc"] '''
     # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
-    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool}
+    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug}
 
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, flist_loc=flist_loc)
