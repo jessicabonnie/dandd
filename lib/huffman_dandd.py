@@ -53,7 +53,7 @@ class DeltaTreeNode:
         ksweep = should ks 1-100 be explored even after delta is found?
         
         '''
-    def __init__(self, node_title: str, children: list, speciesinfo: SpeciesSpecifics, experiment:dict, progeny=None):
+    def __init__(self, node_title: str, children: list, speciesinfo: SpeciesSpecifics, experiment:dict, progeny:list=[]):
         self.node_title = node_title
         self.progeny = progeny
         self.experiment=experiment
@@ -275,7 +275,7 @@ class DeltaTree:
         # create leaf nodes for all the provided fastas
         inputs = [
             DeltaTreeNode(
-                node_title=s, children=[], speciesinfo=self.speciesinfo, experiment=self.experiment
+                node_title=s, children=[], speciesinfo=self.speciesinfo, experiment=self.experiment, progeny=[]
             ) for s in symbol]
         inputs.sort()
         ## TODO: parallelize right here
@@ -364,7 +364,7 @@ class DeltaTree:
         def _delta_pos_recursive(node):
             tmplist=[node.plot_df()]
             
-            if not node.children.is_empty():
+            if node.children:
                 nchild=len(node.children)
                 for i in range(nchild):
                     #print(i)
