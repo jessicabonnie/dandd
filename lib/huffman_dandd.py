@@ -53,13 +53,11 @@ class DeltaTreeNode:
         ksweep = should ks 1-100 be explored even after delta is found?
         
         '''
-    def __init__(self, node_title: str, children: list, speciesinfo: SpeciesSpecifics,experiment:dict, progeny=None):
+    def __init__(self, node_title: str, children: list, speciesinfo: SpeciesSpecifics, experiment:dict, progeny=None):
         self.node_title = node_title
         self.progeny = progeny
         self.experiment=experiment
         self.speciesinfo=speciesinfo
-        # self.left = left
-        # self.right = right
         self.children=children
         self.mink = 0
         self.maxk = 0
@@ -69,8 +67,6 @@ class DeltaTreeNode:
         self.assign_progeny()
         self.fastas = [f.node_title for f in self.progeny]
         self.ngen = len(self.progeny)
-        #print(self.progeny)
-        #self.speciesinfo=speciesinfo
 
     def __repr__(self):
         return f"{self.__class__.__name__}['{self.node_title}', k: {self.bestk}, delta: {self.delta}, ngen: {self.ngen}, children: {repr(self.children)} ]"
@@ -78,25 +74,13 @@ class DeltaTreeNode:
     def __lt__(self, other):
         # lt = less than
         return self.ngen < other.ngen
-    # def is_leaf(self):
-    #     if self.right or self.left:
-    #         return False
-    #     else:
-    #         return True
     
     def assign_progeny(self):
         '''something'''
         if not self.progeny:
             self.progeny=[self]
     
-            
-#    def batch_update_card(self, card0, cards):
-#        cmdlist = [DASHINGLOC,"card --presketched -p10"] +  card0
-#        cmd = " ".join(cmdlist)
-#        card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-#        for card in csv.DictReader(card_lines, delimiter='\t'):
-#            cards[card['#Path']] = card['Size (est.)']
-#        return cards
+
     def find_delta_helper(self, kval: int, direction=1):
         '''determine if there is a local maximum delta relative to the current k'''
         # make sure that all necessary ingredient sketches are available for the current k in question
@@ -142,7 +126,6 @@ class DeltaTreeNode:
                         self.children[i].update_node(kval)
                         presketches= presketches + [self.children[i].ksketches[kval].sketch]
 
-            #print(presketches)
             if self.experiment["tool"] == "dashing":
                 self.ksketches[kval] = DashSketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
             elif self.experiment["tool"] == "kmc":
@@ -165,8 +148,7 @@ class DeltaTreeNode:
             self.ksketches = self.ksketches.extend([None]* (kmax-len(self.ksketches)))
         for kval in range(kmin, kmax+1):
             if not self.ksketches[kval]:
-                self.update_node(kval)
-        
+                self.update_node(kval)     
 
     def plot_df(self):
         '''create a dataframe of all "possible" delta values that were examined during creation of the node for use in plotting'''
@@ -189,7 +171,6 @@ class DeltaTreeNode:
             card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
             for card in csv.DictReader(card_lines, delimiter='\t'):
                 self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-        #print(self._speciesinfo.cardkey)
         for sketch in self.ksketches:
             if sketch is not None:
                 if sketch.sketch in sketches:
@@ -198,7 +179,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True}):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10}):
         self.fastahex = speciesinfo.fastahex
         self.experiment=experiment
         self._symbols = []
@@ -257,7 +238,6 @@ class DeltaTree:
             card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
             for card in csv.DictReader(card_lines, delimiter='\t'):
                 self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-            #print(speciesinfo.cardkey)
             for node in self._dt:
                 for sketch in node.ksketches:
                     if sketch:
@@ -325,14 +305,12 @@ class DeltaTree:
             new_node = DeltaTreeNode(
                 node_title="_".join(child_titles), speciesinfo=self.speciesinfo,
                 children = children,
-                # children = [self._dt[idx_current],self._dt[idx_current+1]]
                 progeny=progeny,
                 experiment=self.experiment
             )
             new_node.find_delta(kval=self.speciesinfo.kstart)
             
             while idx_insert < len(self._dt)-increment and self._dt[idx_insert+increment].ngen <= new_node.ngen:
-                
                 idx_insert += increment
             
             self._dt = self._dt[:idx_insert+increment] + [new_node] + self._dt[idx_insert+increment:]
@@ -340,7 +318,6 @@ class DeltaTree:
             idx_current += nchildren
             if idx_insert + increment > len(self._dt)-1:
                 nchildren = len(self._dt) - idx_current
-                #print("NCHILDREN:", nchildren)
 
         #self.batch_update_card()
         #self.compute_code()
@@ -414,15 +391,6 @@ class DeltaTree:
     def ksweep(self, kmin=1, kmax=RANGEK):
         self.root.ksweep(self.speciesinfo, kmin=kmin, kmax=kmax)
 
-
-class DeltaSpider(DeltaTree):
-    '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
-    def __init__(self, fasta_files, speciesinfo, experiment):
-        print("I made it to spider")
-        nchildren=len(fasta_files)
-        super().__init__(fasta_files=fasta_files, speciesinfo=speciesinfo, experiment=experiment, nchildren=nchildren)
-
-
     def orderings_list(self, ordering_file=None, flist_loc=None, count=None):
         '''create or retrieve a series of random orderings of fasta sketches. return also the expected "sorted" array of the files. A subset of the fastas in the tree can be provided by name (in a file). The ordering of this file will be used when count=1 and the list is provided.'''
         fastas=self.fastas
@@ -476,14 +444,6 @@ class DeltaSpider(DeltaTree):
     def progressive_union(self, flist, orderings, step):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
 
-        #speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart)
-        
-        #fastas = retrieve_fasta_files(speciesinfo.inputdir)
-        #fastas=self.fastas
-        # fastas, orderings = self.orderings_list( ordering_file=ordering_file, flist_loc=flist_loc, count=count)
-        # speciesinfo=self.speciesinfo
-        
-
         # create a sketch of the full union of the fastas
         smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo, experiment=self.experiment)
         results=[]
@@ -496,8 +456,6 @@ class DeltaSpider(DeltaTree):
         
         #rdf=pd.DataFrame(results,columns=["k","delta"])
         return pd.concat(results)
-
-
     def sketch_ordering(self, ordering, step=1):
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas in a dataframe'''
         flen=len(ordering)
@@ -508,6 +466,15 @@ class DeltaSpider(DeltaTree):
                 ospider=DeltaSpider(fasta_files=sublist, speciesinfo=self.speciesinfo, experiment=self.experiment)
                 output.append([i, ospider.root_k(), ospider.delta])
         return output
+
+
+
+class DeltaSpider(DeltaTree):
+    '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
+    def __init__(self, fasta_files, speciesinfo, experiment):
+        print("I made it to spider")
+        nchildren=len(fasta_files)
+        super().__init__(fasta_files=fasta_files, speciesinfo=speciesinfo, experiment=experiment, nchildren=nchildren)
 
 
 
