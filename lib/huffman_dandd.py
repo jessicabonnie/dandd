@@ -15,7 +15,7 @@ from numpy import unique
 import pandas as pd
 from species_specifics import SpeciesSpecifics
 from sketch_classes import SketchFilePath
-from sketch_classes import SketchObj
+from sketch_classes import SketchObj, DashSketchObj, KMCSketchObj
 
 #This is assuming that the command for dashing has been aliased
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
@@ -128,6 +128,7 @@ class DeltaTreeNode:
             #create sketch file path holding information relating to the sketch for that k 
             sfp = SketchFilePath(filenames=self.fastas, kval=kval, speciesinfo=self.speciesinfo, experiment=self.experiment)
             # if this isn't a leaf node then collect the sketches for unioning
+            presketches=None
             if self.ngen > 1:
                 presketches=[]
                 # update each of the child nodes 
@@ -141,17 +142,19 @@ class DeltaTreeNode:
                         self.children[i].update_node(kval)
                         presketches= presketches + [self.children[i].ksketches[kval].sketch]
 
-                #print(presketches)
-                
-                self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
+            #print(presketches)
+            if self.experiment["tool"] == "dashing":
+                self.ksketches[kval] = DashSketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
+            elif self.experiment["tool"] == "kmc":
+                self.ksketches[kval] = KMCSketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
 
-            # if this is a leaf node, sketch from fasta    
-            elif self.ngen == 1:
-                #print("Inside ngen=1 of update_node")
-                self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp,  speciesinfo=self.speciesinfo, experiment=self.experiment)
-                self.update_card()
-            else:
-                raise ValueError("For some reason you are trying to sketch ngen that is not >= 1. Something is amiss.")
+            # # if this is a leaf node, sketch from fasta    
+            # elif self.ngen == 1:
+            #     #print("Inside ngen=1 of update_node")
+            #     self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp,  speciesinfo=self.speciesinfo, experiment=self.experiment)
+            #     self.update_card()
+            # else:
+            #     raise ValueError("For some reason you are trying to sketch ngen that is not >= 1. Something is amiss.")
                 
         self.update_card()
         return
@@ -254,7 +257,7 @@ class DeltaTree:
         '''Update the cardinality dictionary for any sketches which have been added to the card0 list in speciesinfo '''
         if len(self.speciesinfo.card0) > 0:
             # TODO check for kmc v dashing
-            cmdlist = [DASHINGLOC,"card --presketched -p10"] +  speciesinfo.card0
+            cmdlist = [DASHINGLOC,"card --presketched -p10"] +  self.speciesinfo.card0
             cmd = " ".join(cmdlist)
             if debug:
                 print(cmd)
@@ -518,7 +521,7 @@ class DeltaSpider(DeltaTree):
 #     '''something'''
 #     def __init__(self, fasta_files, speciesinfo, nchildren=2):
 #         self.hashkey = speciesinfo.hashkey
-# TODO: add arg for dashing vs kmc
+
 def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None, canonicalize=True, tool='dashing'):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag

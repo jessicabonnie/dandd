@@ -140,7 +140,7 @@ class SketchObj:
             delta_pos = possible delta value (to be compared to other ks of the same group of files)
     '''
     
-    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=None, delay=False, debug=True):
+    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[], delay=False, debug=True):
         self.kval = kval
         self.experiment=experiment
         # self.tool=speciesinfo.tool
@@ -177,7 +177,7 @@ class SketchObj:
         ##TODO: is this the right working directory to create/use?
         tmpdir="/tmp/dandD"
         os.makedirs(tmpdir,exist_ok=True)
-        cmdlist = ['kmc -t'+ str(nthreads),'-ci1 ',f'-k{str(self.kval)}',canon_command(canon=self.experiment['canonicalize'], tool="kmc"),'-fm', sfp.ffiles[0], sfp.full, tmpdir]
+        cmdlist = ['kmc -t'+ str(nthreads),'-ci1 -cs2',f'-k{str(self.kval)}',canon_command(canon=self.experiment['canonicalize'], tool="kmc"),'-fm', sfp.ffiles[0], sfp.full, tmpdir]
         cmd = " ".join(cmdlist)
         if debug:
                 print(cmd)
@@ -241,7 +241,7 @@ class SketchObj:
         complex_input = "INPUT: \n"
         inputn=1
         for sketch in self._presketches:
-            complex_input = complex_input + f"input{inputn} = {sketch} -ci1  \n"
+            complex_input = complex_input + f"input{inputn} = {sketch} -ci1   \n"
             inputn+=1
         complex_input = complex_input + f"OUTPUT:\n{sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
         cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-t"+ str(nthreads), "complex", "/dev/stdin"]
@@ -249,7 +249,7 @@ class SketchObj:
         print (cmd)
         #print("SIZE of {0} is {1}".format(self._sfp.full, os.stat(sfp.full)))
         if (not os.path.exists(sfp.full)) or os.stat(sfp.full).st_size == 0:
-            print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
+            # print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
             #self.cmd=subprocess.run(cmdlist)
             subprocess.call(cmd, shell=True)
             self.cmd=cmd
@@ -265,7 +265,7 @@ class SketchObj:
         cmd = " ".join(cmdlist)
         #print("SIZE of {0} is {1}".format(self._sfp.full, os.stat(sfp.full)))
         if (not os.path.exists(sfp.full)) or os.stat(sfp.full).st_size == 0:
-            print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
+            # print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
             #self.cmd=subprocess.run(cmdlist)
             subprocess.call(cmd, shell=True)
             self.cmd=cmd
@@ -300,27 +300,28 @@ class SketchObj:
 
     def individual_card(self, speciesinfo:SpeciesSpecifics, debug:bool=False):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
-        if self.experiment["tool"] == "dashing":
-            cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
-            cmd = " ".join(cmdlist)
-            if debug:
-                print(cmd)
-            #print(cmd)
-            card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-            for card in csv.DictReader(card_lines, delimiter='\t'):
-                speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-        elif self.experiment["tool"] == "kmc":
-            cmdlist = ["kmc_tools","info"] +  [self.sketch]
-            cmd = " ".join(cmdlist)
-            if debug:
-                print(cmd)
-            card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-            for line in card_lines:
-                print(line)
-                key, value = line.strip().split(':')
-                print (f"{key},{value}")
-                if key.strip() == 'total k-mers':
-                    speciesinfo.cardkey[self.sketch] = value.strip()
+        pass
+        # if self.experiment["tool"] == "dashing":
+        #     cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
+        #     cmd = " ".join(cmdlist)
+        #     if debug:
+        #         print(cmd)
+        #     #print(cmd)
+        #     card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
+        #     for card in csv.DictReader(card_lines, delimiter='\t'):
+        #         speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+        # elif self.experiment["tool"] == "kmc":
+        #     cmdlist = ["kmc_tools","info"] +  [self.sketch]
+        #     cmd = " ".join(cmdlist)
+        #     if debug:
+        #         print(cmd)
+        #     card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
+        #     for line in card_lines:
+        #         print(line)
+        #         key, value = line.strip().split(':')
+        #         print (f"{key},{value}")
+        #         if key.strip() == 'total k-mers':
+        #             speciesinfo.cardkey[self.sketch] = value.strip()
             
     def check_cardinality(self, speciesinfo: SpeciesSpecifics, debug=False):
         if self._sfp.full not in speciesinfo.cardkey.keys() or speciesinfo.cardkey[self._sfp.full] == 0:
@@ -330,4 +331,38 @@ class SketchObj:
         #else:
         #    self.individual_card(speciesinfo)
         #return float(speciesinfo.cardkey[self._sfp.full])
-  
+
+class DashSketchObj(SketchObj):
+    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[], delay=False, debug=True):
+        super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches, delay=delay, debug=debug)
+    
+    def individual_card(self, speciesinfo: SpeciesSpecifics, debug: bool = False):
+        '''Run cardinality for an individual sketch. Add it to a dictionary {path:value}'''
+        cmdlist = [DASHINGLOC,"card --presketched -p10"] +  [self.sketch]
+        cmd = " ".join(cmdlist)
+        if debug:
+            print(cmd)
+        #print(cmd)
+        card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
+        for card in csv.DictReader(card_lines, delimiter='\t'):
+            speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+        #return super().individual_card(speciesinfo, debug)
+
+
+class KMCSketchObj(SketchObj):
+    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[], delay=False, debug=True):
+        super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches, delay=delay, debug=debug)
+
+    def individual_card(self, speciesinfo: SpeciesSpecifics, debug: bool = False):
+        cmdlist = ["kmc_tools","info"] +  [self.sketch]
+        cmd = " ".join(cmdlist)
+        if debug:
+            print(cmd)
+        card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
+        for line in card_lines:
+            print(line)
+            key, value = line.strip().split(':')
+            print (f"{key},{value}")
+            if key.strip() == 'total k-mers':
+                speciesinfo.cardkey[self.sketch] = value.strip()
+        #return super().individual_card(speciesinfo, debug)
