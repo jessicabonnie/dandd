@@ -4,6 +4,7 @@ import hashlib
 import warnings
 import subprocess
 import csv
+import sys
 
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
 
@@ -92,9 +93,7 @@ class SketchFilePath:
                   raise RuntimeError(f"Duplicate keys but not duplicate values: {sketchbase}: (1) {stored_info}, (2) {info}")
         return sketchbase
 
-    
 
-##TODO create superclasses for precise vs estimate classes which have same function names
 class SketchObj(object):
     ''' A sketchobject.
         Inputs:
@@ -131,19 +130,29 @@ class SketchObj(object):
     def __repr__(self):
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
+    def sketch_usable(self) -> bool:
+        raise NotImplementedError
     
     def sketch_check(self)->bool:
         raise NotImplementedError("Subclass needs to define this.")
         
     def leaf_command(self) -> str:
         raise NotImplementedError("Subclass needs to define this.")
-    
-    def leaf_sketch(self):
+    def command_check(self):
+        pass
+
+    def leaf_sketch(self, just_do_it=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmd = self.leaf_command()
+        print(f"Just do it: {just_do_it}")
         if self.experiment['debug']:
             print(cmd)
-        if not self.sketch_check():
+        if just_do_it:
+            print("Just Do It.")
+            subprocess.call(cmd, shell=True)
+            print("Just did it.")
+            self.cmd=cmd
+        elif not self.sketch_check():
             print("The sketch file {0} either doesn't exist or is empty".format(self._sfp.full))
             subprocess.call(cmd, shell=True)
             self.cmd=cmd
@@ -160,28 +169,34 @@ class SketchObj(object):
         raise NotImplementedError("Subclass needs to define this.")
 
     
-    def union_sketch(self):
+    def union_sketch(self, just_do_it=False):
         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmd = self.union_command()
-        if not self.sketch_check():
+        if just_do_it:
+            subprocess.call(cmd, shell=True)
+            self.cmd = cmd
+            # subprocess.call(cmd, shell=True)
+        elif not self.sketch_check():
             print(f"The sketch file {self._sfp.full} either doesn't exist or is empty")
             #self.cmd=subprocess.run(cmdlist)
             subprocess.call(cmd, shell=True)
-            self.cmd=cmd
-        else:
+            # subprocess.call(cmd, shell=True)
             self.cmd = cmd
+        
+        self.cmd = cmd
             #" ".join(cmdlist)
         if self.experiment['debug']:
             print(self.cmd)
     ##TODO: make leaf sketch and union sketch private
         
-    def create_sketch(self):
+    def create_sketch(self, just_do_it=False):
         ''' If sketch file exists, assign path to self.sketch and return path. 
             If not create sketch, assign, and then return path.'''
         if self._sfp.ngen == 1:
-            self.leaf_sketch()
+            print("INSIDE")
+            self.leaf_sketch(just_do_it=just_do_it)
         elif self._sfp.ngen > 1:
-            self.union_sketch()
+            self.union_sketch(just_do_it=just_do_it)
         else:
             raise RuntimeError("For some reason you are trying to sketch an empty list of files. Don't do that.")
         
@@ -191,9 +206,10 @@ class SketchObj(object):
 
     def individual_card(self, speciesinfo:SpeciesSpecifics):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
-        pass
+        raise NotImplementedError("Subclass needs to define this.")
         
     def check_cardinality(self, speciesinfo: SpeciesSpecifics):
+        print("inside check_cardinality")
         if self._sfp.full not in speciesinfo.cardkey.keys() or speciesinfo.cardkey[self._sfp.full] == 0:
             self.individual_card(speciesinfo=speciesinfo)   
         return float(speciesinfo.cardkey[self.sketch])
@@ -202,24 +218,79 @@ class DashSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
     
+    def card_command(self) -> str:
+        cmdlist = [DASHINGLOC,"card", "--presketched", "-p10"]+ [self._sfp.full]
+        cmd = " ".join(cmdlist)
+        return cmd
+    
+    def view_test_command(self) -> str:
+        '''Check to make sure that the supposedly existing sketch is viewable / not malformed.'''
+        cmdlist = [DASHINGLOC,"view", self._sfp.full]
+        cmd = " ".join(cmdlist)
+        return cmd
+
     def individual_card(self, speciesinfo: SpeciesSpecifics):
         '''Run cardinality for an individual sketch. Add it to a dictionary {path:value}'''
-        cmdlist = [DASHINGLOC,"card --presketched -p10", self.sketch]
-        cmd = " ".join(cmdlist)
+        cmd = self.card_command()
         if self.experiment['debug']:
             print(cmd)
         #print(cmd)
-        card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-        for card in csv.DictReader(card_lines, delimiter='\t'):
-            speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+        try:
+            print("trying card")
+            proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, check=True,universal_newlines=True)
+            print("tried")
+            # for card in csv.DictReader(card_lines, delimiter='\t'):
+            #     speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+            # readme=False
+            # print(card_lines)
+            # for card in card_lines:
+            #     llist=card.split()
+            #     print(llist)
+            #     if readme:
+            #         llist=card.split()
+            #         print(llist)
+            #         speciesinfo.cardkey[llist[0]] = llist[1]
+            #         readme=True
+
+        except subprocess.CalledProcessError:
+            print("failed")
+            # warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=RuntimeWarning)
+            self.create_sketch(just_do_it=True)
+            print("recreated sketch")
+            proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True)
+            print("ran card again")
+            # card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout
+        finally:
+            print("I think I have a working sketch")
+            for card in csv.DictReader(proc.stdout.splitlines(),delimiter='\t'):
+                speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
         #return super().individual_card(speciesinfo, debug)
 
     def sketch_check(self) -> bool:
         '''Check that sketch at full path exists and is not empty'''
-        if (os.path.exists(self._sfp.full)) and os.stat(self._sfp.full).st_size != 0:
+        
+        if os.path.exists(self._sfp.full) and os.stat(self._sfp.full).st_size != 0:
             return True
         else:
             return False
+            # and os.stat(self._sfp.full).st_size != 0:
+        #     if self.sketch_usable():
+        #         return True
+        # else:
+        #     return False
+    
+    def sketch_usable(self)-> bool:
+        try:
+            code=subprocess.run(self.view_test_command(), shell=True,check=True, stdout=subprocess.DEVNULL,start_new_session=True).returncode
+            if code != 0:
+                print("INSIDE")
+                warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=UserWarning)
+                return False
+        except:
+            warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=UserWarning)
+            return False
+        else:
+            return True
     
     def leaf_command(self) -> str:
         cmdlist = [DASHINGLOC, "sketch", 
@@ -260,7 +331,7 @@ class KMCSketchObj(SketchObj):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
 
     def individual_card(self, speciesinfo: SpeciesSpecifics):
-        cmdlist = ["kmc_tools","info",self.sketch]
+        cmdlist = ["kmc_tools","info",self.sketch] #this should be self._sfp.full
         cmd = " ".join(cmdlist)
         if self.experiment['debug']:
             print(cmd)

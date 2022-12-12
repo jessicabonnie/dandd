@@ -439,7 +439,7 @@ class DeltaTree:
             pickle.dump(orderings, f)
         return fastas, list(orderings)
 
-    def progressive_wrapper(self, flist_loc=None, count=30, ordering_file=None,step=1):
+    def progressive_wrapper(self, flist_loc=None, count=30, ordering_file=None,step=1, debug=False):
         fastas, orderings = self.orderings_list( ordering_file=ordering_file, flist_loc=flist_loc, count=count)
 
         return self.progressive_union(flist=fastas, orderings=orderings, step=step)
