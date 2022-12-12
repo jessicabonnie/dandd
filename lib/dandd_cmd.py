@@ -16,12 +16,13 @@ def tree_command(args):
         tool='kmc'
         
     os.makedirs(args.outdir, exist_ok=True)
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool)
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug)
 
     dtree.save(outdir=args.outdir, tag=args.tag, label=args.label)
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
+    # dtree.experiment["debug"] = args.debug
     results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
     if args.outfile:
         results.to_csv(args.outfile)
@@ -35,7 +36,14 @@ def abba_command(args):
     #     results.to_csv(args.outfile)
     # else:
     #     print(tabulate(results, headers=list(results.columns)))
-    
+
+def info_command(args):
+    dtree = pickle.load(open(args.delta_tree, "rb"))
+    print(dtree)
+
+def kij_command(args):
+    dtree = pickle.load(open(args.delta_tree, "rb"))
+    print(dtree)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='program to explore delta values for a set of fasta files')
@@ -43,12 +51,12 @@ def parse_arguments():
     # Arguments for top-level
 
     parser.add_argument("-v", "--verbose", action="count", default=0)
-    
 
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
 
     # Make parser for "dand_cmd.py tree ..."
     tree_parser = subparsers.add_parser("tree")
+    tree_parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
 
     tree_parser.add_argument("-s", "--species", dest="tag", help="species tagname used to locate data directory",  metavar="SPECIESNAME", type=str, required=True)
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
@@ -78,7 +86,7 @@ def parse_arguments():
 
 
     # Make parser for "dand_cmd.py progressive ..."
-    progressive_parser = subparsers.add_parser("progressive", help="Measure Delta as each individual fasta is added to the set. If a specific ordering is not provided, a set of random orderings can be generated. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.")
+    progressive_parser = subparsers.add_parser("progressive", help="Measure Delta as each individual fasta is added to the set. If a specific ordering is not provided, a set of random orderings can be generated. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)")
     
     progressive_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command")
 
@@ -99,6 +107,10 @@ def parse_arguments():
     # Make parser for "dand_cmd.py info ..."
     info_parser = subparsers.add_parser("info")
     
+    info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command")
+
+    info_parser.set_defaults(func=info_command)
+    
     # Make parser for "dand_cmd.py exhaustive ..."
     abba_parser = subparsers.add_parser("abba", help='NOT IMPLEMENTED. "A before B, B before A" runs runs all permutations of orderings of subsets where both fasta A and fasta B are present -- with analysis comparing those where (1) fasta A preceeds B in the ordering; (2) fasta B preceeds A in the ordering. NOTE: A and B should both be present in the provided tree.')
 
@@ -109,6 +121,17 @@ def parse_arguments():
     abba_parser.add_argument("-B", "--fastaB", dest="fastaB", metavar="FASTA_B_PATH", type=str, default=None, help="filepath of fasta B")
 
     abba_parser.set_defaults(func=abba_command)
+
+   # Make parser for "dand_cmd.py progressive ..."
+    kij_parser = subparsers.add_parser("kij", help="K Independent Jaccard. If a subset of fastas is not provided, matrix will include all inputs used to generate the delta tree using the `tree` command. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)")
+    
+    kij_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command")
+
+    kij_parser.add_argument("-f", "--fastas", dest="flist_loc", default=None, type=str, metavar="FASTA LIST FILE", help="filepath to a subset of fasta files from the original tree which should be analyzed.")
+
+    kij_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
+
+    kij_parser.set_defaults(func=kij_command)
 
     return parser
 
