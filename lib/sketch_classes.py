@@ -266,6 +266,10 @@ class DashSketchObj(SketchObj):
                 speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
         #return super().individual_card(speciesinfo, debug)
 
+    def parse_card(self,speciesinfo, proc):
+        for card in csv.DictReader(proc.stdout.splitlines(),delimiter='\t'):
+                speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+
     def sketch_check(self) -> bool:
         '''Check that sketch at full path exists and is not empty'''
         
