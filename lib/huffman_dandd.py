@@ -130,6 +130,7 @@ class DeltaTreeNode:
             if self.experiment["tool"] == "dashing":
                 self.ksketches[kval] = DashSketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
             elif self.experiment["tool"] == "kmc":
+                # TODO: create tmp directory for this obj to use here?
                 self.ksketches[kval] = KMCSketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
 
             # # if this is a leaf node, sketch from fasta    
@@ -140,7 +141,7 @@ class DeltaTreeNode:
             # else:
             #     raise ValueError("For some reason you are trying to sketch ngen that is not >= 1. Something is amiss.")
                 
-        self.update_card()
+        #self.update_card()
         return
 
     def ksweep(self, kmin: int, kmax: int):
@@ -163,7 +164,7 @@ class DeltaTreeNode:
         return ndf
 
     def update_card(self):
-        '''retrieve/calculate cardinality for any sketches in the node that lack it'''
+        '''retrieve/calculate cardinality for any sketches in the node that lack it. NOTE: this is not in use. also it is more sketch related. TODO: refactor to use commands from SketchObj classes rather than using dashing '''
         sketches = [sketch for sketch in self.ksketches if sketch is not None]
         cardlist = [sketch.sketch for sketch in sketches if sketch.card == 0]
         if len(cardlist) > 0:
