@@ -481,11 +481,16 @@ class DeltaTree:
 
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
-    def __init__(self, fasta_files, speciesinfo, experiment):
+    def __init__(self, fasta_files, speciesinfo, experiment, padding=True):
         print("I made it to spider")
         nchildren=len(fasta_files)
-        super().__init__(fasta_files=fasta_files, speciesinfo=speciesinfo, experiment=experiment, nchildren=nchildren)
+        super().__init__(fasta_files=fasta_files, speciesinfo=speciesinfo, experiment=experiment, nchildren=nchildren, padding=padding)
+    def __init2__(self, tree:DeltaTree):
+        raise NotImplementedError("initialization of spider by tree not yet implemented")
+    #TODO: add a function to the superclass that adds union nodes to the _dt and then create one here that adds just the spider body. That way the function can be passed the list of childnodes and then repurposed to instantiate a spider using only child nodes
+    # def _build_tree(self.leaf_nodes=[DeltaTreeNode]):
 
+    ## TODO: init function receives a delta tree and creates a spider out of it's nodes without creating new child nodes
 
 
 def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10):
