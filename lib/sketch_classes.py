@@ -218,10 +218,11 @@ class DashSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
     
-    def card_command(self) -> str:
-        cmdlist = [DASHINGLOC,"card", "--presketched", "-p10"]+ [self._sfp.full]
+    def card_command(self, sketch_paths) -> str:
+        cmdlist = [DASHINGLOC,"card", "--presketched", "-p10"]+ sketch_paths
         cmd = " ".join(cmdlist)
         return cmd
+    
     
     def view_test_command(self) -> str:
         '''Check to make sure that the supposedly existing sketch is viewable / not malformed.'''
@@ -231,7 +232,8 @@ class DashSketchObj(SketchObj):
 
     def individual_card(self, speciesinfo: SpeciesSpecifics):
         '''Run cardinality for an individual sketch. Add it to a dictionary {path:value}'''
-        cmd = self.card_command()
+        cmd = self.card_command([self._sfp.full])
+        
         if self.experiment['debug']:
             print(cmd)
         #print(cmd)
