@@ -286,6 +286,7 @@ class DeltaTree:
         #inputs = [n.find_delta(speciesinfo, self.registers, speciesinfo.kstart) for n in inputs]
         # 
         if parallel:
+            # self.parallel_progeny_prep(kval)
             pass
             # pool = Pool(processes=4)
             # results = [pool.apply(_update_helper, args=(dnode, self.speciesinfo,self.speciesinfo.kstart,  )) for dnode in inputs]
@@ -325,6 +326,10 @@ class DeltaTree:
         #self.batch_update_card()
         #self.compute_code()
     
+    # def parallel_progeny_prep(self, kval:int):
+    #     cmd = parallel_progeny_command(self.speciesinfo.sketchdir, kval, self.experiment)
+    #     proc = subprocess.Popen(cmd,shell=True)
+    #     output, errs=proc.communicate(input="\n".join(self.fastas).encode())
 
     def print_list(self) -> None:
         nodes = []

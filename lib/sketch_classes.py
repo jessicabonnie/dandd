@@ -24,6 +24,26 @@ def canon_command(canon:bool, tool='dashing'):
                 outstr='-b'
         return outstr
 
+
+def parallel_progeny_command(sketchdir, kval:int, experiment) -> str:
+    '''Produce the necessary leaf sketches for a node further up the tree in a single batch command to dashing/kmc
+    NOTE: NOT CURRENTLY USED'''
+        # fasta_list="\n".join(self._sfp.ffiles)
+    if experiment["tool"] == "dashing":
+        progeny_dir=os.path.join(sketchdir, "ngen" + str(1),"k"+ str(kval))
+        cmdlist = [ DASHINGLOC, "sketch", 
+    canon_command(experiment['canonicalize'], "dashing"),
+    "-k" + str(kval), 
+    "-S",str(experiment['registers']),
+        "-p10","--prefix", progeny_dir, "--paths", "/dev/stdin"]
+            #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
+    else:
+        cmdlist=[]
+        raise NotImplementedError("tools other than dashing not yet implemented with parallel argument")
+    cmd = " ".join(cmdlist)
+    
+    return cmd
+
 class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location
     filenames: list of filenames that will be used to make the sketch
