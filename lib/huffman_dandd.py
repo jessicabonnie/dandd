@@ -182,7 +182,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10}):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10}, padding=True):
         self.fastahex = speciesinfo.fastahex
         self.experiment=experiment
         self._symbols = []
@@ -193,7 +193,7 @@ class DeltaTree:
         self.kstart=speciesinfo.kstart
         self.speciesinfo=speciesinfo
         self._build_tree(fasta_files, nchildren)
-        self.fill_tree()
+        self.fill_tree(padding=padding)
         self.ngen = len(fasta_files)
         self.root=self._dt[-1]
         self.delta = self.root_delta()
@@ -338,20 +338,21 @@ class DeltaTree:
             nodes.append(f'\'{node.node_title}\'({node.ngen}\'({" ".join([i.node_title for i in node.progeny])})')
         print(' -> '.join(nodes))
 
-    def fill_tree(self):
-        '''Starting at the root make sure that all nodes in the tree contain the sketches for the argmax ks for every node as well as 2 less than the minimum and 2 greater than the maximum'''
+    def fill_tree(self, padding=True):
+        '''Starting at the root make sure that all nodes in the tree contain the sketches for the argmax ks for every node as well as 2 less than the minimum and 2 greater than the maximum (IF padding argument is True)'''
         root = self._dt[-1]
         bestks = list(unique([n.bestk for n in self._dt]))
         bestks = [k for k in bestks if k!=0  ]
         #print(bestks)
         bestks.sort()
         print("Best ks before padding:", bestks)
-        bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2]
+        if padding:
+            bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2]
         print("Best ks after padding:", bestks)
         for k in bestks:
             root.update_node(k)
-        
-        
+
+
     def save(self, outdir: str, tag: str, label=None):
         '''Save the delta tree for future retrieval
         '''
