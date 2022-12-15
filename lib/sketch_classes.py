@@ -158,14 +158,15 @@ class SketchObj(object):
     def sketch_check(self)->bool:
         raise NotImplementedError("Subclass needs to define this.")
         
-    def leaf_command(self) -> str:
+    def leaf_command(self, tmpdir) -> str:
         raise NotImplementedError("Subclass needs to define this.")
     def command_check(self):
         pass
 
     def leaf_sketch(self, just_do_it=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
-        cmd = self.leaf_command()
+        tmpdir=tempfile.mkdtemp()
+        cmd = self.leaf_command(tmpdir=tmpdir)
         print(f"Just do it: {just_do_it}")
         if self.experiment['debug']:
             print(cmd)
@@ -178,10 +179,12 @@ class SketchObj(object):
             print("The sketch file {0} either doesn't exist or is empty".format(self._sfp.full))
             subprocess.call(cmd, shell=True)
             self.cmd=cmd
-            ##TODO Check if call raises error / returns 0
+            
             ##TODO pass back the command so that it can be done in parallel?
         else:
             self.cmd = cmd
+
+        shutil.rmtree(tmpdir)
         #print(self.cmd)
 
     ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
@@ -321,7 +324,7 @@ class DashSketchObj(SketchObj):
         else:
             return True
     
-    def leaf_command(self) -> str:
+    def leaf_command(self, tmpdir) -> str:
         '''Command string to produce the sketch from a fasta based on the information used to initiate the sketch obj'''
         cmdlist = [DASHINGLOC, "sketch", 
         canon_command(self.experiment['canonicalize'], "dashing"),
@@ -380,9 +383,7 @@ class KMCSketchObj(SketchObj):
         else:
             return False
 
-    def leaf_command(self) -> str:
-        tmpdir="/tmp/dandD"
-        os.makedirs(tmpdir,exist_ok=True)
+    def leaf_command(self,tmpdir) -> str:
         cmdlist = ['kmc -t'+ str(self.experiment['nthreads']),
         '-ci1 -cs2',f'-k{str(self.kval)}',
         canon_command(canon=self.experiment['canonicalize'], tool="kmc"),
