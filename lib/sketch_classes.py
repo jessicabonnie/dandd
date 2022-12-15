@@ -5,6 +5,8 @@ import warnings
 import subprocess
 import csv
 import sys
+import tempfile
+import shutil
 
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
 
@@ -245,7 +247,7 @@ class DashSketchObj(SketchObj):
     
     
     def view_test_command(self) -> str:
-        '''Check to make sure that the supposedly existing sketch is viewable / not malformed.'''
+        '''Check to make sure that the supposedly existing sketch is viewable / not malformed. NOT CURRENTLY IN USE'''
         cmdlist = [DASHINGLOC,"view", self._sfp.full]
         cmd = " ".join(cmdlist)
         return cmd
@@ -306,6 +308,7 @@ class DashSketchObj(SketchObj):
         #     return False
     
     def sketch_usable(self)-> bool:
+        '''Not currently in use'''
         try:
             code=subprocess.run(self.view_test_command(), shell=True,check=True, stdout=subprocess.DEVNULL,start_new_session=True).returncode
             if code != 0:
@@ -319,6 +322,7 @@ class DashSketchObj(SketchObj):
             return True
     
     def leaf_command(self) -> str:
+        '''Command string to produce the sketch from a fasta based on the information used to initiate the sketch obj'''
         cmdlist = [DASHINGLOC, "sketch", 
         canon_command(self.experiment['canonicalize'], "dashing"),
         "-k" + str(self.kval), 
