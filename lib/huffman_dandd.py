@@ -351,6 +351,30 @@ class DeltaTree:
         print("Best ks after padding:", bestks)
         for k in bestks:
             root.update_node(k)
+    
+    def leaf_nodes(self):
+        return [child for child in self._dt if child.ngen==1]
+
+    def to_spider(self):
+        '''Transform tree into a spider if it isn't'''
+        #TODO: make this use the leaf nodes of self
+        # dspider = DeltaSpider(fasta_files=self.fastas,speciesinfo=self.speciesinfo,experiment=self.experiment)
+        # self._dt = self.leaf_nodes()
+
+        children=self.leaf_nodes()
+        progeny=[p.progeny for p in children]
+        #flatten the progeny list
+        progeny=[item for sublist in progeny for item in sublist]
+        child_titles=[c.node_title for c in children]
+        body_node = DeltaTreeNode(
+            node_title="_".join(child_titles), speciesinfo=self.speciesinfo,
+            children = children,
+            progeny=progeny,
+            experiment=self.experiment
+            )
+        body_node.find_delta(kval=self.speciesinfo.kstart)
+        self._dt = children + [body_node]
+        
 
 
     def save(self, outdir: str, tag: str, label=None):
