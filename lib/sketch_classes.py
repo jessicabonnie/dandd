@@ -8,8 +8,7 @@ import sys
 import tempfile
 import shutil
 
-DASHINGLOC="dashing" #
-DASHINGLOC="/scratch16/blangme2/jessica/lib/dashing/dashing"
+DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
 
 def blake2b(fname):
     hash_blake2b = hashlib.blake2b()
