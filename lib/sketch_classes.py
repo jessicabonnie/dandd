@@ -233,10 +233,15 @@ class SketchObj(object):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
         raise NotImplementedError("Subclass needs to define this.")
         
-    def check_cardinality(self, speciesinfo: SpeciesSpecifics):
+    def check_cardinality(self, speciesinfo: SpeciesSpecifics, delay=False):
+        '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. NOTE: delay argument not implemented relates to idea of a way to batch the card command by attatching the sketch to a card0 sketch list attached to the SpeciesSpecifics object'''
         print("inside check_cardinality")
         if self._sfp.full not in speciesinfo.cardkey.keys() or speciesinfo.cardkey[self._sfp.full] == 0:
-            self.individual_card(speciesinfo=speciesinfo)   
+            self.individual_card(speciesinfo=speciesinfo)
+            # if delay and self._sfp.full not in speciesinfo.card0:
+            #     speciesinfo.card0.append(self._sfp.full)
+            #     return 0
+            # else:
         return float(speciesinfo.cardkey[self.sketch])
 
 class DashSketchObj(SketchObj):
