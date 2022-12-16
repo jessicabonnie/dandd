@@ -623,6 +623,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     else:
         dtree = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo, experiment=experiment)
     # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
+    # BUG: need to segment cardinality by tool otherwise they will all go to the same place
     speciesinfo.save_cardkey()
     speciesinfo.save_fastahex()
     print(dtree)#.print_tree()
