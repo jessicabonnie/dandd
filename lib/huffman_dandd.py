@@ -16,6 +16,9 @@ import pandas as pd
 from species_specifics import SpeciesSpecifics
 from sketch_classes import SketchFilePath
 from sketch_classes import SketchObj, DashSketchObj, KMCSketchObj
+import tabulate
+from typing import List, Dict, Set, Tuple, NamedTuple
+
 
 #This is assuming that the command for dashing has been aliased
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
@@ -29,7 +32,7 @@ def retrieve_fasta_files(inputdir, full=True)->list:
         fastas=[os.path.join(inputdir,fasta) for fasta in fastas]
     return fastas
 
-def random_orderings(length, norder, preexist=set()):
+def random_orderings(length, norder, preexist=set())->Set[Tuple[int]]:
     '''create norder NEW unique random orderings of numbers 0 through length in addition to those in provided preexisting set of orderings'''
     rlist = list(range(length))
     prelen=len(preexist)
@@ -352,7 +355,7 @@ class DeltaTree:
         for k in bestks:
             root.update_node(k)
     
-    def leaf_nodes(self):
+    def leaf_nodes(self) -> List[DeltaTreeNode]:
         return [child for child in self._dt if child.ngen==1]
 
     def to_spider(self):
@@ -409,15 +412,13 @@ class DeltaTree:
         dflist= _delta_pos_recursive(root)
         return pd.concat(dflist)
 
-    def find_delta_delta(self, fasta_subset: list):
+    def find_delta_delta(self, fasta_subset: List[str]) -> float:
         '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
         # majord = self.delta
         # majork = self.root_k()
-        # create list of fastas that are in the original spider that are not in the subset provided
+        # create list of fastas that are in the original spider that are not in the subset provided --> i.e. the complement
         fastas = [f for f in self.fastas if f not in fasta_subset]
-        if len(fastas) == 0:
-            fastas = [f for f in self.fastas if os.path.basename(f) not in fasta_subset]
-        small_spider = DeltaSpider(fasta_files=fastas, speciesinfo=self.speciesinfo, experiment=self.experiment)
+
         print("Full Tree Delta: ", self.delta)
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
@@ -425,7 +426,7 @@ class DeltaTree:
     def ksweep(self, kmin=1, kmax=RANGEK):
         self.root.ksweep(self.speciesinfo, kmin=kmin, kmax=kmax)
 
-    def orderings_list(self, ordering_file=None, flist_loc=None, count=None):
+    def orderings_list(self, ordering_file=None, flist_loc=None, count=None)-> Tuple[List[str], List[Tuple[int]]]:
         '''create or retrieve a series of random orderings of fasta sketches. return also the expected "sorted" array of the files. A subset of the fastas in the tree can be provided by name (in a file). The ordering of this file will be used when count=1 and the list is provided.'''
         fastas=self.fastas
         fastas.sort()
@@ -439,7 +440,7 @@ class DeltaTree:
             fastas = [f for f in fsublist if f in fastas]
         # if count is one "sorted" ordering is returned with the reference list
         if count == 1:
-            return [fastas,[[i for i in range(len(fastas))]]]
+            return fastas,[tuple(i for i in range(len(fastas)))]
         
         # orderings are handled as sets to prevent duplication
         orderings=set()
@@ -453,10 +454,10 @@ class DeltaTree:
                 orderings=pickle.load(f)
             # if count was not provided then just return the orderings that are already there
             if not count:
-                return [fastas, list(orderings)]
+                return fastas, list(orderings)
             # if the count is lte to the number of orderings in the file, take the first count number of orderings
             if count <= len(orderings):
-                return [fastas, list(orderings)[:count]]
+                return fastas, list(orderings)[:count]
 
         # if there is no ordering file at the location, time to make some    
         else:
