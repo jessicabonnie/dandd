@@ -411,6 +411,8 @@ class DeltaTree:
         
         dflist= _delta_pos_recursive(root)
         return pd.concat(dflist)
+    def nodes_from_fastas(self, fasta_list):
+        return [node for node in self.leaf_nodes() if node.fastas[0] in fasta_list]
 
     def find_delta_delta(self, fasta_subset: List[str]) -> float:
         '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
@@ -419,6 +421,9 @@ class DeltaTree:
         # create list of fastas that are in the original spider that are not in the subset provided --> i.e. the complement
         fastas = [f for f in self.fastas if f not in fasta_subset]
 
+        # if len(fastas) == 0:
+        #     fastas = [f for f in self.fastas if os.path.basename(f) not in fasta_subset]
+        small_spider = SubSpider(leafnodes=self.nodes_from_fastas(fastas), speciesinfo=self.speciesinfo, experiment=self.experiment)
         print("Full Tree Delta: ", self.delta)
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
@@ -515,10 +520,17 @@ class DeltaTree:
         def pairwise_helper(pair):
             print(pair)
             pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=self.experiment)
-            return (pspider._dt[0].fastas[0],pspider._dt[0].bestk, pspider._dt[0].delta,
-            pspider._dt[1].fastas[0],pspider._dt[1].bestk, pspider._dt[1].delta,
-            pspider.root.bestk, pspider.delta)
+            outdict={"A":pspider._dt[0].fastas[0], "B":pspider._dt[1].fastas[0],
+            "Adelta":pspider._dt[0].delta, "Bdelta":pspider._dt[1].delta,
+            "Ak":pspider._dt[0].bestk, "Bk":pspider._dt[1].bestk,
+            "ABdelta":pspider.delta, "ABk":pspider.root.bestk}
+            outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
+            return outdict
+            #(pspider._dt[0].fastas[0],pspider._dt[0].bestk, pspider._dt[0].delta,
+            #pspider._dt[1].fastas[0],pspider._dt[1].bestk, pspider._dt[1].delta,
+            #pspider.root.bestk, pspider.delta)
         results=[pairwise_helper(pair) for pair in pairings]
+        
         return results
     
 
