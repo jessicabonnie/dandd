@@ -501,7 +501,57 @@ class DeltaTree:
                 output.append([i, ospider.root_k(), ospider.delta])
         return output
 
+    
+    def pairwise_spiders(self, sublist=[]):
+        '''Create values for K-Independent-Jaccard. TODO: don't actually need to create a tree for each pair, could reuse nodes from a spider'''
+        ## TODO: do this by reusing treenodes from self rather than making a million new ones
+        # super_spider=self.to_spider()
 
+        if len(sublist)==0:
+            sublist=self.leaf_nodes()
+        pairings=[[a, b] for idx, a in enumerate(sublist) for b in sublist[idx + 1:]]
+        # spider_list=[]
+        def pairwise_helper(pair):
+            print(pair)
+            pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=self.experiment)
+            return (pspider._dt[0].fastas[0],pspider._dt[0].bestk, pspider._dt[0].delta,
+            pspider._dt[1].fastas[0],pspider._dt[1].bestk, pspider._dt[1].delta,
+            pspider.root.bestk, pspider.delta)
+        results=[pairwise_helper(pair) for pair in pairings]
+        return results
+    
+
+class SubSpider(DeltaTree):
+    def __init__(self,leafnodes,speciesinfo,experiment):
+        self.fastahex = speciesinfo.fastahex
+        self.experiment=experiment
+        self._symbols = []
+        self.mink=0
+        self.maxk=0
+        self.kstart=speciesinfo.kstart
+        self.speciesinfo=speciesinfo
+        self._build_tree(leafnodes)
+        self.root=self._dt[-1]
+        self.fastas=self.root.fastas
+        self.ngen = len(self.fastas)
+        self.delta = self.root_delta()
+        self.speciesinfo.save_fastahex()
+        #super().__new__(self)
+
+    def _build_tree(self, leafnodes):
+        children=leafnodes
+        progeny=[p.progeny for p in children]
+        #flatten the progeny list
+        progeny=[item for sublist in progeny for item in sublist]
+        child_titles=[c.node_title for c in children]
+        body_node = DeltaTreeNode(
+            node_title="_".join(child_titles), speciesinfo=self.speciesinfo,
+            children = children,
+            progeny=progeny,
+            experiment=self.experiment
+            )
+        body_node.find_delta(kval=self.speciesinfo.kstart)
+        self._dt = children + [body_node]
 
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
