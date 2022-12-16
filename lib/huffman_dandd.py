@@ -348,10 +348,10 @@ class DeltaTree:
         bestks = [k for k in bestks if k!=0  ]
         #print(bestks)
         bestks.sort()
-        print("Best ks before padding:", bestks)
+        # print("Best ks before padding:", bestks)
         if padding:
             bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2]
-        print("Best ks after padding:", bestks)
+        # print("Best ks after padding:", bestks)
         for k in bestks:
             root.update_node(k)
     
@@ -518,7 +518,6 @@ class DeltaTree:
         pairings=[[a, b] for idx, a in enumerate(sublist) for b in sublist[idx + 1:]]
         # spider_list=[]
         def pairwise_helper(pair):
-            print(pair)
             pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=self.experiment)
             outdict={"A":pspider._dt[0].fastas[0], "B":pspider._dt[1].fastas[0],
             "Adelta":pspider._dt[0].delta, "Bdelta":pspider._dt[1].delta,
@@ -530,7 +529,6 @@ class DeltaTree:
             #pspider._dt[1].fastas[0],pspider._dt[1].bestk, pspider._dt[1].delta,
             #pspider.root.bestk, pspider.delta)
         results=[pairwise_helper(pair) for pair in pairings]
-        
         return results
     
 
@@ -569,7 +567,7 @@ class SubSpider(DeltaTree):
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
     def __init__(self, fasta_files, speciesinfo, experiment, padding=True):
-        print("I made it to spider")
+        # print("I made it to spider")
         nchildren=len(fasta_files)
         super().__init__(fasta_files=fasta_files, speciesinfo=speciesinfo, experiment=experiment, nchildren=nchildren, padding=padding)
     def __init2__(self, tree:DeltaTree):
@@ -609,7 +607,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
             fastas = [line.strip() for line in file]
     # right now we expect that if we are provided with a genome directory AND a file list the file list will only contain the basenames
     elif os.path.exists(speciesinfo.inputdir):
-        print("I think the input directory exists")
+        # print("I think the input directory exists")
         fastas = retrieve_fasta_files(speciesinfo.inputdir, full=True)
     else:
         ValueError("You must provide either an existing directory of fastas or a file listing the paths of the desired fastas. The directory you provided was {speciesinfo.inputdir}.")
