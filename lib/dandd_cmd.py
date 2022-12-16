@@ -4,6 +4,7 @@ import sys
 import pickle
 import os
 from tabulate import tabulate
+import csv
 
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
 
@@ -43,7 +44,21 @@ def info_command(args):
 
 def kij_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
-    print(dtree)
+    fastas=[]
+    if args.flist_loc:
+        with open(flist_loc) as file:
+            fastas = [line.strip() for line in file]
+    results = dtree.pairwise_spiders(sublist=fastas)
+    writer = open(args.outfile, "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
+    # if args.outfile:
+    #     with open(args.outfile, 'w', newline='') as output_file:
+    dict_writer = csv.DictWriter(writer, fieldnames=results[0].keys())
+    dict_writer.writeheader()
+    dict_writer.writerows(results)
+    writer.close()
+    # else:
+    #     print(tabulate(results, headers='keys'))
+    
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='program to explore delta values for a set of fasta files')
