@@ -579,6 +579,11 @@ class DeltaSpider(DeltaTree):
 
     ## TODO: init function receives a delta tree and creates a spider out of it's nodes without creating new child nodes
 
+class ProgressiveUnion:
+    '''Unimplemented Progressive Union Class to hold functions and objects relating to that capability'''
+    def __init__(self, deltatree:DeltaTree):
+        raise NotImplementedError
+
 
 def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
