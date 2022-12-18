@@ -6,7 +6,7 @@ import os
 import pickle
 #import hashlib
 #import warnings
-import re
+#import re
 import subprocess
 import csv
 from multiprocessing import Process, Pool
@@ -24,13 +24,13 @@ from typing import List, Dict, Set, Tuple, NamedTuple
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
 RANGEK=100
 
-def retrieve_fasta_files(inputdir, full=True)->list:
-    '''return a list of all fasta files in a directory accounting for all the possible extensions'''
-    reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
-    fastas = [fasta for fasta in os.listdir(inputdir) if reg_compile]
-    if full:
-        fastas=[os.path.join(inputdir,fasta) for fasta in fastas]
-    return fastas
+# def retrieve_fasta_files(inputdir, full=True)->list:
+#     '''return a list of all fasta files in a directory accounting for all the possible extensions'''
+#     reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
+#     fastas = [fasta for fasta in os.listdir(inputdir) if reg_compile]
+#     if full:
+#         fastas=[os.path.join(inputdir,fasta) for fasta in fastas]
+#     return fastas
 
 def random_orderings(length, norder, preexist=set())->Set[Tuple[int]]:
     '''create norder NEW unique random orderings of numbers 0 through length in addition to those in provided preexisting set of orderings'''
@@ -411,6 +411,7 @@ class DeltaTree:
         
         dflist= _delta_pos_recursive(root)
         return pd.concat(dflist)
+
     def nodes_from_fastas(self, fasta_list):
         return [node for node in self.leaf_nodes() if node.fastas[0] in fasta_list]
 
@@ -599,7 +600,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug}
 
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
-    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, flist_loc=flist_loc)
+    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)
     #inputdir = speciesinfo.inputdir
     fastas=[]
     if flist_loc:
@@ -608,7 +609,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     # right now we expect that if we are provided with a genome directory AND a file list the file list will only contain the basenames
     elif os.path.exists(speciesinfo.inputdir):
         # print("I think the input directory exists")
-        fastas = retrieve_fasta_files(speciesinfo.inputdir, full=True)
+        fastas = speciesinfo.retrieve_fasta_files(full=True)
     else:
         ValueError("You must provide either an existing directory of fastas or a file listing the paths of the desired fastas. The directory you provided was {speciesinfo.inputdir}.")
         #fastas = [f for f in allfastas if f in fastas]
@@ -624,7 +625,8 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
         dtree = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo, experiment=experiment)
     # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
     # BUG: need to segment cardinality by tool otherwise they will all go to the same place
-    speciesinfo.save_cardkey()
+    # cardpath=os.path.join(speciesinfo.sketchdir, f'{tag}_{tool}_cardinalities.pickle')
+    speciesinfo.save_cardkey(tool=tool)
     speciesinfo.save_fastahex()
     print(dtree)#.print_tree()
     return dtree
