@@ -152,8 +152,8 @@ class SketchObj(object):
     def __repr__(self):
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
-    def sketch_usable(self) -> bool:
-        raise NotImplementedError
+    # def sketch_usable(self) -> bool:
+        # raise NotImplementedError
     
     def sketch_check(self)->bool:
         raise NotImplementedError("Subclass needs to define this.")
@@ -306,24 +306,19 @@ class DashSketchObj(SketchObj):
             return True
         else:
             return False
-            # and os.stat(self._sfp.full).st_size != 0:
-        #     if self.sketch_usable():
-        #         return True
-        # else:
-        #     return False
     
-    def sketch_usable(self)-> bool:
-        '''Not currently in use'''
-        try:
-            code=subprocess.run(self.view_test_command(), shell=True,check=True, stdout=subprocess.DEVNULL,start_new_session=True).returncode
-            if code != 0:
-                warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=UserWarning)
-                return False
-        except:
-            warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=UserWarning)
-            return False
-        else:
-            return True
+    # def sketch_usable(self)-> bool:
+    #     '''Not currently in use'''
+    #     try:
+    #         code=subprocess.run(self.view_test_command(), shell=True,check=True, stdout=subprocess.DEVNULL,start_new_session=True).returncode
+    #         if code != 0:
+    #             warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=UserWarning)
+    #             return False
+    #     except:
+    #         warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=UserWarning)
+    #         return False
+    #     else:
+        #         return True
     
     def leaf_command(self, tmpdir) -> str:
         '''Command string to produce the sketch from a fasta based on the information used to initiate the sketch obj'''
