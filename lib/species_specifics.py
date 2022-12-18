@@ -1,17 +1,18 @@
 import pickle
 import os
+import re
 
 
 
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
-    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, flist_loc=None):
+    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, tool: str, flist_loc=None):
         self.tag=tag
         self.sketchdir=sketchdir
         #os.makedirs(self.sketchdir, exist_ok=True)
         self.species=self._resolve_species()
         self.fastahex=self._read_fastahex()
-        self.cardkey=self._read_cardkey()
+        self.cardkey=self._read_cardkey(tool=tool)
         self.inputdir=self._locate_input(genomedir)
         self.card0 = []
         self.kstart = kstart
@@ -42,19 +43,19 @@ class SpeciesSpecifics:
         with open(usual,"wb") as f:
             pickle.dump(file=f, obj=self.sketchinfo)
     
-    def _read_cardkey(self):
+    def _read_cardkey(self, tool):
         '''Recover key of previously calculated cardinalities from pickle file'''
-        usual=os.path.join(self.sketchdir, self.tag+'_cardinalities.pickle')
-        if os.path.exists(usual):
-            cardkey=pickle.load(open(usual, "rb", -1))
+        cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
+        if os.path.exists(cardpath):
+            cardkey=pickle.load(open(cardpath, "rb", -1))
         else:
             cardkey=dict()
         return cardkey
     
-    def save_cardkey(self):
+    def save_cardkey(self, tool: str):
         '''Store cardinalities in species specific pickle'''
-        usual=os.path.join(self.sketchdir, self.tag+'_cardinalities.pickle')
-        with open(usual,"wb") as f:
+        cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
+        with open(cardpath,"wb") as f:
             pickle.dump(file=f, obj=self.cardkey)
             
     def _resolve_species(self):
@@ -84,3 +85,10 @@ class SpeciesSpecifics:
             self.card0.append(fullpath)
         return 0
 
+    def retrieve_fasta_files(self, full=True)->list:
+        '''return a list of all fasta files in a directory accounting for all the possible extensions'''
+        reg_compile = re.compile(self.inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
+        fastas = [fasta for fasta in os.listdir(self.inputdir) if reg_compile]
+        if full:
+            fastas=[os.path.join(self.inputdir,fasta) for fasta in fastas]
+        return fastas
