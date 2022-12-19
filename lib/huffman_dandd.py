@@ -485,6 +485,7 @@ class DeltaTree:
     def progressive_union(self, flist, orderings, step):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
 
+        # TODO: Update experiment object if needed
         # create a sketch of the full union of the fastas
         smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo, experiment=self.experiment)
         results=[]
@@ -494,9 +495,9 @@ class DeltaTree:
             odf['ordering']=i+1
             results.append(odf)
             self.speciesinfo.save_fastahex()
-        
         #rdf=pd.DataFrame(results,columns=["k","delta"])
         return pd.concat(results)
+        
     def sketch_ordering(self, ordering, step=1):
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas in a dataframe'''
         flen=len(ordering)
@@ -504,7 +505,8 @@ class DeltaTree:
         for i in range(1,flen+1):
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
-                ospider=DeltaSpider(fasta_files=sublist, speciesinfo=self.speciesinfo, experiment=self.experiment)
+
+                ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
                 output.append([i, ospider.root_k(), ospider.delta])
         return output
 

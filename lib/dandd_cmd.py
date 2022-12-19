@@ -46,7 +46,7 @@ def kij_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
     fastas=[]
     if args.flist_loc:
-        with open(flist_loc) as file:
+        with open(args.flist_loc) as file:
             fastas = [line.strip() for line in file]
     results = dtree.pairwise_spiders(sublist=fastas)
     writer = open(args.outfile, "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
@@ -126,7 +126,7 @@ def parse_arguments():
 
     info_parser.set_defaults(func=info_command)
     
-    # Make parser for "dand_cmd.py exhaustive ..."
+    # Make parser for "dand_cmd.py abba ..."
     abba_parser = subparsers.add_parser("abba", help='NOT IMPLEMENTED. "A before B, B before A" runs runs all permutations of orderings of subsets where both fasta A and fasta B are present -- with analysis comparing those where (1) fasta A preceeds B in the ordering; (2) fasta B preceeds A in the ordering. NOTE: A and B should both be present in the provided tree.')
 
     abba_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command")
@@ -137,7 +137,7 @@ def parse_arguments():
 
     abba_parser.set_defaults(func=abba_command)
 
-   # Make parser for "dand_cmd.py progressive ..."
+   # Make parser for "dand_cmd.py kij ..."
     kij_parser = subparsers.add_parser("kij", help="K Independent Jaccard. If a subset of fastas is not provided, matrix will include all inputs used to generate the delta tree using the `tree` command. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)")
     
     kij_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command")
