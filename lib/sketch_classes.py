@@ -185,8 +185,6 @@ class SketchObj(object):
 
         shutil.rmtree(tmpdir)
         #print(self.cmd)
-
-    ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
     #     filename =os.path.basename(filename)
     
     def union_command(self)->str:
@@ -256,7 +254,10 @@ class SketchObj(object):
             #     return 0
             # else:
         return float(speciesinfo.cardkey[self.sketch])
-
+    
+    def summarize(self):
+        outdict = {"kval":self.kval, "card":self.card, "delta_pos":self.delta_pos}
+        return outdict
 class DashSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)

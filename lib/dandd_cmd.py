@@ -23,6 +23,18 @@ def tree_command(args):
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
+    fastas = dtree.fastas
+    if args.flist_loc:
+        with open(args.flist_loc) as file:
+            fsublist = [line.strip() for line in file]
+        fastas = [f for f in fastas if f in fsublist]
+        #order fastas as given in file
+        fastas = [f for f in fsublist if f in fastas]
+        # if count is one "sorted" ordering is returned with the reference list
+        # if args.norderings == 1:
+        #     return fastas,[tuple(i for i in range(len(fastas)))]
+
+    
     # dtree.experiment["debug"] = args.debug
     results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
     if args.outfile:
@@ -48,16 +60,24 @@ def kij_command(args):
     if args.flist_loc:
         with open(args.flist_loc) as file:
             fastas = [line.strip() for line in file]
-    results = dtree.pairwise_spiders(sublist=fastas)
+
+    dtree.ksweep(mink=args.mink,maxk=args.maxk)
+    kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk)
+
     writer = open(args.outfile, "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
-    # if args.outfile:
-    #     with open(args.outfile, 'w', newline='') as output_file:
-    dict_writer = csv.DictWriter(writer, fieldnames=results[0].keys())
+    dict_writer = csv.DictWriter(writer, fieldnames=kij_results[0].keys())
     dict_writer.writeheader()
-    dict_writer.writerows(results)
+    dict_writer.writerows(kij_results)
     writer.close()
-    # else:
-    #     print(tabulate(results, headers='keys'))
+    
+    if args.jaccard:
+        writer = open(args.outfile+".jaccard", "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
+        dict_writer = csv.DictWriter(writer, fieldnames=j_results[0].keys())
+        dict_writer.writeheader()
+        dict_writer.writerows(j_results)
+        writer.close()
+
+    
     
 
 def parse_arguments():
@@ -122,7 +142,11 @@ def parse_arguments():
     # Make parser for "dand_cmd.py info ..."
     info_parser = subparsers.add_parser("info")
     
-    info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command")
+    info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command. Tree nodes will be updated to hold additional sketches as needed to perform info commands selected.")
+    
+    info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+
+    info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     info_parser.set_defaults(func=info_command)
     
@@ -145,6 +169,14 @@ def parse_arguments():
     kij_parser.add_argument("-f", "--fastas", dest="flist_loc", default=None, type=str, metavar="FASTA LIST FILE", help="filepath to a subset of fasta files from the original tree which should be analyzed.")
 
     kij_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
+
+    kij_parser.add_argument("--jaccard", dest="jaccard", default=False, action="store_true", help="Indicate whether to include output for standard jaccard difference for indicated ks")
+
+    kij_parser.add_argument("--mash", dest="mash", default=False, action="store_true", help="Indicate whether to include output for mash difference for indicated ks")
+
+    kij_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, type=int, default=0, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+
+    kij_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, type=int, default=0, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     kij_parser.set_defaults(func=kij_command)
 
