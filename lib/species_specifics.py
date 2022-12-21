@@ -2,8 +2,6 @@ import pickle
 import os
 import re
 
-
-
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
     def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, tool: str, flist_loc=None):

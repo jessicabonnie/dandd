@@ -18,6 +18,7 @@ from sketch_classes import SketchFilePath
 from sketch_classes import SketchObj, DashSketchObj, KMCSketchObj
 import tabulate
 from typing import List, Dict, Set, Tuple, NamedTuple
+from string import ascii_uppercase
 
 
 #This is assuming that the command for dashing has been aliased
@@ -107,6 +108,7 @@ class DeltaTreeNode:
         self.find_delta_helper(kval=kval, direction=1)
         #TODO maybe this one should reference the species kstart
         self.find_delta_helper(kval=kval, direction=-1)
+        self.card=self.ksketches[self.bestk].card
         return
 
     def update_node(self, kval, parallel=False):
@@ -147,24 +149,44 @@ class DeltaTreeNode:
         #self.update_card()
         return
 
-    def ksweep(self, kmin: int, kmax: int):
-        '''Sketch all of the ks for the node (and its decendent nodes)between kmin and kmax (even when they weren't needed to calculate delta'''
-        if kmax > len(self.ksketches):
-            self.ksketches = self.ksketches + [None]* (kmax-len(self.ksketches))
-            #self.ksketches.extend([None]* (kmax-len(self.ksketches)))
-        for kval in range(kmin, kmax+1):
+    def node_ksweep(self, mink: int, maxk: int):
+        '''Sketch all of the ks for the node (and its decendent nodes)between mink and maxk (even when they weren't needed to calculate delta'''
+        print(len(self.ksketches))
+        maxk=int(maxk)
+        mink=int(mink)
+        if maxk > len(self.ksketches):
+            self.ksketches = self.ksketches + [None]* (maxk-len(self.ksketches))
+            #self.ksketches.extend([None]* (maxk-len(self.ksketches)))
+        for kval in range(mink, maxk+1):
             if not self.ksketches[kval]:
-                self.update_node(kval)     
+                self.update_node(kval) 
+        self.mink=mink
+        self.maxk=maxk    
 
-    def plot_df(self):
+    def summarize(self, mink:int=0, maxk:int=0):
         '''create a dataframe of all "possible" delta values that were examined during creation of the node for use in plotting'''
         nodevals=[]
-        for kval in range(len(self.ksketches)):
+        if mink == 0:
+            mink=self.mink
+        if maxk == 0:
+            maxk=self.maxk
+        labels=[ascii_uppercase[i] for i in range(self.ngen)]
+        for kval in range(mink, maxk+1):
             if self.ksketches[kval]:
-                linelist=[self.ngen,kval, self.ksketches[kval].delta_pos, self.node_title]
-                nodevals.append(linelist)
-        ndf=pd.DataFrame(nodevals,columns=["ngenomes","kval","delta_pos", "title"])
-        return ndf
+                linedict = {"ngen": self.ngen, "kval": kval, "card": self.ksketches[kval].card, "delta_pos": self.ksketches[kval].delta_pos, "title": self.node_title}
+                for index, value in enumerate(self.fastas):
+                    linedict[labels[index]] = value
+                
+                # if len(self.fastas) <= 2:
+                #     linedict.update({"A": self.fastas[0]})
+                # if len(self.fastas) == 2:
+                #     linedict.update({"B": self.fastas[1]})
+                
+                # linelist=[self.ngen,kval, self.ksketches[kval].card, self.ksketches[kval].delta_pos, self.node_title]
+                nodevals.append(linedict)
+        # ndf=pd.DataFrame(nodevals,columns=["ngenomes","kval","card","delta_pos", "title"])
+        # return ndf
+        return nodevals
 
     def update_card(self):
         '''retrieve/calculate cardinality for any sketches in the node that lack it. NOTE: this is not in use. also it is more sketch related. TODO: refactor to use commands from SketchObj classes rather than using dashing '''
@@ -394,12 +416,17 @@ class DeltaTree:
         return filepath
 
   
-    def delta_pos(self):
+    def summarize(self, mink=0, maxk=0):
         ''' Traverse the DeltaTree to return a dataframe with all possible delta values.'''
         root = self._dt[-1]
+        if mink == 0:
+            mink=self.mink
+        if maxk == 0:
+            maxk = self.maxk
+        self.ksweep(mink=mink, maxk=maxk)
         #print(root)
         def _delta_pos_recursive(node):
-            tmplist=[node.plot_df()]
+            tmplist=[node.summarize()]
             
             if node.children:
                 nchild=len(node.children)
@@ -409,8 +436,8 @@ class DeltaTree:
                     tmplist.extend(_delta_pos_recursive(n))
             return tmplist
         
-        dflist= _delta_pos_recursive(root)
-        return pd.concat(dflist)
+        dictlist= _delta_pos_recursive(root)
+        return dictlist
 
     def nodes_from_fastas(self, fasta_list):
         return [node for node in self.leaf_nodes() if node.fastas[0] in fasta_list]
@@ -429,8 +456,12 @@ class DeltaTree:
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
    
-    def ksweep(self, kmin=1, kmax=RANGEK):
-        self.root.ksweep(self.speciesinfo, kmin=kmin, kmax=kmax)
+    def ksweep(self, mink:int=0, maxk:int=0):
+        if mink == 0:
+            mink=int(self.mink)
+        if maxk == 0:
+            maxk = int(self.maxk)
+        self.root.node_ksweep( mink=mink, maxk=maxk)
 
     def orderings_list(self, ordering_file=None, flist_loc=None, count=None)-> Tuple[List[str], List[Tuple[int]]]:
         '''create or retrieve a series of random orderings of fasta sketches. return also the expected "sorted" array of the files. A subset of the fastas in the tree can be provided by name (in a file). The ordering of this file will be used when count=1 and the list is provided.'''
@@ -485,6 +516,7 @@ class DeltaTree:
     def progressive_union(self, flist, orderings, step):
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
 
+        # TODO: Update experiment object if needed
         # create a sketch of the full union of the fastas
         smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo, experiment=self.experiment)
         results=[]
@@ -494,9 +526,9 @@ class DeltaTree:
             odf['ordering']=i+1
             results.append(odf)
             self.speciesinfo.save_fastahex()
-        
         #rdf=pd.DataFrame(results,columns=["k","delta"])
         return pd.concat(results)
+
     def sketch_ordering(self, ordering, step=1):
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas in a dataframe'''
         flen=len(ordering)
@@ -504,33 +536,41 @@ class DeltaTree:
         for i in range(1,flen+1):
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
-                ospider=DeltaSpider(fasta_files=sublist, speciesinfo=self.speciesinfo, experiment=self.experiment)
+
+                ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
                 output.append([i, ospider.root_k(), ospider.delta])
         return output
 
     
-    def pairwise_spiders(self, sublist=[]):
-        '''Create values for K-Independent-Jaccard. TODO: don't actually need to create a tree for each pair, could reuse nodes from a spider'''
-        ## TODO: do this by reusing treenodes from self rather than making a million new ones
+    def pairwise_spiders(self, sublist=[], mink=0, maxk=0):
+        '''Create values for K-Independent-Jaccard. '''
         # super_spider=self.to_spider()
 
         if len(sublist)==0:
             sublist=self.leaf_nodes()
         pairings=[[a, b] for idx, a in enumerate(sublist) for b in sublist[idx + 1:]]
-        # spider_list=[]
-        def pairwise_helper(pair):
+        kij_results=[]
+        j_results=[]
+        for pair in pairings:
+
+        # def pairwise_helper(pair):
             pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=self.experiment)
-            outdict={"A":pspider._dt[0].fastas[0], "B":pspider._dt[1].fastas[0],
-            "Adelta":pspider._dt[0].delta, "Bdelta":pspider._dt[1].delta,
-            "Ak":pspider._dt[0].bestk, "Bk":pspider._dt[1].bestk,
-            "ABdelta":pspider.delta, "ABk":pspider.root.bestk}
-            outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
-            return outdict
-            #(pspider._dt[0].fastas[0],pspider._dt[0].bestk, pspider._dt[0].delta,
-            #pspider._dt[1].fastas[0],pspider._dt[1].bestk, pspider._dt[1].delta,
-            #pspider.root.bestk, pspider.delta)
-        results=[pairwise_helper(pair) for pair in pairings]
-        return results
+            pspider.ksweep(mink=mink, maxk=maxk)
+            kij_results.append(pspider.kij_summarize())
+            j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))
+            # pspider.ksweep(mink=mink, maxk=maxk)
+            # childA=pspider._dt[0]
+            # childB=pspider._dt[1]
+            # outdict={"A":childA.fastas[0], "B":childB.fastas[0],
+            # "Adelta":childA.delta, "Bdelta":childB.delta,
+            # "Ak":childA.bestk, "Bk":childB.bestk,
+            # "ABdelta":pspider.delta, "ABk":pspider.root.bestk}
+            # outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
+            
+        # results=[pairwise_helper(pair) for pair in pairings]
+        self.speciesinfo.save_fastahex()
+        self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
+        return kij_results, j_results
     
 
 class SubSpider(DeltaTree):
@@ -538,8 +578,8 @@ class SubSpider(DeltaTree):
         self.fastahex = speciesinfo.fastahex
         self.experiment=experiment
         self._symbols = []
-        self.mink=0
-        self.maxk=0
+        # self.mink=0
+        # self.maxk=0
         self.kstart=speciesinfo.kstart
         self.speciesinfo=speciesinfo
         self._build_tree(leafnodes)
@@ -563,7 +603,39 @@ class SubSpider(DeltaTree):
             experiment=self.experiment
             )
         body_node.find_delta(kval=self.speciesinfo.kstart)
+        self.mink=body_node.mink
+        self.maxk=body_node.maxk
         self._dt = children + [body_node]
+
+    def kij_summarize(self):
+        '''Calculate k independent jaccard for the subspider'''
+        ##TODO: Write this to handle more than 2 children?
+        if len(self.fastas) != 2:
+            raise ValueError("KIJ can only be calculated on spider/trees with 2 children")
+        childA=self._dt[0]
+        childB=self._dt[1]
+        outdict={"A":childA.fastas[0], "B":childB.fastas[0],
+            "Adelta":childA.delta, "Bdelta":childB.delta,
+            "Ak":childA.bestk, "Bk":childB.bestk,
+            "ABdelta":self.delta, "ABk":self.root.bestk}
+        outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
+        return outdict
+    
+    def jaccard_summarize(self, mink=0, maxk=0):
+        '''Calculate jaccard distance for the subspider'''
+        ##TODO: Write this to handle more than 2 children?
+        if len(self.fastas) != 2:
+            raise ValueError("KIJ can only be calculated on spider/trees with 2 children")
+        childA=self._dt[0]
+        childB=self._dt[1]
+        jevals=[]
+        outdict={"A":childA.fastas[0], "B":childB.fastas[0]}
+        # self.ksweep(mink=mink,maxk=maxk)
+        for k in range(mink,maxk+1):
+            outdict.update({"kval":k , "Acard": childA.ksketches[k].card, "Bcard": childB.ksketches[k].card, "ABcard":self.root.card})
+            outdict["jaccard"] = (outdict["Acard"] + outdict["Bcard"] - outdict["ABcard"])/outdict["ABcard"]
+            jevals.append(outdict)
+        return jevals
 
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
@@ -581,6 +653,9 @@ class DeltaSpider(DeltaTree):
 class ProgressiveUnion:
     '''Unimplemented Progressive Union Class to hold functions and objects relating to that capability'''
     def __init__(self, deltatree:DeltaTree):
+        self.orderings=[]
+        self.dtree=deltatree
+
         raise NotImplementedError
 
 

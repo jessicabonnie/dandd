@@ -185,8 +185,6 @@ class SketchObj(object):
 
         shutil.rmtree(tmpdir)
         #print(self.cmd)
-
-    ##TODO: need to separate process of identifying and saving hashkey so a badly formed sketch/db doesn't get saved in the key... or we catch the associated error and delete the sketch file and try again with a new one 
     #     filename =os.path.basename(filename)
     
     def union_command(self)->str:
@@ -256,7 +254,10 @@ class SketchObj(object):
             #     return 0
             # else:
         return float(speciesinfo.cardkey[self.sketch])
-
+    
+    def summarize(self):
+        outdict = {"kval":self.kval, "card":self.card, "delta_pos":self.delta_pos}
+        return outdict
 class DashSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
@@ -268,12 +269,6 @@ class DashSketchObj(SketchObj):
         cmd = " ".join(cmdlist)
         return cmd
     
-    
-    def view_test_command(self) -> str:
-        '''Check to make sure that the supposedly existing sketch is viewable / not malformed. NOT CURRENTLY IN USE'''
-        cmdlist = [DASHINGLOC,"view", self._sfp.full]
-        cmd = " ".join(cmdlist)
-        return cmd
 
     # def individual_card(self, speciesinfo: SpeciesSpecifics):
     #     '''Run cardinality for an individual sketch. Add it to a dictionary {path:value}'''
@@ -316,18 +311,6 @@ class DashSketchObj(SketchObj):
         else:
             return False
     
-    # def sketch_usable(self)-> bool:
-    #     '''Not currently in use'''
-    #     try:
-    #         code=subprocess.run(self.view_test_command(), shell=True,check=True, stdout=subprocess.DEVNULL,start_new_session=True).returncode
-    #         if code != 0:
-    #             warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=UserWarning)
-    #             return False
-    #     except:
-    #         warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=UserWarning)
-    #         return False
-    #     else:
-    #         return True
     
     def leaf_command(self, tmpdir) -> str:
         '''Command string to produce the sketch from a fasta based on the information used to initiate the sketch obj'''
@@ -348,21 +331,7 @@ class DashSketchObj(SketchObj):
         cmd = " ".join(cmdlist)
         return cmd
         
-    # def union_sketch(self):
-    #     ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
-    #     cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(self._sfp.full)] + self._presketches
-    #     cmd = " ".join(cmdlist)
-    #     #print("SIZE of {0} is {1}".format(self._sfp.full, os.stat(sfp.full)))
-    #     if (not os.path.exists(self._sfp.full)) or os.stat(self._sfp.full).st_size == 0:
-    #         # print("The sketch file {0} either doesn't exist or is empty".format(sfp.full))
-    #         #self.cmd=subprocess.run(cmdlist)
-    #         subprocess.call(cmd, shell=True)
-    #         self.cmd=cmd
-    #     else:
-    #         self.cmd = cmd
-    #         #" ".join(cmdlist)
-    #     if self.experiment['debug']:
-    #         print(self.cmd)
+
 
 class KMCSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
