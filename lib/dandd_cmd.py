@@ -17,7 +17,7 @@ def tree_command(args):
         tool='kmc'
         
     os.makedirs(args.outdir, exist_ok=True)
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug)
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads)
 
     dtree.save(outdir=args.outdir, tag=args.tag, label=args.label)
 
@@ -116,6 +116,9 @@ def parse_arguments():
     tree_parser.add_argument("-n", "--nchildren", dest="nchildren", metavar="INTEGER", type=int, default=None, help="number of children for each node in the delta tree -- default is to create a tree of only 2 levels with all individual sketches as the children of the root node.")
 
     tree_parser.add_argument("-r", "--registers", dest="registers", metavar="INTEGER", default=20, help="number of registers to use during sketching")
+
+    tree_parser.add_argument("-t", "--nthreads", dest="nthreads", metavar="INTEGER", type=int, default=10, help="number of threads to use in calls to associated kmer counting/estimating tool")
+
 
     tree_parser.add_argument("-C", "--no-canon", action="store_false", default=True,  dest="canonicalize", help="instruct dashing to use non-canonicalized kmers")
 

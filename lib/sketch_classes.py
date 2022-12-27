@@ -37,7 +37,7 @@ def parallel_progeny_command(sketchdir, kval:int, experiment) -> str:
     canon_command(experiment['canonicalize'], "dashing"),
     "-k" + str(kval), 
     "-S",str(experiment['registers']),
-        "-p10","--prefix", progeny_dir, "--paths", "/dev/stdin"]
+        f"-p{experiment['nthreads']}","--prefix", progeny_dir, "--paths", "/dev/stdin"]
             #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
     else:
         cmdlist=[]
@@ -255,9 +255,9 @@ class SketchObj(object):
             # else:
         return float(speciesinfo.cardkey[self.sketch])
     
-    def summarize(self):
-        outdict = {"kval":self.kval, "card":self.card, "delta_pos":self.delta_pos}
-        return outdict
+    # def summarize(self):
+    #     outdict = {"kval":self.kval, "card":self.card, "delta_pos":self.delta_pos}
+    #     return outdict
 class DashSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
@@ -265,7 +265,7 @@ class DashSketchObj(SketchObj):
     def card_command(self, sketch_paths=[]) -> str:
         if len(sketch_paths) == 0:
             sketch_paths=[self.sketch]
-        cmdlist = [DASHINGLOC,"card", "--presketched", "-p10"]+ sketch_paths
+        cmdlist = [DASHINGLOC,"card", "--presketched", f"-p{self.experiment['nthreads']}"]+ sketch_paths
         cmd = " ".join(cmdlist)
         return cmd
     
@@ -318,7 +318,7 @@ class DashSketchObj(SketchObj):
         canon_command(self.experiment['canonicalize'], "dashing"),
         "-k" + str(self.kval), 
         "-S",str(self.experiment['registers']),
-         "-p10","--prefix", str(self._sfp.dir),
+         f"-p{self.experiment['nthreads']}","--prefix", str(self._sfp.dir),
           self._sfp.ffiles[0]]
                 #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
         cmd = " ".join(cmdlist)
@@ -327,7 +327,7 @@ class DashSketchObj(SketchObj):
     
     def union_command(self) -> str:
         '''Returns bash command to create a union sketch'''
-        cmdlist = [DASHINGLOC, "union", "-p 10 ","-z -o", str(self._sfp.full)] + self._presketches
+        cmdlist = [DASHINGLOC, "union", f"-p{self.experiment['nthreads']}","-z -o", str(self._sfp.full)] + self._presketches
         cmd = " ".join(cmdlist)
         return cmd
         
