@@ -8,6 +8,13 @@ import csv
 
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
 
+def write_listdict_to_csv(outfile, listdict, suffix=""):
+    writer = open(outfile+"suffix", "w") if outfile is not None and outfile != '-' else sys.stdout
+    dict_writer = csv.DictWriter(writer, fieldnames=listdict[0].keys())
+    dict_writer.writeheader()
+    dict_writer.writerows(listdict)
+    writer.close()
+
 def tree_command(args):
     if not args.sketchdir:
         args.sketchdir=os.path.join(args.outdir,args.tag,"sketchdb")
@@ -39,10 +46,11 @@ def progressive_command(args):
     
     # dtree.experiment["debug"] = args.debug
     results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
-    if args.outfile:
-        results.to_csv(args.outfile)
-    else:
-        print(tabulate(results, headers=list(results.columns)))
+    write_listdict_to_csv(outfile=args.outfile, listdict=results)
+    # if args.outfile:
+    #     results.to_csv(args.outfile)
+    # else:
+    #     print(tabulate(results, headers=list(results.columns)))
 
 def abba_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -65,19 +73,21 @@ def kij_command(args):
 
     dtree.ksweep(mink=args.mink,maxk=args.maxk)
     kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk)
+    write_listdict_to_csv(outfile=args.outfile, listdict=kij_results)
 
-    writer = open(args.outfile, "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
-    dict_writer = csv.DictWriter(writer, fieldnames=kij_results[0].keys())
-    dict_writer.writeheader()
-    dict_writer.writerows(kij_results)
-    writer.close()
+    # writer = open(args.outfile, "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
+    # dict_writer = csv.DictWriter(writer, fieldnames=kij_results[0].keys())
+    # dict_writer.writeheader()
+    # dict_writer.writerows(kij_results)
+    # writer.close()
     
     if args.jaccard:
-        writer = open(args.outfile+".jaccard", "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
-        dict_writer = csv.DictWriter(writer, fieldnames=j_results[0].keys())
-        dict_writer.writeheader()
-        dict_writer.writerows(j_results)
-        writer.close()
+        write_listdict_to_csv(outfile=args.outfile,listdict=j_results,suffix=".jaccard")
+        # writer = open(args.outfile+".jaccard", "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
+        # dict_writer = csv.DictWriter(writer, fieldnames=j_results[0].keys())
+        # dict_writer.writeheader()
+        # dict_writer.writerows(j_results)
+        # writer.close()
 
     
     
