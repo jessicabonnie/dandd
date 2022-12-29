@@ -583,7 +583,7 @@ class DeltaTree:
             # outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
             
         # results=[pairwise_helper(pair) for pair in pairings]
-        self.speciesinfo.save_fastahex()
+        self.speciesinfo.save_references()
         self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
         return kij_results, j_results
     
@@ -602,7 +602,7 @@ class SubSpider(DeltaTree):
         self.fastas=self.root.fastas
         self.ngen = len(self.fastas)
         self.delta = self.root_delta()
-        self.speciesinfo.save_fastahex()
+        self.speciesinfo.save_references()
         #super().__new__(self)
 
     def _build_tree(self, leafnodes):
