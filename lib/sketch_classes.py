@@ -61,10 +61,12 @@ class SketchFilePath:
         #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
         self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'])
         self.dir = os.path.join(speciesinfo.sketchdir, "ngen" + str(self.ngen),"k"+ str(kval))
+        self.relative = os.path.join("ngen" + str(self.ngen),"k"+ str(kval),self.base)+ self._get_ext(experiment['tool'])
+        # self.full = os.path.join(speciesinfo.sketchdir, self.relative)
         self.full = os.path.join(self.dir, self.base)+ self._get_ext(experiment['tool'])
         #self.registers = speciesinfo.registers
         os.makedirs(self.dir, exist_ok=True) 
-    #TODO: WHY IS ngen10 happening without the sketch
+    
     #WHAT K/D are reported when tree node is reported.
     def __repr__(self):
         return f"{self.__class__.__name__}[basename: {self.base}, 'fullpath inputs: {self.ffiles}', ngen: {self.ngen}, dir: {self.dir}, fullpath: {self.full} ]"
@@ -88,30 +90,36 @@ class SketchFilePath:
         return output
         
     def assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool):
+        '''determine the base file name for the sketch using the properties that will be used to generate it'''
         fnames_key=''.join(self.files)
+        # if the key (made by joining the ingredient filenames) isn't already in the fastahex dictionary mapping the combination of those files to a hexsum, calculate that hexsum and add it to the fastahex key
         if fnames_key not in speciesinfo.fastahex.keys():
             speciesinfo.fastahex[fnames_key]= self.hashsum(speciesinfo)   
             stored_val=speciesinfo.fastahex[fnames_key]
+        # if the key is there, calculate what we expect the hashsum value to be based on the hexes of the components -- this is just to confirm that nothing has gotten confused somehow
         else:
             checkval=self.hashsum(speciesinfo)
             stored_val=speciesinfo.fastahex[fnames_key]
             if checkval != stored_val:
                raise RuntimeError(f"Checksum does not match stored value for {fnames_key}: {checkval}, {stored_val}")
+        # if the sketch is of a single input file, dashing will insist on naming it something specific, so we will use that base as a name for both dashing and kmc to make life easier
         if self.ngen == 1:
             sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
+        # if sketch is of a combination of sketches, add a tag that will differentiate it from other combinations of the same sketches composed using different register counts or kvalues. Also guard against the low probability chance that there are overlapping hexsums of different numbers of fasta inputs
         else:
             suffix = str(registers) + "n" + str(self.ngen) + "k" + str(kval)
             if not canonicalize:
                 suffix=suffix+'nc'
             sketchbase = stored_val[:15] + "_" + suffix
         # store information relating to this basename to be given to user later as table or obj
-        info = [self.files,self.ngen, kval, registers ]
+        info = {"sketchbase": sketchbase, "files": self.files, "ngen": self.ngen, "kval": kval, "registers": registers }
         if sketchbase not in speciesinfo.sketchinfo.keys():
             speciesinfo.sketchinfo[sketchbase] = info
         else:
             stored_info=speciesinfo.sketchinfo[sketchbase]
-            for index in range(len(stored_info)):
-              if stored_info[index] != info[index]:
+            # check to make sure all sketchinfo values match what is stored
+            for key in stored_info.keys():
+              if stored_info[key] != info[key]:
                   raise RuntimeError(f"Duplicate keys but not duplicate values: {sketchbase}: (1) {stored_info}, (2) {info}")
         return sketchbase
 
@@ -132,12 +140,13 @@ class SketchObj(object):
             delta_pos = possible delta value (to be compared to other ks of the same group of files)
     '''
     
-    def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
+    def __init__(self, kval: int, sfp: SketchFilePath, speciesinfo: SpeciesSpecifics, experiment: dict, presketches=[]):
         self.kval = kval
-        self.experiment=experiment
         self.sketch = None
         self.cmd = None
         self._sfp = sfp
+        experiment['baseset'].add(sfp.base)
+        self.experiment=experiment
         self._presketches = presketches
         self.create_sketch()
         self.card = self.check_cardinality(speciesinfo=speciesinfo)

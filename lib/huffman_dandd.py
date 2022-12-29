@@ -207,8 +207,8 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10}, padding=True):
-        self.fastahex = speciesinfo.fastahex
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set()}, padding=True):
+        # self.fastahex = speciesinfo.fastahex
         self.experiment=experiment
         self._symbols = []
         #self._code_words = []
@@ -224,7 +224,7 @@ class DeltaTree:
         self.delta = self.root_delta()
         self.fastas = fasta_files
         speciesinfo.kstart = self.root_k()
-        self.speciesinfo.save_fastahex()
+        self.speciesinfo.save_references()
     def __sub__(self, other):
         # sub = subtraction
         print("Larger Tree Delta: ", self.delta)
@@ -400,7 +400,22 @@ class DeltaTree:
         body_node.find_delta(kval=self.speciesinfo.kstart)
         self._dt = children + [body_node]
         
-
+    # def get_experiment_map(self, sketchinfo):
+    #     return sketchinfo.fromkeys(self.experiment["baseset"])
+    def write_expmap(self, outdir, tag, label=None):
+        if label is None:
+            label = ""
+        else:
+            label = "_"+label
+        bases=list(self.experiment["baseset"])
+        print(bases)
+        explist=[self.speciesinfo.sketchinfo[item] for item in bases]
+        keys=explist[0].keys()
+        filepath=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')
+        with open(filepath, "w") as writer:
+            dict_writer = csv.DictWriter(writer, fieldnames=keys)
+            dict_writer.writeheader()
+            dict_writer.writerows(explist)
 
     def save(self, outdir: str, tag: str, label=None):
         '''Save the delta tree for future retrieval
@@ -525,7 +540,7 @@ class DeltaTree:
             odf=pd.DataFrame(oresults,columns=["ngenomes","kval","delta"])
             odf['ordering']=i+1
             results.append(odf)
-            self.speciesinfo.save_fastahex()
+            self.speciesinfo.save_references()
         #rdf=pd.DataFrame(results,columns=["k","delta"])
         return pd.concat(results)
 
@@ -672,7 +687,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     tool = string indicating which tool to use for kmer cardinality
     choices=["dashing","kmc"] '''
     # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
-    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug}
+    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set()}
 
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)
@@ -702,6 +717,6 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     # BUG: need to segment cardinality by tool otherwise they will all go to the same place
     # cardpath=os.path.join(speciesinfo.sketchdir, f'{tag}_{tool}_cardinalities.pickle')
     speciesinfo.save_cardkey(tool=tool)
-    speciesinfo.save_fastahex()
+    speciesinfo.save_references()
     print(dtree)#.print_tree()
     return dtree

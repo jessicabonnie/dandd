@@ -17,9 +17,11 @@ def tree_command(args):
         tool='kmc'
         
     os.makedirs(args.outdir, exist_ok=True)
+    # os.chdir(args.sketchdir)
     dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads)
 
     dtree.save(outdir=args.outdir, tag=args.tag, label=args.label)
+    dtree.write_expmap(outdir=args.outdir, tag=args.tag, label=args.label)
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -99,7 +101,7 @@ def parse_arguments():
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
     tree_parser.add_argument("-x", "--exact", dest="exact", help="instead of estimating, count kmers using kmc3", default=False, action="store_true", required=False)
 
-    tree_parser.add_argument("-g", "--genomedir", dest="genomedir", default='/scratch16/blangme2/jessica/data', help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="FASTADIR")
+    tree_parser.add_argument("-d", "--datadir", dest="genomedir", default='/scratch16/blangme2/jessica/data', help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="FASTADIR")
 
     tree_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the species directory after running", type=str, metavar="OUTDIRPATH")
 
