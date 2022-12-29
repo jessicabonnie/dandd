@@ -5,11 +5,12 @@ import pickle
 import os
 from tabulate import tabulate
 import csv
+from typing import List, Dict, Set, Tuple, NamedTuple
 
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
 
-def write_listdict_to_csv(outfile, listdict, suffix=""):
-    writer = open(outfile+"suffix", "w") if outfile is not None and outfile != '-' else sys.stdout
+def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str=""):
+    writer = open(outfile+suffix, "w") if outfile is not None and outfile != '-' else sys.stdout
     dict_writer = csv.DictWriter(writer, fieldnames=listdict[0].keys())
     dict_writer.writeheader()
     dict_writer.writerows(listdict)

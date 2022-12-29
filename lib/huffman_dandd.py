@@ -1,7 +1,7 @@
 #import parallel
 #import random
 #from ast import Str
-import sys
+# import sys
 import os
 import pickle
 #import hashlib
@@ -9,10 +9,10 @@ import pickle
 #import re
 import subprocess
 import csv
-from multiprocessing import Process, Pool
+# from multiprocessing import Process, Pool
 from random import sample
 from numpy import unique
-import pandas as pd
+# import pandas as pd
 from species_specifics import SpeciesSpecifics
 from sketch_classes import SketchFilePath
 from sketch_classes import SketchObj, DashSketchObj, KMCSketchObj
@@ -25,13 +25,7 @@ from string import ascii_uppercase
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
 RANGEK=100
 
-# def retrieve_fasta_files(inputdir, full=True)->list:
-#     '''return a list of all fasta files in a directory accounting for all the possible extensions'''
-#     reg_compile = re.compile(inputdir + "/*\.(fa.gz|fasta.gz|fna.gz|fasta|fa)")
-#     fastas = [fasta for fasta in os.listdir(inputdir) if reg_compile]
-#     if full:
-#         fastas=[os.path.join(inputdir,fasta) for fasta in fastas]
-#     return fastas
+
 
 def random_orderings(length, norder, preexist=set())->Set[Tuple[int]]:
     '''create norder NEW unique random orderings of numbers 0 through length in addition to those in provided preexisting set of orderings'''
@@ -523,12 +517,12 @@ class DeltaTree:
             pickle.dump(orderings, f)
         return fastas, list(orderings)
 
-    def progressive_wrapper(self, flist_loc=None, count=30, ordering_file=None,step=1, debug=False):
+    def progressive_wrapper(self, flist_loc=None, count=30, ordering_file=None,step=1, debug=False)-> List[dict]:
         fastas, orderings = self.orderings_list( ordering_file=ordering_file, flist_loc=flist_loc, count=count)
 
         return self.progressive_union(flist=fastas, orderings=orderings, step=step)
 
-    def progressive_union(self, flist, orderings, step):
+    def progressive_union(self, flist, orderings, step) -> List[dict]:
         '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
 
         # TODO: Update experiment object if needed
@@ -536,24 +530,20 @@ class DeltaTree:
         smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo, experiment=self.experiment)
         results=[]
         for i in range(0,len(orderings)):
-            oresults=smain.sketch_ordering(orderings[i], step=step)
-            odf=pd.DataFrame(oresults,columns=["ngenomes","kval","delta"])
-            odf['ordering']=i+1
-            results.append(odf)
+            oresults=smain.sketch_ordering(orderings[i], number=i+1, step=step)
+            results.extend(oresults)
             self.speciesinfo.save_references()
-        #rdf=pd.DataFrame(results,columns=["k","delta"])
-        return pd.concat(results)
+        return results
 
-    def sketch_ordering(self, ordering, step=1):
-        '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas in a dataframe'''
+    def sketch_ordering(self, ordering, number, step=1)->List[dict]:
+        '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas'''
         flen=len(ordering)
         output=[]
         for i in range(1,flen+1):
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
-
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
-                output.append([i, ospider.root_k(), ospider.delta])
+                output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": number})
         return output
 
     
@@ -667,9 +657,10 @@ class DeltaSpider(DeltaTree):
 
 class ProgressiveUnion:
     '''Unimplemented Progressive Union Class to hold functions and objects relating to that capability'''
-    def __init__(self, deltatree:DeltaTree):
+    def __init__(self, deltatree: DeltaTree, orderings: list):
         self.orderings=[]
         self.dtree=deltatree
+        self.orderings=orderings
 
         raise NotImplementedError
 
