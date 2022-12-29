@@ -19,6 +19,7 @@ from sketch_classes import SketchObj, DashSketchObj, KMCSketchObj
 import tabulate
 from typing import List, Dict, Set, Tuple, NamedTuple
 from string import ascii_uppercase
+from dandd_cmd import write_listdict_to_csv
 
 
 #This is assuming that the command for dashing has been aliased
@@ -396,20 +397,18 @@ class DeltaTree:
         
     # def get_experiment_map(self, sketchinfo):
     #     return sketchinfo.fromkeys(self.experiment["baseset"])
-    def write_expmap(self, outdir, tag, label=None):
-        if label is None:
-            label = ""
-        else:
-            label = "_"+label
-        bases=list(self.experiment["baseset"])
-        print(bases)
-        explist=[self.speciesinfo.sketchinfo[item] for item in bases]
-        keys=explist[0].keys()
-        filepath=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')
-        with open(filepath, "w") as writer:
-            dict_writer = csv.DictWriter(writer, fieldnames=keys)
-            dict_writer.writeheader()
-            dict_writer.writerows(explist)
+    
+    # def name_exmap(self, outdir, tag, label):
+        # bases=list(self.experiment["baseset"])
+        # print(bases)
+        # explist=[self.speciesinfo.sketchinfo[item] for item in bases]
+        # keys=explist[0].keys()
+        # filepath=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')
+        # return filepath
+        # with open(filepath, "w") as writer:
+        #     dict_writer = csv.DictWriter(writer, fieldnames=keys)
+        #     dict_writer.writeheader()
+        #     dict_writer.writerows(explist)
 
     def save(self, outdir: str, tag: str, label=None):
         '''Save the delta tree for future retrieval
@@ -422,6 +421,12 @@ class DeltaTree:
         with open(filepath,"wb") as f:
             pickle.dump(obj=self, file=f)
         print("Tree Pickle saved to: "+filepath)
+        #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
+        expmaploc=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')
+        explist=[self.speciesinfo.sketchinfo[item] for item in list(self.experiment["baseset"])]
+        write_listdict_to_csv(outfile=expmaploc, listdict=explist)
+        print(f"Output Sketch/DB mapping saved to {expmaploc}.")
+
         return filepath
 
   
@@ -705,7 +710,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     else:
         dtree = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo, experiment=experiment)
     # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
-    # BUG: need to segment cardinality by tool otherwise they will all go to the same place
+    
     # cardpath=os.path.join(speciesinfo.sketchdir, f'{tag}_{tool}_cardinalities.pickle')
     speciesinfo.save_cardkey(tool=tool)
     speciesinfo.save_references()

@@ -18,7 +18,8 @@ def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str=""):
 
 def tree_command(args):
     if not args.sketchdir:
-        args.sketchdir=os.path.join(args.outdir,args.tag,"sketchdb")
+        # args.sketchdir=os.path.join(args.outdir,args.tag,"sketchdb")
+        args.sketchdir=os.path.join(args.outdir,"sketchdb")
         os.makedirs(args.sketchdir, exist_ok=True)
     tool="dashing"
     if args.exact:
@@ -29,7 +30,10 @@ def tree_command(args):
     dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads)
 
     dtree.save(outdir=args.outdir, tag=args.tag, label=args.label)
-    dtree.write_expmap(outdir=args.outdir, tag=args.tag, label=args.label)
+    #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
+    # explist=[dtree.speciesinfo.sketchinfo[item] for item in list(dtree.experiment["baseset"])]
+    # expmaploc=os.path.join(args.outdir,  args.tag + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')
+    # write_listdict_to_csv(outfile=args.outdir, tag=args.tag, label=args.label)
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -108,7 +112,7 @@ def parse_arguments():
     commands.append('tree')
     tree_parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
 
-    tree_parser.add_argument("-s", "--species", dest="tag", help="species tagname used to locate data directory",  metavar="SPECIESNAME", type=str, required=False, default='dandd')
+    tree_parser.add_argument("-t", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="LABELSTRING", type=str, required=False, default='dandd')
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
     tree_parser.add_argument("-x", "--exact", dest="exact", help="instead of estimating, count kmers using kmc3", default=False, action="store_true", required=False)
 
@@ -124,7 +128,7 @@ def parse_arguments():
 
     tree_parser.add_argument("-f", "--fastas", dest="flist_loc", metavar="FILE", type=str, default=None, help="filepath to a subset of fasta files to use in the species directory -- no title, one per line")
 
-    tree_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default=None, help="label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list). NOT IMPLEMENTED", required=False)
+    tree_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default=None, help="NOT IMPLEMENTED. label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list). NOT IMPLEMENTED", required=False)
 
     tree_parser.add_argument("-n", "--nchildren", dest="nchildren", metavar="INTEGER", type=int, default=None, help="number of children for each node in the delta tree -- default is to create a tree of only 2 levels with all individual sketches as the children of the root node.")
 
