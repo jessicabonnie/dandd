@@ -112,7 +112,7 @@ def parse_arguments():
     commands.append('tree')
     tree_parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
 
-    tree_parser.add_argument("-t", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="LABELSTRING", type=str, required=False, default='dandd')
+    tree_parser.add_argument("-s","-t", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="LABELSTRING", type=str, required=False, default='dandd')
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
     tree_parser.add_argument("-x", "--exact", dest="exact", help="instead of estimating, count kmers using kmc3", default=False, action="store_true", required=False)
 
