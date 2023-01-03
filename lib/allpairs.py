@@ -186,6 +186,7 @@ def summ_to_phylip(summ, seqid_to_treid, phylip_fn, convert_to_ani=False):
     for _, name1, name2, k, j, k1, k2, k12 in summ:
         names.add(name1)
         names.add(name2)
+        # We can ignore ANI
         if convert_to_ani:
             k_for_mash_distance = k
             if k == 0:
@@ -197,14 +198,30 @@ def summ_to_phylip(summ, seqid_to_treid, phylip_fn, convert_to_ani=False):
         else:
             recs[(name1, name2)] = recs[(name2, name1)] = 1-j
     names = sorted(list(names))
+    # Don't have to worry about seqid_to_treid
     assert len(names) == len(seqid_to_treid), (len(names), len(seqid_to_treid))
     with open(phylip_fn, 'wt') as fh:
+        # First line has to be dimension of the matrix
         print(str(len(names)), file=fh)
+        # Iterate through sequence names, now in alphabetical order
         for i, name1 in enumerate(names):
+            # Compose the row.  Row label comes first.  Label is sequence name.
             row = [name1]
+            # Compose the rest of the row; distances, up to ith
+            # This will be lower triangular, but omitting the diagonal
             for name2 in names[:i]:
                 row.append(recs[(name1, name2)])
             print(' '.join(map(str, row)), file=fh)
+        # If these are my distances
+        # A <-> B 0.2
+        # A <-> C 0.3
+        # B <-> C 0.5
+        #
+        # This is the format of the output:
+        # 3
+        # A
+        # B 0.2
+        # C 0.3 0.5
 
 
 def mash_distance(j, k):
@@ -380,23 +397,69 @@ def go():
         print('\t'.join(['tool', 'name1', 'name2', 'k', 'card']), file=fh)
         for tool, name1, name2, k, card in results:
             print('\t'.join([tool, name1, name2, str(k), str(card)]), file=fh)
+
+    #
+    # Entry point 1: give me "results"
+    # i.e. tuples of this form: ('tool', 'name1', 'name2', 'k', 'card')
+    #
+
     # Pick out maximal dk/ks
     dsumm = delta_summarize(results)
+    #
+    # Records in dsumm are of the form (tool, name1, name2, delta, card, k)
+    # When name1 == name2, the tuple describes a single dataset
+    # When name1 != name2, the tuple describes a pair of datasets
+    #
     with open(args.delta_results, 'wt') as fh:
         print('\t'.join(['tool', 'name1', 'name2', 'delta', 'card', 'k']), file=fh)
         for tool, name1, name2, delta, card, k in dsumm:
             print('\t'.join([tool, name1, name2, str(k), str(card), str(delta)]), file=fh)
+
+    #
+    # Entry point 2: give me "results" _and_ "dsumm"
+    # (this one probably doesn't make any sense, since it's strictly
+    #  more work for you compared to Entry point 1)
+    #
+
     # Final combination that combines deltas for marginals and pairs
-    j_and_kij_summ = kij_summarize(dsumm)
-    # Records are of the form (tool, name1, name2, k, j, k1, k2, k12)
+    j_and_kij_summ = kij_summarize(dsumm)  # dsumm comes from delta_summarize
     for k in map(int, args.klist.split(',')):
-        j_and_kij_summ += j_summarize(results, k)
+        j_and_kij_summ += j_summarize(results, k)  # results comes from p.map
+
+    #
+    # Entry point 3: give me "j_and_kij_summ"
+    #
+    # Records in j_and_kij_summ are of the form (tool, name1, name2, k, j, k1, k2, k12)
+    #  - When name1 == name2, the tuple describes a single dataset
+    #  - When name1 != name2, the tuple describes a pair of datasets
+    #
+    #  - When the record describes a KIJ, then there is 1 tuple for each pair/singleton
+    #    + k=0
+    #    + k1, k2, and k12 are all positive (non-None)
+    #    + j = KIJ
+    #  - When the record describes a J, then there are k tuples for each pair/singleton
+    #    + k is positive
+    #    + k1, k2, and k12 are all None
+    #    + j = J (or J_k)
+    #
+
+    # Loop over all --klist 1,2,3,4,5,6,7,8,9,20
+    # After split: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '20']
+    # After the map(int, ...): (1, 2, 3, 4, 5, 6, 7, 8, 9, 20) -- this is something you can only iterate over and it's not a list
+    # After the list(map(int, ...)): [1, 2, 3, 4, 5, 6, 7, 8, 9, 20]
+    # Final: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20]
+    #
+    # Python "map" is like R "lapply"
     for k in [0] + list(map(int, args.klist.split(','))):
+        # k = 0 means "do KIJ"
+        # This filter extracts tuples where the 4th item is equal to the desired k
         summ = list(filter(lambda x: x[3] == k, j_and_kij_summ))
+        # Get last 3 elements of the tuple
         k1, k2, k12 = summ[0][-3:]
         assert len(summ) > 0
         name = 'kij' if k == 0 else 'k%d' % k
 
+        # Creates a new filename, sticks the "name" ("kij", "k1", "k2", ...) in before the last "."
         def _customize_fn(_fn):
             toks = _fn.split('.')
             return '.'.join(toks[:-1] + [name] + [toks[-1]])
@@ -406,6 +469,10 @@ def go():
             fn = _customize_fn(args.j_results_phylip)
             summ_to_phylip(summ, seqid_to_treid, fn)
             assert os.path.exists(fn)
+
+        #
+        # ** We'll stop here **
+        #
 
         # write fneighbor tree output for 1-Jaccard / 1-KIJ
         j_tree_fn = _customize_fn(args.j_tree)
