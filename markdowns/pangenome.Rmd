@@ -1,0 +1,49 @@
+---
+title: "Delta Pangenome Exploration"
+output: html_document
+date: '2022-12-27'
+---
+
+```{bash delta, eval=FALSE}
+datadir=/data/blangme2/fasta/hprc-yr1
+wkdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/pangenome
+fasta_list=${wkdir}/pangenome_fasta_paths.txt
+overlap_list=${wkdir}/pangenome_hvsvc2_fasta_paths.txt
+realpath ${datadir}/HG*.fa > ${fasta_list}
+realpath ${datadir}/NA*.fa >> ${fasta_list}
+
+grep -f /scratch16/blangme2/jessica/data/HVSVC2/raw/SampleIds.txt ${fasta_list} > ${overlap_list}
+
+head ${fasta_list} > ${fasta_list}10
+
+codelib=/scratch16/blangme2/jessica/dandd/dev-dandD/lib
+python ${codelib}/dandd_cmd.py tree -s pangenome -f ${overlap_list} --nthreads 20 -k18 -o ${wkdir}
+
+```
+
+## R Markdown
+
+
+
+```{bash hvsvc2, eval=FALSE}
+filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_pangenome_overlap.txt
+grep -E "(_HG00733|_HG02818|_HG03486|_NA19240)" /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/consensus_fastas.txt > ${filelist}
+
+python ${codelib}/dandd_cmd.py tree -t hvsvc2_overlap -f ${filelist} --nthreads 20 -k19
+
+dtree=/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/hvsvc2_overlap_8_dashing_dtree.pickle
+orderings=pangenome/pangenome_8orderings.pickle
+python ${codelib}/dandd_cmd.py progressive -d ${dtree} -f ${filelist} -r ${orderings}
+
+python ${codelib}/dandd_cmd.py kij -d ${dtree} --mink 10 --maxk 40
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
