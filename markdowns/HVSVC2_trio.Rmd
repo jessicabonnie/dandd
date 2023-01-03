@@ -19,19 +19,19 @@ outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/bds'
 ## Run random orderings for 10 genomes with only SNVs
 
 ```{bash}
-outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
-tag=HVSVC2
-filelist=${outdir}/mom_fchild_and_onef.txt
+outdir=/scratch16/blangme2/jessica/dandd/scratch/HVSVC2
+tag=trio
+filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_mom_fchild_and_onef.txt
 #_HG0111|
 grep -E "(_HG00513|_HG00514|_HG01114)" /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/consensus_fastas.txt > ${filelist}
 
-sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds/sketches
+sketchdir=${outdir}/sketchdb
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -f ${filelist} -c ${sketchdir} -k 19 |& tee ${outdir}/${tag}_trio.log
+python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19 |& tee ${outdir}/${tag}_trio.log
 
-tree_pick='/home/jbonnie1/scr16_blangme2/jessica/dandd/bds/sketches/HVSVC2_6_dtree.pickle'
+tree_pick=/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/trio_6_dashing_dtree.pickle
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick} -n 200 -o ${outdir}/${tag}_progu.csv
+python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick} -n 300 -o ${outdir}/${tag}_progu.csv
 
 #../scratch/progressive_union/sketches/HVSVC2/k20/ngen1/allvar_HG00513_1.fasta.gz.w.20.spacing.20.hll
 
@@ -40,10 +40,10 @@ python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py pr
 
 
 ```{r draw_graphs1, cache=TRUE}
-tag='HVSVC2'
+tag='trio'
 ngenome=6
 
-delta_trio<-read.csv('/home/jbonnie1/scr16_blangme2/jessica/dandd/bds/HVSVC2_6_progu.csv') %>% 
+delta_trio<-read.csv('/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/trio_6_progu.csv') %>% 
   rename(delta_pos=delta)
 plotProgressiveUnion(species=tag, out = outdir, delta_trio, nshow=10)
 

@@ -14,10 +14,9 @@ realpath ${datadir}/NA*.fa >> ${fasta_list}
 
 grep -f /scratch16/blangme2/jessica/data/HVSVC2/raw/SampleIds.txt ${fasta_list} > ${overlap_list}
 
-head ${fasta_list} > ${fasta_list}10
 
 codelib=/scratch16/blangme2/jessica/dandd/dev-dandD/lib
-python ${codelib}/dandd_cmd.py tree -s pangenome -f ${overlap_list} --nthreads 20 -k18 -o ${wkdir}
+python ${codelib}/dandd_cmd.py tree -s overlap -f ${overlap_list} --nthreads 20 -k18 -o ${wkdir}
 
 ```
 
@@ -29,7 +28,7 @@ python ${codelib}/dandd_cmd.py tree -s pangenome -f ${overlap_list} --nthreads 2
 filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_pangenome_overlap.txt
 grep -E "(_HG00733|_HG02818|_HG03486|_NA19240)" /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/consensus_fastas.txt > ${filelist}
 
-python ${codelib}/dandd_cmd.py tree -t hvsvc2_overlap -f ${filelist} --nthreads 20 -k19
+python ${codelib}/dandd_cmd.py tree -s hvsvc2_overlap -f ${filelist} --nthreads 20 -k19
 
 dtree=/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/hvsvc2_overlap_8_dashing_dtree.pickle
 orderings=pangenome/pangenome_8orderings.pickle
