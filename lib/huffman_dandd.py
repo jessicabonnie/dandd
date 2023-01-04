@@ -20,6 +20,7 @@ import tabulate
 from typing import List, Dict, Set, Tuple, NamedTuple
 from string import ascii_uppercase
 from dandd_cmd import write_listdict_to_csv
+from math import factorial
 
 
 #This is assuming that the command for dashing has been aliased
@@ -34,6 +35,11 @@ def random_orderings(length, norder, preexist=set())->Set[Tuple[int]]:
     prelen=len(preexist)
     newset=preexist.copy()
     totalneed = norder + prelen
+    maxpermute=factorial(length)
+    if totalneed > maxpermute:
+        ##TODO: check to see if norder needs to be changed? Maybe do this sooner?
+        totalneed=maxpermute
+        print(f"You asked for more permutations than are possible with the set size. Number of permutations is being reset to: {maxpermute}")
     while len(newset) < totalneed:
         needed=totalneed - len(newset)
         #union the pre-existing set of orderings with remaining number of orderings required
@@ -410,12 +416,10 @@ class DeltaTree:
         #     dict_writer.writeheader()
         #     dict_writer.writerows(explist)
 
-    def save(self, outdir: str, tag: str, label=None):
+    def save(self, outdir: str, tag: str, label=""):
         '''Save the delta tree for future retrieval
         '''
-        if label is None:
-            label = ""
-        else:
+        if not label == "":
             label = "_"+label
         filepath=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_dtree.pickle')
         with open(filepath,"wb") as f:
@@ -660,14 +664,14 @@ class DeltaSpider(DeltaTree):
 
     ## TODO: init function receives a delta tree and creates a spider out of it's nodes without creating new child nodes
 
-class ProgressiveUnion:
-    '''Unimplemented Progressive Union Class to hold functions and objects relating to that capability'''
-    def __init__(self, deltatree: DeltaTree, orderings: list):
-        self.orderings=[]
-        self.dtree=deltatree
-        self.orderings=orderings
+# class ProgressiveUnion:
+#     '''Unimplemented Progressive Union Class to hold functions and objects relating to that capability'''
+#     def __init__(self, deltatree: DeltaTree, orderings: list):
+#         self.orderings=[]
+#         self.dtree=deltatree
+#         self.orderings=orderings
 
-        raise NotImplementedError
+#         raise NotImplementedError
 
 
 def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10):
