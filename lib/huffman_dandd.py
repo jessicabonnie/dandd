@@ -10,7 +10,7 @@ import pickle
 import subprocess
 import csv
 # from multiprocessing import Process, Pool
-from random import sample
+from random import sample, shuffle
 from numpy import unique
 # import pandas as pd
 from species_specifics import SpeciesSpecifics
@@ -21,30 +21,53 @@ from typing import List, Dict, Set, Tuple, NamedTuple
 from string import ascii_uppercase
 from dandd_cmd import write_listdict_to_csv
 from math import factorial
+from itertools import permutations
 
 
 #This is assuming that the command for dashing has been aliased
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
 RANGEK=100
 
+# def permutations(elements):
+#     '''Generate all permutations of a list of elements or a string'''
+#     if len(elements) <= 1:
+#         yield elements
+#         return
+#     for perm in permutations(elements[1:]):
+#         for i in range(len(elements)):
+#             # nb elements[0:1] works in both string and list contexts
+#             yield perm[:i] + elements[0:1] + perm[i:]
 
-
-def random_orderings(length, norder, preexist=set())->Set[Tuple[int]]:
-    '''create norder NEW unique random orderings of numbers 0 through length in addition to those in provided preexisting set of orderings'''
-    rlist = list(range(length))
-    prelen=len(preexist)
+def permute(length, norder, preexist=set())-> Set[Tuple[int]]:
+    # create a randomized list of all permutations
+    allpermute=list(permutations(range(length)))
+    shuffle(allpermute)
+    print(len(allpermute))
+    index=0
     newset=preexist.copy()
-    totalneed = norder + prelen
-    maxpermute=factorial(length)
-    if totalneed > maxpermute:
-        ##TODO: check to see if norder needs to be changed? Maybe do this sooner?
-        totalneed=maxpermute
-        print(f"You asked for more permutations than are possible with the set size. Number of permutations is being reset to: {maxpermute}")
-    while len(newset) < totalneed:
-        needed=totalneed - len(newset)
-        #union the pre-existing set of orderings with remaining number of orderings required
-        newset.update(set([tuple(sample(rlist,length)) for i in range(needed)]))
+    norder = min(norder, factorial(length))
+    print(f"{norder} permutations will be produced.")
+    while len(newset) < norder:
+        newset.update([allpermute[index]])
+        index+=1
     return newset
+
+# def random_orderings(length, norder, preexist=set())->Set[Tuple[int]]:
+#     '''create norder NEW unique random orderings of numbers 0 through length in addition to those in provided preexisting set of orderings'''
+#     rlist = list(range(length))
+#     prelen=len(preexist)
+#     newset=preexist.copy()
+#     totalneed = norder + prelen
+#     maxpermute=factorial(length)
+#     if totalneed > maxpermute:
+#         ##TODO: check to see if norder needs to be changed? Maybe do this sooner?
+#         totalneed=maxpermute
+#         print(f"You asked for more permutations than are possible with the set size. Number of permutations is being reset to: {maxpermute}")
+#     while len(newset) < totalneed:
+#         needed=totalneed - len(newset)
+#         #union the pre-existing set of orderings with remaining number of orderings required
+#         newset.update(set([tuple(sample(rlist,length)) for i in range(needed)]))
+#     return newset
 
 # def _update_helper(node, kval):
 #     node.find_delta(kval=kval)
@@ -520,7 +543,8 @@ class DeltaTree:
             if not count:
                 raise ValueError("You must provide a value for count when there is no default ordering file")
         
-        orderings = random_orderings(length=len(fastas), norder=count-len(orderings), preexist=orderings)
+        orderings = permute(length=len(fastas), norder=count, preexist=orderings)
+        # orderings = random_orderings(length=len(fastas), norder=count-len(orderings), preexist=orderings)
         # save the orderings for use next run of species 
         with open(ordering_file,"wb") as f:
             pickle.dump(orderings, f)
@@ -552,7 +576,7 @@ class DeltaTree:
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
-                output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": number})
+                output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": number, "fastas": sublist})
         return output
 
     
