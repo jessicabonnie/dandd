@@ -17,6 +17,10 @@ grep -f /scratch16/blangme2/jessica/data/HVSVC2/raw/SampleIds.txt ${fasta_list} 
 
 codelib=/scratch16/blangme2/jessica/dandd/dev-dandD/lib
 python ${codelib}/dandd_cmd.py tree -s overlap -f ${overlap_list} --nthreads 20 -k18 -o ${wkdir}
+dtree=${wkdir}/overlap_8_dashing_dtree.pickle
+orderings=${wkdir}/overlap_8orderings.pickle
+
+python ${codelib}/dandd_cmd.py progressive -d ${dtree} -f ${overlap_list} -r ${orderings} -n 60
 
 ```
 
