@@ -38,6 +38,8 @@ def tree_command(args):
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
     fastas = dtree.fastas
+    tag = dtree.speciesinfo.tag
+
     if args.flist_loc:
         with open(args.flist_loc) as file:
             fsublist = [line.strip() for line in file]
@@ -47,7 +49,12 @@ def progressive_command(args):
         # if count is one "sorted" ordering is returned with the reference list
         # if args.norderings == 1:
         #     return fastas,[tuple(i for i in range(len(fastas)))]
-
+    if not args.ordering_file:
+        args.ordering_file = os.path.join(args.outdir,f"{tag}_{len(fastas)}_orderings.pickle")
+    if os.path.exists(args.ordering_file):
+        orderings = pickle.load(open(args.ordering_file, "rb"))
+    else:
+        orderings = set()
     
     # dtree.experiment["debug"] = args.debug
     results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
@@ -128,7 +135,7 @@ def parse_arguments():
 
     tree_parser.add_argument("-f", "--fastas", dest="flist_loc", metavar="FILE", type=str, default=None, help="filepath to a subset of fasta files to use in the species directory -- no title, one per line")
 
-    tree_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default=None, help="NOT IMPLEMENTED. label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list). NOT IMPLEMENTED", required=False)
+    tree_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default="", help="NOT IMPLEMENTED. label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list). NOT IMPLEMENTED", required=False)
 
     tree_parser.add_argument("-n", "--nchildren", dest="nchildren", metavar="INTEGER", type=int, default=None, help="number of children for each node in the delta tree -- default is to create a tree of only 2 levels with all individual sketches as the children of the root node.")
 
@@ -168,7 +175,7 @@ def parse_arguments():
     
     info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command. Tree nodes will be updated to hold additional sketches as needed to perform info commands selected.")
     
-    info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=10, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
@@ -200,9 +207,9 @@ def parse_arguments():
 
     kij_parser.add_argument("--mash", dest="mash", default=False, action="store_true", help="Indicate whether to include output for mash difference for indicated ks")
 
-    kij_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, type=int, default=0, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    kij_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, type=int, default=10, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    kij_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, type=int, default=0, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    kij_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, type=int, default=32, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     kij_parser.set_defaults(func=kij_command)
 
