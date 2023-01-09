@@ -1,6 +1,6 @@
 
-.libPaths(c(.libPaths(),"/home/jbonnie1/rlibs/4.0.2/","/home/jbonnie1/rlibs/4.0.2/gcc/9.3.0","/home/jbonnie1/R/4.0.4","/usr/local/lib/R/site-library",
-            "/usr/local/lib/R/library"))
+.libPaths(c(.libPaths(),"~/R/rstudio/4.0"))
+.libPaths(c(.libPaths(),"~/rlibs/4.0.2/","~/rlibs/4.0.2/gcc/9.3.0","~/R/4.0.4","/usr/local/lib/R/site-library","/usr/local/lib/R/library"))
 
 require(tidyr)
 require(ggplot2)
