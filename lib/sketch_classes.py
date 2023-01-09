@@ -89,7 +89,7 @@ class SketchFilePath:
             output= hex(sum)
         return output
         
-    def assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool):
+    def assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool, safety=True):
         '''determine the base file name for the sketch using the properties that will be used to generate it'''
         fnames_key=''.join(self.files)
         # if the key (made by joining the ingredient filenames) isn't already in the fastahex dictionary mapping the combination of those files to a hexsum, calculate that hexsum and add it to the fastahex key
@@ -98,10 +98,11 @@ class SketchFilePath:
             stored_val=speciesinfo.fastahex[fnames_key]
         # if the key is there, calculate what we expect the hashsum value to be based on the hexes of the components -- this is just to confirm that nothing has gotten confused somehow
         else:
-            checkval=self.hashsum(speciesinfo)
             stored_val=speciesinfo.fastahex[fnames_key]
-            if checkval != stored_val:
-               raise RuntimeError(f"Checksum does not match stored value for {fnames_key}: {checkval}, {stored_val}")
+            if safety:
+                checkval=self.hashsum(speciesinfo)
+                if checkval != stored_val:
+                    raise RuntimeError(f"Checksum does not match stored value for {fnames_key}: {checkval}, {stored_val}")
         # if the sketch is of a single input file, dashing will insist on naming it something specific, so we will use that base as a name for both dashing and kmc to make life easier
         if self.ngen == 1:
             sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
@@ -115,7 +116,7 @@ class SketchFilePath:
         info = {"sketchbase": sketchbase, "files": self.files, "ngen": self.ngen, "kval": kval, "registers": registers }
         if sketchbase not in speciesinfo.sketchinfo.keys():
             speciesinfo.sketchinfo[sketchbase] = info
-        else:
+        elif safety:
             stored_info=speciesinfo.sketchinfo[sketchbase]
             # check to make sure all sketchinfo values match what is stored
             for key in stored_info.keys():
