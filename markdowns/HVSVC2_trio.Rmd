@@ -11,7 +11,7 @@ require(callr)
 codelib<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
 source(file.path(codelib,'plot_progressive.R'))
 
-outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/bds'
+outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/HVSVC2'
 
 ```
 
@@ -43,11 +43,35 @@ python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive 
 tag='trio'
 ngenome=6
 
-delta_trio<-read.csv('/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/trio_6_progu.csv') %>% 
-  rename(delta_pos=delta)
+delta_trio<-read.csv('/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/trio_progu.csv') %>% 
+  rename(delta_pos=delta, ngenomes=ngen)
 plotProgressiveUnion(species=tag, out = outdir, delta_trio, nshow=10)
 
 
 ```
+
+```{r abba, cache=TRUE}
+abba.trio <- read.csv('/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/trio_abba.csv')
+ggplot(abba.trio) + geom_boxplot(aes(x=as.factor(step),y=deltadelta)) + scale_y_log10()
+
+```
+
+
+```{r abba2}
+ggplot(abba.trio) + geom_boxplot(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_1))) + geom_point(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_1))) + scale_y_log10() 
+ggplot(abba.trio) + geom_boxplot(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_2))) + geom_point(aes(x=as.factor(step),y=deltadelta, color=as.factor(HG00514_2))) + scale_y_log10()
+```
+
+
+```{r explode}
+abba.trio %>% filter(HG00514_1 == 0 & step==3 & HG00513_1 == 1 & HG00513_2 == -1) -> mom1
+abba.trio %>% filter(HG00514_1 == 0 & step==3 & (HG00513_1 == 1 | HG00513_2 == 1)) -> allmommy
+abba.trio %>% filter(HG00514_1 == 0 & step==3 & HG00513_1 == -1 & HG00513_2 == 1) -> mom2
+abba.trio %>% filter(HG00514_1 == 0 & step==3 & HG00513_1 == -1 & HG00513_2 == -1) -> nomommy
+nomommy$deltadelta %>% unique()
+View(nomommy)
+
+```
+
 
 

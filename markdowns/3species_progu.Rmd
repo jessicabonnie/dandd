@@ -17,33 +17,37 @@ require(callr)
 codelib<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
 source(file.path(codelib,'plot_progressive.R'))
 
-outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union'
+outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB'
 
 ```
 
 
 ```{bash}
 tag=ecoli
-outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
-sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/arg_tests/${tag}/sketchdb
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
+sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
 genomedir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -c ${sketchdir} -o ${outdir} -k 14 -g ${genomedir}
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 14 --datadir ${genomedir}
 
-tree_pick=${outdir}/${tag}_10_dtree.pickle
+tree_pick=${outdir}/${tag}_10_dashing_dtree.pickle
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu.csv
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep.csv --mink 2 --maxk 32
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu30.csv
 ```
 
 
 ```{r draw_ecoli, cache=TRUE}
 tag='ecoli'
-outdir='/home/jbonnie1/scr16_blangme2/jessica/dandd/bds'
+outdir='/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB'
 
-delta_ecoli<- fread(file.path(outdir,paste0(tag,"_progu.csv"))) %>%
-  select(-V1) %>% rename(delta_pos=delta)
+ksweep_ecoli <- read.csv(file.path(outdir,tag,"ksweep.csv"))
 
-plotProgressiveUnion(species=tag, out = outdir, delta_ecoli, nshow=30)
+delta_ecoli<- fread(file.path(outdir,tag,paste0(tag,"_progu30.csv"))) %>%
+  rename(delta_pos=delta, ngenomes=ngen)
+
+plotProgressiveUnion(species=tag, out = outdir, delta_ecoli, nshow=5)
 
 ```
 
@@ -51,25 +55,32 @@ plotProgressiveUnion(species=tag, out = outdir, delta_ecoli, nshow=30)
 
 ```{bash}
 tag=salmonella
-outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
+sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
 genomedir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
 
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 14 --datadir ${genomedir}
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -k 15 -g ${genomedir} -o ${outdir}
 
-tree_pick=${outdir}/${tag}_10_dtree.pickle
+tree_pick=${outdir}/${tag}_10_dashing_dtree.pickle
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu.csv
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep.csv --mink 2 --maxk 32
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu30.csv
 ```
 
 
 ```{r draw_salmon6, cache=TRUE}
 tag='salmonella'
-outdir='/home/jbonnie1/scr16_blangme2/jessica/dandd/bds'
+outdir='/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB'
+
+ksweep_salmon <- read.csv(file.path(outdir,tag,"ksweep.csv"))
 
 #fread("/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/progressive_union/sketches/testplot.csv")
-delta_salmon<- fread(file.path(outdir,paste0(tag,"_progu.csv"))) %>%
-  select(-V1) %>% rename(delta_pos=delta)
+# delta_salmon<- fread(file.path(outdir,paste0(tag,"_progu30.csv"))) %>% select(-V1) %>% rename(delta_pos=delta)
+delta_salmon<- fread(file.path(outdir,tag,paste0(tag,"_progu30.csv"))) %>%
+  rename(delta_pos=delta, ngenomes=ngen)
 
 salmon.gg<-plotProgressiveUnion(species=tag, out = outdir, delta = delta_salmon, nshow=5)
 #salmon.gg + scale_y_log10()
@@ -82,24 +93,31 @@ salmon.gg
 
 ```{bash}
 tag=human
-outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/bds
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
+sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
 genomedir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
 
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 18 --datadir ${genomedir}
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -g ${genomedir} -s ${tag} -o ${outdir} -k 20 
+tree_pick=${outdir}/${tag}_12_dashing_dtree.pickle
 
-tree_pick=${outdir}/${tag}_12_dtree.pickle
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep.csv --mink 2 --maxk 32
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 5 -o ${outdir}/${tag}_progu.csv
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu30.csv
 ```
 
 
 
 ```{r draw_human, cache=TRUE}
 tag='human'
+outdir='/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB'
 
-delta_human<- fread(file.path(outdir,paste0(tag,"_progu.csv"))) %>%
-  select(-V1) %>% rename(delta_pos=delta)
+ksweep_human <- read.csv(file.path(outdir,tag,"ksweep.csv"))
+
+#fread("/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/progressive_union/sketches/testplot.csv")
+# delta_salmon<- fread(file.path(outdir,paste0(tag,"_progu30.csv"))) %>% select(-V1) %>% rename(delta_pos=delta)
+delta_human<- fread(file.path(outdir,tag,paste0(tag,"_progu30.csv"))) %>%
+  rename(delta_pos=delta, ngenomes=ngen)
 
 
 plotProgressiveUnion(species=tag, out = outdir, delta = delta_human, nshow=5)
