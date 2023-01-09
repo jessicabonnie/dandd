@@ -16,6 +16,10 @@ def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str=""):
     dict_writer.writerows(listdict)
     writer.close()
 
+def insert_pre_ext(filename, string):
+    toks = filename.split('.')
+    return '.'.join(toks[:-1] + [string] + [toks[-1]])
+
 def tree_command(args):
     if not args.sketchdir:
         # args.sketchdir=os.path.join(args.outdir,args.tag,"sketchdb")
@@ -37,32 +41,11 @@ def tree_command(args):
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
-    fastas = dtree.fastas
-    tag = dtree.speciesinfo.tag
-
-    if args.flist_loc:
-        with open(args.flist_loc) as file:
-            fsublist = [line.strip() for line in file]
-        fastas = [f for f in fastas if f in fsublist]
-        #order fastas as given in file
-        fastas = [f for f in fsublist if f in fastas]
-        # if count is one "sorted" ordering is returned with the reference list
-        # if args.norderings == 1:
-        #     return fastas,[tuple(i for i in range(len(fastas)))]
-    if not args.ordering_file:
-        args.ordering_file = os.path.join(args.outdir,f"{tag}_{len(fastas)}_orderings.pickle")
-    if os.path.exists(args.ordering_file):
-        orderings = pickle.load(open(args.ordering_file, "rb"))
-    else:
-        orderings = set()
-    
-    # dtree.experiment["debug"] = args.debug
+        
+    dtree.experiment["debug"] = args.debug
     results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
     write_listdict_to_csv(outfile=args.outfile, listdict=results)
-    # if args.outfile:
-    #     results.to_csv(args.outfile)
-    # else:
-    #     print(tabulate(results, headers=list(results.columns)))
+    dtree.save(outdir=os.path.split(args.outfile)[0], tag=dtree.speciesinfo.tag, label=f"progu{args.norderings}")
 
 def abba_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -74,7 +57,8 @@ def abba_command(args):
 
 def info_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
-    print(dtree)
+    summary=dtree.summarize(mink=args.mink, maxk=args.maxk)
+    write_listdict_to_csv(outfile=args.outfile, listdict=summary)
 
 def kij_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -111,13 +95,14 @@ def parse_arguments():
 
     commands = []
     parser.add_argument("-v", "--verbose", action="count", default=0)
+    parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
 
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
 
     # Make parser for "dand_cmd.py tree ..."
     tree_parser = subparsers.add_parser("tree")
     commands.append('tree')
-    tree_parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
+    # tree_parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
 
     tree_parser.add_argument("-s","-t", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="LABELSTRING", type=str, required=False, default='dandd')
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
@@ -125,7 +110,7 @@ def parse_arguments():
 
     tree_parser.add_argument("-d", "--datadir", dest="genomedir", default='/scratch16/blangme2/jessica/data', help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="FASTADIR")
 
-    tree_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the species directory after running", type=str, metavar="OUTDIRPATH")
+    tree_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
     tree_parser.add_argument("-c", "--sketchdir", dest="sketchdir", default=None, help="sketch directory for species", type=str, metavar="SKETCHDIR")
 
@@ -159,9 +144,11 @@ def parse_arguments():
 
     progressive_parser.add_argument("-f", "--fastas", dest="flist_loc", default=None, type=str, metavar="FASTA LIST FILE", help="filepath to a subset of fasta files from the original tree which should be analyzed using progressive union. When count is not provided, the ordering in the file will be used for a single progression. The ordering will not be added to the ordering pickle.")
 
-    progressive_parser.add_argument("-n", "--norderings", dest="norderings", default=None, type=int, help="number of random orderings to explore. If not provided, the orderings stored in the ordering pickle will be used. If that file does not exist / is not provided, program will terminate.")
+    progressive_parser.add_argument("-n", "--norderings", dest="norderings", default=0, type=int, help="number of random orderings to explore. If not provided, the orderings stored in the ordering pickle will be used. If that file does not exist / is not provided, program will terminate.")
 
     progressive_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
+
+    # progressive_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
     progressive_parser.add_argument("--step", dest="step", default=1, type=int, help="Number of sketches to include in each progression. Mostly used for a single ordered progression.")
 
@@ -178,6 +165,9 @@ def parse_arguments():
     info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=10, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+
+    info_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
+
 
     info_parser.set_defaults(func=info_command)
     
@@ -202,6 +192,8 @@ def parse_arguments():
     kij_parser.add_argument("-f", "--fastas", dest="flist_loc", default=None, type=str, metavar="FASTA LIST FILE", help="filepath to a subset of fasta files from the original tree which should be analyzed.")
 
     kij_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
+
+    # kij_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
     kij_parser.add_argument("--jaccard", dest="jaccard", default=False, action="store_true", help="Indicate whether to include output for standard jaccard difference for indicated ks")
 
