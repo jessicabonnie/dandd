@@ -28,7 +28,10 @@ outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
 sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
 genomedir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 14 --datadir ${genomedir}
+cd ${outdir}
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -c ${sketchdir} -k 14 --datadir ${genomedir}
+
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 14 --datadir ${genomedir} --exact
 
 tree_pick=${outdir}/${tag}_10_dashing_dtree.pickle
 
@@ -48,6 +51,8 @@ delta_ecoli<- fread(file.path(outdir,tag,paste0(tag,"_progu30.csv"))) %>%
   rename(delta_pos=delta, ngenomes=ngen)
 
 plotProgressiveUnion(species=tag, out = outdir, delta_ecoli, nshow=5)
+
+ggplot(ksweep_ecoli) + geom_line(aes(x=kval, y=delta_pos))
 
 ```
 
@@ -133,6 +138,9 @@ ggsave(filename='human_progu.pdf',
        units = "cm")
 
 ```
+
+
+
 
 
 
