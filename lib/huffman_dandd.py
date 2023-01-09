@@ -457,7 +457,7 @@ class DeltaTree:
         return filepath
 
   
-    def summarize(self, mink=0, maxk=0):
+    def summarize(self, mink=1, maxk=32):
         ''' Traverse the DeltaTree to return a dataframe with all possible delta values.'''
         root = self._dt[-1]
         if mink == 0:
@@ -467,7 +467,7 @@ class DeltaTree:
         self.ksweep(mink=mink, maxk=maxk)
         #print(root)
         def _delta_pos_recursive(node):
-            tmplist=[node.summarize()]
+            tmplist=node.summarize()
             
             if node.children:
                 nchild=len(node.children)
@@ -522,7 +522,7 @@ class DeltaTree:
         
         # orderings are handled as sets to prevent duplication
         orderings=set()
-        default_ordering=os.path.join(self.speciesinfo.sketchdir, self.speciesinfo.tag + "_"+ str(len(fastas))+"orderings.pickle")
+        default_ordering=os.path.join(self.speciesinfo.sketchdir, self.speciesinfo.tag + "_"+ str(len(fastas))+"_orderings.pickle")
         # if no ordering file is provided the default location is used
         if not ordering_file:
             ordering_file=default_ordering
@@ -531,7 +531,7 @@ class DeltaTree:
             with open(ordering_file,'rb') as f:
                 orderings=pickle.load(f)
             # if count was not provided then just return the orderings that are already there
-            if not count:
+            if count==0:
                 return fastas, list(orderings)
             # if the count is lte to the number of orderings in the file, take the first count number of orderings
             if count <= len(orderings):
@@ -540,7 +540,7 @@ class DeltaTree:
         # if there is no ordering file at the location, time to make some    
         else:
             # if count is not provided, how will we know how many to make??
-            if not count:
+            if count<1:
                 raise ValueError("You must provide a value for count when there is no default ordering file")
         
         orderings = permute(length=len(fastas), norder=count, preexist=orderings)
