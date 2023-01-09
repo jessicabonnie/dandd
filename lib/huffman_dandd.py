@@ -504,7 +504,7 @@ class DeltaTree:
             maxk = int(self.maxk)
         self.root.node_ksweep( mink=mink, maxk=maxk)
 
-    def orderings_list(self, ordering_file=None, flist_loc=None, count=None)-> Tuple[List[str], List[Tuple[int]]]:
+    def orderings_list(self, ordering_file=None, flist_loc=None, count=0)-> Tuple[List[str], List[Tuple[int]]]:
         '''create or retrieve a series of random orderings of fasta sketches. return also the expected "sorted" array of the files. A subset of the fastas in the tree can be provided by name (in a file). The ordering of this file will be used when count=1 and the list is provided.'''
         fastas=self.fastas
         fastas.sort()
@@ -566,6 +566,7 @@ class DeltaTree:
             oresults=smain.sketch_ordering(orderings[i], number=i+1, step=step)
             results.extend(oresults)
             self.speciesinfo.save_references()
+            self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
         return results
 
     def sketch_ordering(self, ordering, number, step=1)->List[dict]:
