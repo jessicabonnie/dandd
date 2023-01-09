@@ -11,12 +11,12 @@ import subprocess
 import csv
 # from multiprocessing import Process, Pool
 from random import sample, shuffle
-from numpy import unique
+# from numpy import unique
 # import pandas as pd
 from species_specifics import SpeciesSpecifics
 from sketch_classes import SketchFilePath
 from sketch_classes import SketchObj, DashSketchObj, KMCSketchObj
-import tabulate
+# import tabulate
 from typing import List, Dict, Set, Tuple, NamedTuple
 from string import ascii_uppercase
 from dandd_cmd import write_listdict_to_csv
@@ -390,7 +390,7 @@ class DeltaTree:
     def fill_tree(self, padding=True):
         '''Starting at the root make sure that all nodes in the tree contain the sketches for the argmax ks for every node as well as 2 less than the minimum and 2 greater than the maximum (IF padding argument is True)'''
         root = self._dt[-1]
-        bestks = list(unique([n.bestk for n in self._dt]))
+        bestks = list(set([n.bestk for n in self._dt]))
         bestks = [k for k in bestks if k!=0  ]
         #print(bestks)
         bestks.sort()

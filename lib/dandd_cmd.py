@@ -3,7 +3,7 @@ import huffman_dandd
 import sys
 import pickle
 import os
-from tabulate import tabulate
+# from tabulate import tabulate
 import csv
 from typing import List, Dict, Set, Tuple, NamedTuple
 
