@@ -33,6 +33,7 @@ tag=HVSVC2
 outdir=/scratch16/blangme2/jessica/dandd/scratch/${tag}
 filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_fastas_nonrel_female.txt
 python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+tree_pick=/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/HVSVC2_34_dashing_sketchdb.txt
 
 
 
