@@ -1,0 +1,279 @@
+
+```{r prep, echo=FALSE,warning=FALSE, include=FALSE}
+
+require(tidyr)
+require(ggplot2)
+require(data.table)
+require(openssl)
+require(dplyr)
+require(optparse)
+require(callr)
+codelib<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
+source(file.path(codelib,'plot_progressive.R'))
+
+outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union'
+
+```
+
+
+## Run random orderings for 10 genomes with only SNVs
+
+```{bash}
+tag=HVSVC2_snv
+outdir=/scratch16/blangme2/jessica/dandd/scratch/${tag}
+filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_snv_fastas_nonrel_female.txt
+python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+
+tag=HVSVC2_snv_indel
+outdir=/scratch16/blangme2/jessica/dandd/scratch/${tag}
+filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_snv_indels_fastas_nonrel_female.txt
+python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+
+tag=HVSVC2
+outdir=/scratch16/blangme2/jessica/dandd/scratch/${tag}
+filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_fastas_nonrel_female.txt
+python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+
+
+
+```
+
+
+
+```{r draw_graphs1, cache=TRUE}
+tag='HVSVC2_snv'
+ngenome=64
+load(file.path(outdir,"sketches",tag,paste0(tag,"_nonrel_results.rda")))
+delta_snv<-results.save[[paste0("ng",ngenome)]]$delta
+plotProgressiveUnion(species=tag, ngenome = ngenome, out = outdir, delta_snv, nshow=1)
+
+
+```
+
+
+
+
+## Run random orderings for 20 genomes on set with SNVs and SVs  
+
+
+```{bash}
+tag=HVSVC2_snv_sv
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union
+sortprefix=${outdir}/sketches/${tag}/${tag}_sortorder
+# Remove children from trios
+grep -vE "(_HG00514_|_HG00733_|_NA19240_)" ${sortprefix}_out.txt > ${sortprefix}_nonrel.txt
+# Make a list of only female samples
+grep -vEf /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/raw/SampleIds_male.txt ${sortprefix}_nonrel.txt > ${sortprefix}_nonrel_female.txt
+
+
+
+Rscript --vanilla /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/progressive_union.R \
+ --species ${tag} --maxk 20 --ngenomes 10 -r 20 --prefix nonrel --sortorder ${sortprefix}_nonrel.txt\
+ -o ${outdir} \
+ |& tee ${outdir}/${tag}_nonrel.log
+
+```
+
+```{r draw_graphs2, cache=TRUE}
+tag='HVSVC2_snv_sv'
+ngenome=64
+load(file.path(outdir,"sketches",tag,paste0(tag,"_nonrel_results.rda")))
+delta_snv_sv <- results.save[[paste0("ng",ngenome)]]$delta
+plotProgressiveUnion(species=tag, ngenome = ngenome, out = outdir, delta_snv_sv,nshow=6)
+
+
+```
+## Run random orderings for 10 genomes on set with Indels and INSDELS only
+
+
+```{bash}
+prefix=nonrel
+tag=HVSVC2_indel
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union
+sortprefix=${outdir}/sketches/${tag}/${tag}_sortorder
+# Remove children from trios
+grep -vE "(_HG00514_|_HG00733_|_NA19240_)" ${sortprefix}_out.txt > ${sortprefix}_nonrel.txt
+# Make a list of only female samples
+grep -vEf /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/raw/SampleIds_male.txt ${sortprefix}_nonrel.txt > ${sortprefix}_nonrel_female.txt
+
+Rscript --vanilla /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/progressive_union.R  \
+--species ${tag} --maxk 21 -r 20 --prefix ${prefix} --sortorder ${sortprefix}_${prefix}.txt  \
+-o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union   |& tee /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/${tag}_64_${prefix}.log
+
+#Rscript --vanilla /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/plot_progressive.R \
+ #--species HVSVC2_snv_sv --ngenomes 30 \
+ #-o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union 
+
+```
+
+
+```{r draw_graphsi, cache=TRUE}
+tag='HVSVC2_indel'
+load(file.path(outdir,"sketches",tag,paste0(tag,"_nonrel_results.rda")))
+delta_indel<- results.save[[paste0("ng",ngenome)]]$delta
+plotProgressiveUnion(species=tag, ngenome = ngenome, out = outdir, delta_indel, nshow=6)
+
+
+```
+
+## Run random orderings on set with only SVs
+
+```{bash}
+prefix=nonrel
+tag=HVSVC2_sv
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union
+sortprefix=${outdir}/sketches/${tag}/${tag}_sortorder
+# Remove children from trios
+grep -vE "(_HG00514_|_HG00733_|_NA19240_)" ${sortprefix}_out.txt > ${sortprefix}_nonrel.txt
+# Make a list of only female samples
+grep -vEf /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/raw/SampleIds_male.txt ${sortprefix}_nonrel.txt > ${sortprefix}_nonrel_female.txt
+
+
+Rscript --vanilla /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/progressive_union.R  --species ${tag} --maxk 21 -r 20 --prefix ${prefix} --sortorder ${sortprefix}_${prefix}.txt  -o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union   |& tee /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/${tag}_64_${prefix}.log
+
+#Rscript --vanilla /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/plot_progressive.R \
+ #--species HVSVC2_snv_sv --ngenomes 30 \
+ #-o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union 
+ 
+ 
+
+```
+
+
+```{r draw_graphsv, cache=TRUE}
+tag='HVSVC2_sv'
+ngenome=10
+load(file.path(outdir,"sketches",tag,paste0(tag,"_nonrel_results.rda")))
+delta_sv<- results.save[[paste0("ng",ngenome)]]$delta
+plotProgressiveUnion(species=tag, ngenome = ngenome, out = outdir, delta_sv, nshow=6)
+ 
+
+```
+
+## Run Random Orderings with SNVs and Indels
+```{bash}
+tag=HVSVC2_snv_indel
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union
+sortprefix=${outdir}/sketches/${tag}/${tag}_sortorder
+prefix=nonrel
+# Remove children from trios
+grep -vE "(_HG00514_|_HG00733_|_NA19240_)" ${sortprefix}_out.txt > ${sortprefix}_nonrel.txt
+# Make a list of only female samples
+grep -vEf /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/raw/SampleIds_male.txt ${sortprefix}_nonrel.txt > ${sortprefix}_nonrel_female.txt
+
+
+Rscript --vanilla /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/progressive_union.R  --species ${tag} --maxk 21 -r 20 --prefix ${prefix} --sortorder ${sortprefix}_${prefix}.txt  -o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union   |& tee /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/${tag}_64_${prefix}.log
+ 
+ #"~/lib/dashing/dashing card --presketched -F /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/HVSVC2_snv_indel/HVSVC2_snv_indel_nonrel_120_index.tsv -o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/HVSVC2_snv_indel/HVSVC2_snv_indel_nonrel_120_cardinalities.txt"
+ 
+nrows=$(cat /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_index.tsv | wc -l)
+nrows1=$( printf "%.0f" $(($nrows/2)) )
+nrows2=$((nrows - nrows1))
+
+head -n$nrows1 /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_index.tsv > /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_indexA.tsv
+
+tail -n$nrows2 /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_index.tsv > /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_indexB.tsv
+
+~/lib/dashing/dashing card --presketched -F /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_indexA.tsv -o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalitiesA.txt
+
+~/lib/dashing/dashing card --presketched -F /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_indexB.tsv -o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalitiesB.txt
+
+cp /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalitiesA.txt /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalities.txt
+sed -e '1,1d' /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalitiesB.txt >> /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalities.txt
+
+
+```
+
+
+
+```{r draw_graphssvind, cache=TRUE}
+tag='HVSVC2_snv_indel'
+ngenome=64
+load(file.path(outdir,"sketches",tag,paste0(tag,"_nonrel_results.rda")))
+delta_snv_indel<- results.save[[paste0("ng",ngenome)]]$delta
+plotProgressiveUnion(species=tag, ngenome = ngenome, out = outdir, delta_snv_indel, nshow=1)
+
+
+```
+
+## Run random orderings for 64 genomes on set with SNVs and SVs and Indels and INSDELS  
+
+
+```{bash}
+tag=HVSVC2
+outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union
+sortprefix=${outdir}/sketches/${tag}/${tag}_sortorder
+# Remove children from trios
+grep -vE "(_HG00514_|_HG00733_|_NA19240_)" ${sortprefix}_out.txt > ${sortprefix}_nonrel.txt
+# Make a list of only female samples
+grep -vEf /home/jbonnie1/scr16_blangme2/jessica/data/HVSVC2/raw/SampleIds_male.txt ${sortprefix}_nonrel.txt > ${sortprefix}_nonrel_female.txt
+
+
+Rscript --vanilla /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/progressive_union.R \
+ --species ${tag} --maxk 21 -r 20 --sortorder ${sortprefix}_nonrel.txt --prefix nonrel\
+ -o ${outdir} \
+ |& tee ${outdir}/${tag}_nonrel_64.log
+
+#Rscript --vanilla /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/plot_progressive.R \
+ #--species HVSVC2_snv_sv --ngenomes 30 \
+ #-o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union 
+
+ 
+nrows=$(cat /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_index.tsv | wc -l)
+nrows1=$( printf "%.0f" $(($nrows/2)) )
+nrows2=$((nrows - nrows1))
+
+head -n$nrows1 /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_index.tsv > /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_indexA.tsv
+
+tail -n$nrows2 /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_index.tsv > /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_indexB.tsv
+
+~/lib/dashing/dashing card --presketched -p10 -F /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_indexA.tsv -o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalitiesA.txt
+
+~/lib/dashing/dashing card --presketched -p10 -F /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_indexB.tsv -o /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalitiesB.txt
+
+cp /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalitiesA.txt /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalities.txt
+sed -e '1,1d' /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalitiesB.txt >> /home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union/sketches/${tag}/${tag}_nonrel_120_cardinalities.txt
+```
+
+
+```{r draw_graphs3, cache=TRUE}
+tag='HVSVC2'
+ngenome=64
+load(file.path(outdir,"sketches",tag,paste0(tag,"_nonrel_results.rda")))
+delta_snv_sv_indel<- results.save[[paste0("ng",ngenome)]]$delta
+plotProgressiveUnion(species=tag, ngenome = ngenome, out = outdir, delta_snv_sv_indel, nshow=6)
+
+
+```
+
+```{r plot_across, cache=TRUE}
+norder=max(delta_snv$ordering)
+gcount=max(delta_snv$ngenomes)
+allg <-
+  # delta %>%
+  # mutate(Indicator=ordering <= 6) %>%
+  # # filter(ordering %in% c(1:20)) %>%
+  # mutate(ngenomes=as.integer(ngenomes),kval=as.factor(kval))  %>%
+  ggplot() +
+  geom_smooth(data = delta_snv, aes(y=delta_pos, x=ngenomes, color="SNV only"), method='loess',formula=y~x,se=TRUE) +
+  # geom_smooth(data = delta_snv_sv, aes(y=delta_pos, x=ngenomes, color="SNV + SV"), method='loess',formula=y~x,se = TRUE) +
+  geom_smooth(data = delta_snv_sv_indel, aes(y=delta_pos, x=ngenomes, color="SNVs + Indels + SVs"), method='loess',formula=y~x, se=TRUE) +
+  # geom_smooth(data = delta_indel, aes(y=delta_pos, x=ngenomes, color="Indels"), method='loess',formula=y~x, se=TRUE) +
+  # geom_smooth(data = delta_sv, aes(y=delta_pos, x=ngenomes, color="SV only"), method='loess',formula=y~x, se=TRUE) +
+    geom_smooth(data = delta_snv_indel, aes(y=delta_pos, x=ngenomes, color="SNVs + Indels"), method='loess',formula=y~x, se=TRUE) +
+
+  #geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=2) +
+  # scale_linetype_manual(name=paste0("Fit (",norder," Orderings)"),values=c(2)) +
+  # geom_line(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, group=ordering,color=as.factor(ordering)), size=.5) +
+  theme_bw() +
+  scale_x_continuous(breaks= scales::pretty_breaks(10)) +
+  # scale_shape_discrete(name="argmax(k)")+
+  # scale_color_discrete(name = "Random Genome Ordering") +
+  xlab("Number of Genomes in Set") +
+  ylab("Value of \u03b4") +
+  ggtitle(label=paste0("Values of \u03b4 over ",norder," orderings of ",gcount," HVSVC2 "," Genomes")) 
+#+xlim(c(1,3))
+  # guides(color = "none")
+
+allg
+```
