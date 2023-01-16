@@ -47,9 +47,7 @@ def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
         
     dtree.experiment["debug"] = args.debug
-    results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
-    write_listdict_to_csv(outfile=args.outfile, listdict=results)
-    dtree.save(outdir=os.path.split(args.outfile)[0], tag=dtree.speciesinfo.tag, label=f"progu{args.norderings}")
+    dtree.experiment["safety"] = args.safety
 
 def abba_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -100,6 +98,7 @@ def parse_arguments():
     commands = []
     parser.add_argument("-v", "--verbose", action="count", default=0)
     parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
+    parser.add_argument( "--safe", action="store_true", default=False, dest="safety",   help="Double check all sketch hashes to make sure they match the sums of the fasta hashes.")
 
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
 

@@ -231,7 +231,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set()}, padding=True):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False}, padding=True):
         # self.fastahex = speciesinfo.fastahex
         self.experiment=experiment
         self._symbols = []
@@ -709,7 +709,7 @@ class DeltaSpider(DeltaTree):
 #         raise NotImplementedError
 
 
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=20, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10, safety=False):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
@@ -722,7 +722,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     tool = string indicating which tool to use for kmer cardinality
     choices=["dashing","kmc"] '''
     # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
-    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set()}
+    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set(), 'safety':safety}
 
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)

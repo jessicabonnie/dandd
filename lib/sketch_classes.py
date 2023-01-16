@@ -59,7 +59,7 @@ class SketchFilePath:
         self.files.sort()
         self.ngen = len(filenames)
         #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
-        self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'])
+        self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'], safety=experiment['safety'])
         self.dir = os.path.join(speciesinfo.sketchdir, "ngen" + str(self.ngen),"k"+ str(kval))
         self.relative = os.path.join("ngen" + str(self.ngen),"k"+ str(kval),self.base)+ self._get_ext(experiment['tool'])
         # self.full = os.path.join(speciesinfo.sketchdir, self.relative)
@@ -89,7 +89,7 @@ class SketchFilePath:
             output= hex(sum)
         return output
         
-    def assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool, safety=True):
+    def assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool, safety=False):
         '''determine the base file name for the sketch using the properties that will be used to generate it'''
         fnames_key=''.join(self.files)
         # if the key (made by joining the ingredient filenames) isn't already in the fastahex dictionary mapping the combination of those files to a hexsum, calculate that hexsum and add it to the fastahex key
