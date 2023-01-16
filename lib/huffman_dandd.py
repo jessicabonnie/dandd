@@ -201,18 +201,20 @@ class DeltaTreeNode:
         self.maxk=maxk    
 
     def summarize(self, mink:int=0, maxk:int=0):
-        '''create a dataframe of all "possible" delta values that were examined during creation of the node for use in plotting'''
+        '''create a dataframe of all "possible" delta values that were examined during creation of the node for use in plotting -- this isn't actually summarizing, so the function should be renamed'''
         nodevals=[]
         if mink == 0:
             mink=self.mink
         if maxk == 0:
             maxk=self.maxk
-        labels=[ascii_uppercase[i] for i in range(self.ngen)]
+        labels=[ascii_uppercase[i]+ ascii_uppercase[j] for i in range(26) for j in range(26)]
+
         for kval in range(mink, maxk+1):
             if self.ksketches[kval]:
                 linedict = {"ngen": self.ngen, "kval": kval, "card": self.ksketches[kval].card, "delta_pos": self.ksketches[kval].delta_pos, "title": self.node_title}
                 for index, value in enumerate(self.fastas):
-                    linedict[labels[index]] = value
+                    linedict[f"step{index}"] = value
+                    # linedict[labels[index]] = value
                 
                 # if len(self.fastas) <= 2:
                 #     linedict.update({"A": self.fastas[0]})
@@ -480,13 +482,17 @@ class DeltaTree:
         return filepath
 
   
-    def summarize(self, mink=1, maxk=32):
-        ''' Traverse the DeltaTree to return a dataframe with all possible delta values.'''
+    def summarize(self, mink=0, maxk=0):
+        ''' Traverse the DeltaTree to return a dataframe with all possible delta values. -- this isn't actually summarizing, so the function should be renamed'''
         root = self._dt[-1]
         if mink == 0:
             mink=self.mink
+            if self.mink > 4:
+                mink=self.mink - 2
         if maxk == 0:
             maxk = self.maxk
+            if self.maxk <= 30:
+                maxk=self.maxk + 2
         self.ksweep(mink=mink, maxk=maxk)
         #print(root)
         def _delta_pos_recursive(node):
@@ -501,6 +507,7 @@ class DeltaTree:
             return tmplist
         
         dictlist= _delta_pos_recursive(root)
+        #print(dictlist)
         return dictlist
 
     def nodes_from_fastas(self, fasta_list):
@@ -585,23 +592,30 @@ class DeltaTree:
         # create a sketch of the full union of the fastas
         smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo, experiment=self.experiment)
         results=[]
+        summary=[]
         for i in range(0,len(orderings)):
-            oresults=smain.sketch_ordering(orderings[i], number=i+1, step=step)
+            oresults, osummary =smain.sketch_ordering(orderings[i], number=i+1, step=step)
+            for o in osummary:
+                o["ordering"] = i+1
             results.extend(oresults)
+            summary.extend(osummary)
             self.speciesinfo.save_references()
             self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
-        return results
+        return results, summary
 
     def sketch_ordering(self, ordering, number, step=1)->List[dict]:
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas'''
         flen=len(ordering)
         output=[]
+        summary=[]
         for i in range(1,flen+1):
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
                 output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": number, "fastas": sublist})
-        return output
+                summary.extend(ospider.summarize())
+
+        return output, summary
 
     
     def pairwise_spiders(self, sublist=[], mink=0, maxk=0):
@@ -766,5 +780,5 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     # cardpath=os.path.join(speciesinfo.sketchdir, f'{tag}_{tool}_cardinalities.pickle')
     speciesinfo.save_cardkey(tool=tool)
     speciesinfo.save_references()
-    print(dtree)#.print_tree()
+    #print(dtree)#.print_tree()
     return dtree

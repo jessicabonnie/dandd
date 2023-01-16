@@ -45,9 +45,20 @@ def tree_command(args):
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
+    if not args.outfile:
+        args.outfile = dtree.make_prefix(tag=dtree.speciesinfo.tag, label=f"progu{args.norderings}")
         
     dtree.experiment["debug"] = args.debug
     dtree.experiment["safety"] = args.safety
+    # dtree.speciesinfo.kstart=25
+    results, summary=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
+    
+    write_listdict_to_csv(outfile=args.outfile+'.csv', listdict=results)
+    write_listdict_to_csv(outfile=args.outfile+'summary.csv', listdict=summary)
+    # if len(str.split(args.outfile)<2):
+    #     args.outfile=os.path.join(os.path.curdir,args.outfile)
+    dtree.save(fileprefix=args.outfile)
+    # dtree.save(outdir=os.path.split(args.outfile)[0], tag=dtree.speciesinfo.tag, label=f"progu{args.norderings}")
 
 def abba_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -149,7 +160,7 @@ def parse_arguments():
 
     progressive_parser.add_argument("-n", "--norderings", dest="norderings", default=0, type=int, help="number of random orderings to explore. If not provided, the orderings stored in the ordering pickle will be used. If that file does not exist / is not provided, program will terminate.")
 
-    progressive_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
+    progressive_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path prefix to write the output tables and tree.")
 
     # progressive_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
