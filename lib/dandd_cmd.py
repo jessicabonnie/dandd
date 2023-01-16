@@ -34,9 +34,10 @@ def tree_command(args):
         
     os.makedirs(args.outdir, exist_ok=True)
     # os.chdir(args.sketchdir)
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads)
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety)
 
-    dtree.save(outdir=args.outdir, tag=args.tag, label=args.label)
+    fileprefix = dtree.make_prefix(outdir=args.outdir, tag=args.tag, label=args.label)
+    dtree.save(fileprefix=fileprefix)
     #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
     # explist=[dtree.speciesinfo.sketchinfo[item] for item in list(dtree.experiment["baseset"])]
     # expmaploc=os.path.join(args.outdir,  args.tag + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')

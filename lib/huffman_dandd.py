@@ -439,21 +439,31 @@ class DeltaTree:
         #     dict_writer.writeheader()
         #     dict_writer.writerows(explist)
 
-    def save(self, outdir: str, tag: str, label=""):
-        '''Save the delta tree for future retrieval
-        '''
+
+    def make_prefix(self, tag: str, label="", outdir:str=None):
+        if not outdir:
+            outdir=os.path.curdir
         if not label == "":
             label = "_"+label
-        filepath=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_dtree.pickle')
+        fileprefix=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] )
+        return fileprefix
+
+    def save(self, fileprefix:str):
+        '''Save the delta tree for future retrieval
+        '''
+        # if not label == "":
+        #     label = "_"+label
+        # fileprefix=self.make_prefix(tag=tag, label=label, outdir=outdir)
+        
+        filepath=fileprefix + '_dtree.pickle'
         with open(filepath,"wb") as f:
             pickle.dump(obj=self, file=f)
         print("Tree Pickle saved to: "+filepath)
         #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
-        expmaploc=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')
+        expmaploc=fileprefix + '_sketchdb.txt'
         explist=[self.speciesinfo.sketchinfo[item] for item in list(self.experiment["baseset"])]
         write_listdict_to_csv(outfile=expmaploc, listdict=explist)
         print(f"Output Sketch/DB mapping saved to {expmaploc}.")
-
         return filepath
 
   
