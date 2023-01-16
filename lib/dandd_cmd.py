@@ -11,7 +11,10 @@ from typing import List, Dict, Set, Tuple, NamedTuple
 
 def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str=""):
     writer = open(outfile+suffix, "w") if outfile is not None and outfile != '-' else sys.stdout
-    dict_writer = csv.DictWriter(writer, fieldnames=listdict[0].keys())
+    fieldnames=set()
+    for x in listdict:
+        fieldnames.update(x.keys())
+    dict_writer = csv.DictWriter(writer, fieldnames=list(fieldnames))
     dict_writer.writeheader()
     dict_writer.writerows(listdict)
     writer.close()
