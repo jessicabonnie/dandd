@@ -5,17 +5,42 @@ date: '2022-12-27'
 ---
 
 ```{bash delta, eval=FALSE}
+codelib=/home/jbonnie1/dandd/dev-dandD/lib
 datadir=/data/blangme2/fasta/hprc-yr1
-wkdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/scratch/pangenome
-fasta_list=${wkdir}/pangenome_fasta_paths.txt
+jdatadir=/data/blangme2/jessica/pangenome
+wkdir=/scratch4/blangme2/jessica/dandd/scratch/pangenome
+fasta_list=${jdatadir}/pangenome_fasta_paths.txt
+female_fastas=${jdatadir}/pangenome_fasta_paths_female.txt
 overlap_list=${wkdir}/pangenome_hvsvc2_fasta_paths.txt
 realpath ${datadir}/HG*.fa > ${fasta_list}
 realpath ${datadir}/NA*.fa >> ${fasta_list}
 
+
+## FEMALES SUBSETTING HERE
+grep female ${jdatadir}/hprc_year1_assemblies_v2_sample_metadata.txt | awk '{print $1}' > ${jdatadir}/hprc_year1_females.txt
+grep -f ${jdatadir}/hprc_year1_females.txt ${fasta_list} > ${female_fastas}
+
+
+python ${codelib}/dandd_cmd.py tree -s female -f ${female_fastas} --nthreads 20 -k25 -o ${wkdir}
+tree_pick=${wkdir}/female_56_dashing_dtree.pickle
+python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 30
+python ${codelib}/dandd_cmd.py info -d ${tree_pick} -o ${wkdirdir}/${tag}_progu30_ksweep_dashing.csv --mink 18 --maxk 30
+#Try exact counting?
+python ${codelib}/dandd_cmd.py tree -s female -f ${female_fastas} --nthreads 30 -k25 -o ${wkdir} --exact
+
+#try 30 registers instead of usual 20
+python ${codelib}/dandd_cmd.py tree -s pangor30 -f ${female_fastas} --nthreads 30 --registers 30 -o ${wkdir} -k 20
+
+tree_pick=${wkdir}/female_56_dashing_dtree.pickle
+python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 90
+tree_pick=${outdir}/female_progu30_56_dashing_dtree.pickle
+python ${codelib}/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/${tag}_ksweep_dashing.csv --mink 18 --maxk 30
+
+python ${codelib}/dandd_cmd.py progressive -d ${wkdir}/pangsan_56_dashing_dtree.pickle -n 10 -r ${wkdir}/sketchdb/female_56_orderings.pickle
+
+## create overlap list with HVSVC2 all sexes
 grep -f /scratch16/blangme2/jessica/data/HVSVC2/raw/SampleIds.txt ${fasta_list} > ${overlap_list}
 
-
-codelib=/scratch16/blangme2/jessica/dandd/dev-dandD/lib
 python ${codelib}/dandd_cmd.py tree -s overlap -f ${overlap_list} --nthreads 20 -k18 -o ${wkdir}
 dtree=${wkdir}/overlap_8_dashing_dtree.pickle
 orderings=${wkdir}/sketchdb/overlap_8_orderings.pickle
@@ -24,7 +49,32 @@ python ${codelib}/dandd_cmd.py progressive -d ${dtree} -f ${overlap_list} -r ${o
 
 ```
 
-## R Markdown
+```{r prep, echo=FALSE,warning=FALSE, include=FALSE}
+
+require(tidyr)
+require(ggplot2)
+require(data.table)
+require(openssl)
+require(dplyr)
+require(optparse)
+require(callr)
+require(codetools)
+codelib<-'/home/jbonnie1/dandd/dev-dandD/lib/'
+source(file.path(codelib,'plot_progressive.R'))
+
+outdir<-'/home/jbonnie1/scr4_blangme2/jessica/dandd/scratch/pangenome'
+
+```
+
+
+```{r females}
+tag='pangenome'
+females<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/pangenome/female_progu30_56_dashing.csv') %>% 
+  rename(delta_pos=delta)#, ngenomes=ngen)
+plotProgressiveUnion(species=tag, out = outdir, females, nshow=5)
+
+
+```
 
 
 

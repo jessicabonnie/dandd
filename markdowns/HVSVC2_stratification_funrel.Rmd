@@ -8,10 +8,10 @@ require(openssl)
 require(dplyr)
 require(optparse)
 require(callr)
-codelib<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
+codelib<-'/home/jessica/dandd/dev-dandD/lib/'
 source(file.path(codelib,'plot_progressive.R'))
 
-outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union'
+outdir<-'/scratch4/blangme2/jessica/dandd/scratch/HVSVC2'
 
 ```
 
@@ -19,21 +19,32 @@ outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union'
 ## Run random orderings for 10 genomes with only SNVs
 
 ```{bash}
-tag=HVSVC2_snv
-outdir=/scratch16/blangme2/jessica/dandd/scratch/${tag}
-filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_snv_fastas_nonrel_female.txt
-python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+codedir=/home/jbonnie1/dandd/dev-dandD/lib
 
-tag=HVSVC2_snv_indel
-outdir=/scratch16/blangme2/jessica/dandd/scratch/${tag}
-filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_snv_indels_fastas_nonrel_female.txt
-python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
 
 tag=HVSVC2
-outdir=/scratch16/blangme2/jessica/dandd/scratch/${tag}
-filelist=/scratch16/blangme2/jessica/data/HVSVC2/consensus_fastas_nonrel_female.txt
-python /scratch16/blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
-tree_pick=/scratch16/blangme2/jessica/dandd/scratch/HVSVC2/HVSVC2_34_dashing_sketchdb.txt
+outdir=/scratch4/blangme2/jessica/dandd/scratch/${tag}
+cd ${outdir}
+filelist=/data/blangme2/jessica/HVSVC2/consensus_fastas_nonrel_female.txt
+python ${codedir}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+tree_pick=/scratch4/blangme2/jessica/dandd/scratch/HVSVC2/HVSVC2_34_dashing_dtree.pickle
+python ${codedir}/dandd_cmd.py progressive -d ${tree_pick} -n 30
+ordering_file=/scratch4/blangme2/jessica/dandd/scratch/HVSVC2/sketchdb/HVSVC2_34_orderings.pickle
+
+tag=HVSVC2_snv
+outdir=/scratch4/blangme2/jessica/dandd/scratch/${tag}
+cd ${outdir}
+filelist=/data/blangme2/jessica/HVSVC2/consensus_snv_fastas_nonrel_female.txt
+tree_pick=/scratch4/blangme2/jessica/dandd/scratch/${tag}/${tag}_34_dashing_dtree.pickle
+python ${codedir}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+python ${codedir}/dandd_cmd.py progressive -d ${tree_pick} -r ${ordering_file}
+
+tag=HVSVC2_snv_indel
+outdir=/scratch4/blangme2/jessica/dandd/scratch/${tag}
+cd ${outdir}
+filelist=/data/blangme2/jessica/HVSVC2/consensus_snv_indel_fastas_nonrel_female.txt
+python ${codedir}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+python ${codedir}/dandd_cmd.py progressive -d ${tree_pick} -r ${ordering_file}
 
 
 

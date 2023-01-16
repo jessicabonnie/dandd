@@ -14,10 +14,10 @@ require(openssl)
 require(dplyr)
 require(optparse)
 require(callr)
-codelib<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
+codelib<-'/home/jessica/dandd/dev-dandD/lib/'
 source(file.path(codelib,'plot_progressive.R'))
 
-outdir<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB'
+outdir<-'/scratch4/blangme2/jessica/dandd/RECOMB'
 
 ```
 
@@ -41,8 +41,70 @@ tree_pick=${outdir}/${tag}_10_kmc_dtree.pickle
 tree_pick=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/ecoli/ecoli_10_kmc_dtree.pickle
 python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep_kmc.csv --mink 2 --maxk 50
 
+tree_pick=${outdir}/${tag}_10_dashing_dtree.pickle
+python /home/jbonnie1/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 #-o ${outdir}/${tag}_progu30.csv
+```
 
-#python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu30.csv
+
+```{r heaps}
+
+
+
+plot_scatter <- function (item, ytitle, filename, heap, alpha, param, plotlog=T) {
+    param = latex2exp::TeX(param)
+    if (abs(alpha) <= 1) {
+        color_heap = "green"
+    } else {
+        color_heap = "red"
+    }
+    pl = ggplot(data = item, aes(x = x, y = y, color="Items")) +
+        geom_point()+
+        geom_line(data=heap,aes(x=x, y=y, color="Heap's law"), alpha=0.5)+
+        theme_classic() +
+        scale_color_manual(values=c(color_heap, "#000000"))+
+        xlab("No. of genomes") +
+        ylab(ytitle) + 
+        ggtitle(param) +
+        theme_bw(base_size = 16) + 
+        theme(legend.text = element_text(size=5), plot.title =
+              element_text(color="black", size=14))
+    if (plotlog) {
+       pl = pl + coord_trans(y='log10')#,x='log10')
+    }
+    plot(pl)
+    #ggsave(filename=file.path(DIROUT, filename), plot=pl)
+}
+
+# heaps <- function(progu.df){
+heaps <- function(ksweep.df){
+  # progu.df <- group_by (ngenmutate(progu.df, av)
+ avg.ksweep <- ksweep.df %>%
+   group_by(ordering) %>% 
+   mutate(delta_delta=delta_pos - lag(delta_pos, default = delta_pos[1])) %>%
+   ungroup() %>% group_by(ngen) %>% 
+   summarize(mean_delta=mean(delta_pos), mean_delta_delta2 = mean(delta_delta)) %>%
+   mutate(mean_delta_delta1 = mean_delta - lag(mean_delta, default = mean_delta[1]))
+  View(avg.ksweep)
+  new_item <- avg.ksweep$mean_delta_delta1
+  N=length(new_item)
+# ALPHA
+x = 2:N
+model = lm(log(new_item[x])~log(x))
+#str(summary(model))
+#summary(model)
+adj.r.sq = summary(model)$adj.r.squared
+x_h = seq(2,N,length.out=1000)
+y_h = exp(model$coefficients[1])*x_h^(model$coefficients[2])
+alpha = abs(model$coefficients[2])
+print(alpha)
+heap = data.frame(x=x_h,y=y_h)
+param = paste0("$\\alpha = $", signif(alpha, digits=4))
+plot_scatter(data.frame(x=2:N,y=new_item[2:N]), "No. of new items", 
+             paste0("new_items.png"), heap, alpha, param)
+plot_scatter(data.frame(x=2:N,y=new_item[2:N]), "No. of new items", 
+             paste0("new_items_log.png"), heap, alpha, param, plotlog=T)
+
+}
 ```
 
 
@@ -57,6 +119,8 @@ ksweep_ecoli_kmc <- read.csv(file.path(outdir,tag,"ksweep_kmc.csv"))  %>% mutate
 
 ggplot() + geom_line(data = ksweep_ecoli_kmc, aes(x=kval, y=delta_pos, color="ecoli"))
 
+ecoli_progu <- read.csv(file.path(outdir,tag,"ecoli_progu30.csv")) %>% rename(delta_pos=delta)
+
 ```
 
 
@@ -66,17 +130,20 @@ tag=salmonella
 outdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
 sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB/${tag}
 genomedir=/home/jbonnie1/scr16_blangme2/jessica/data/${tag}
+codelib=/home/jbonnie1/dandd/dev-dandD/lib/
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 14 --datadir ${genomedir}
+python ${codelib}/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 14 --datadir ${genomedir}
 tree_pick=${outdir}/${tag}_10_dashing_dtree.pickle
 
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep.csv --mink 2 --maxk 32
-
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 14 --datadir ${genomedir} --exact
+python ${codelib}/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/dashing_ksweep.csv --mink 2 --maxk 32
+tree_pick=${outdir}/${tag}_10_dashing_dtree.pickle
+python ${codelib}/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 14 --datadir ${genomedir} --exact
 tree_pick=${outdir}/${tag}_10_kmc_dtree.pickle
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep.csv --mink 2 --maxk 50
+python ${codelib}/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep_kmc.csv --mink 2 --maxk 50
 
-#python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu30.csv
+cd ${outdir}
+tree_pick=${outdir}/${tag}_10_dashing_dtree.pickle
+python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 30 
 ```
 
 
@@ -91,7 +158,9 @@ ksweep_salmon_kmc <- read.csv(file.path(outdir,tag,"ksweep_kmc.csv")) %>% filter
 #salmon.gg<-plotProgressiveUnion(species=tag, out = outdir, delta = delta_salmon, nshow=5)
 #salmon.gg
 
-ggplot() + geom_line(data = ksweep_salmon_kmc,aes(x=kval, y=delta_pos, color="salmonella")) + geom_line(data = ksweep_ecoli_dashing, aes(x=kval, y=delta_pos, color="ecoli"))
+ggplot() + geom_line(data = ksweep_salmon_kmc,aes(x=kval, y=delta_pos, color="salmonella")) + geom_line(data = ksweep_ecoli_kmc, aes(x=kval, y=delta_pos, color="ecoli"))
+
+salmon_progu <- read.csv(file.path(outdir,tag, "salmonella_progu30_10_dashing.csv")) %>% rename(delta_pos=delta)
 
 ```
 
@@ -109,7 +178,7 @@ python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py in
 
 python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 18 --datadir ${genomedir} --exact
 tree_pick=${outdir}/${tag}_12_kmc_dtree.pickle
-python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep_kmc.csv --mink 2 --maxk 50
+python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep_kmc.csv --mink 2 --maxk 37
 
 #python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py progressive -d ${tree_pick}  -n 30 -o ${outdir}/${tag}_progu30.csv
 ```
@@ -120,7 +189,7 @@ python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py in
 tag='human'
 outdir='/home/jbonnie1/scr16_blangme2/jessica/dandd/RECOMB'
 
-ksweep_human_dashing <- read.csv(file.path(outdir,tag,"ksweep_dashing.csv")) %>% mutate(tool="dashing") %>% filter(ngen==max(ngen))
+# ksweep_human_dashing <- read.csv(file.path(outdir,tag,"ksweep_dashing.csv")) %>% mutate(tool="dashing") %>% filter(ngen==max(ngen))
 ksweep_human_kmc <- read.csv(file.path(outdir,tag,"ksweep_kmc.csv"))  %>% mutate(tool="kmc") %>% filter(ngen==max(ngen))
 # ksweep_human <- bind_rows(ksweep_human_kmc, ksweep_human_dashing) 
 
@@ -137,7 +206,13 @@ ggsave(filename='human_progu.pdf',
 
 ```
 
+```{r draw3}
+ggplot() + geom_line(data = filter(ksweep_ecoli_kmc,kval<=37), aes(x=kval, y=delta_pos/max(delta_pos), color="ecoli")) +
+  geom_line(data = filter(ksweep_salmon_kmc,kval<=37), aes(x=kval, y=delta_pos/max(delta_pos), color="salmonella")) +
+  geom_line(data = ksweep_human_kmc, aes(x=kval, y=delta_pos/max(delta_pos), color="human")) + theme_bw()
 
+
+```
 
 
 
