@@ -39,16 +39,26 @@ RANGEK=100
 #             yield perm[:i] + elements[0:1] + perm[i:]
 
 def permute(length, norder, preexist=set())-> Set[Tuple[int]]:
-    # create a randomized list of all permutations
-    allpermute=list(permutations(range(length)))
-    shuffle(allpermute)
-    print(len(allpermute))
-    index=0
+    '''Create a set of ordering tuples'''
+    fact=factorial(length)
     newset=preexist.copy()
-    norder = min(norder, factorial(length))
+    norder = min(norder, fact)
     print(f"{norder} permutations will be produced.")
+    # if the number of permutations is low enough, generate all of them
+    if fact < 4000:
+        print("fact less than 4000")
+        # create a randomized list of all permutations
+        newpermute=list(permutations(range(length)))
+        shuffle(newpermute)
+    else:
+        newpermute=list()
+        while len(newpermute) < norder:
+            # tmpset=set([tuple(sample(list(range(length)),length)) for _ in range(norder)])
+            newpermute.extend([tuple(sample(list(range(length)),length)) for _ in range(norder)])
+            newpermute=list(set(newpermute))
+    index = 0
     while len(newset) < norder:
-        newset.update([allpermute[index]])
+        newset.update([newpermute[index]])
         index+=1
     return newset
 
