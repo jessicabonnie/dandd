@@ -140,6 +140,9 @@ class DeltaTreeNode:
     def find_delta(self, kval: int):
         '''search in both directions of provided kvalue to detect a local maximum'''
         self.find_delta_helper(kval=kval, direction=1)
+        # seek it after a small jump also
+        #self.find_delta_helper(kval = self.bestk + 2, direction=1)
+        #self.find_delta_helper(kval = self.bestk + 4, direction=1)
         #TODO maybe this one should reference the species kstart
         self.find_delta_helper(kval=kval, direction=-1)
         self.card=self.ksketches[self.bestk].card
@@ -397,7 +400,7 @@ class DeltaTree:
             nodes.append(f'\'{node.node_title}\'({node.ngen}\'({" ".join([i.node_title for i in node.progeny])})')
         print(' -> '.join(nodes))
 
-    def fill_tree(self, padding=True):
+    def fill_tree(self, padding=False):
         '''Starting at the root make sure that all nodes in the tree contain the sketches for the argmax ks for every node as well as 2 less than the minimum and 2 greater than the maximum (IF padding argument is True)'''
         root = self._dt[-1]
         bestks = list(set([n.bestk for n in self._dt]))
@@ -406,7 +409,7 @@ class DeltaTree:
         bestks.sort()
         # print("Best ks before padding:", bestks)
         if padding:
-            bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2]
+            bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2] + [bestks[-1]+3]
         # print("Best ks after padding:", bestks)
         for k in bestks:
             root.update_node(k)
@@ -698,7 +701,7 @@ class SubSpider(DeltaTree):
 
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
-    def __init__(self, fasta_files, speciesinfo, experiment, padding=True):
+    def __init__(self, fasta_files, speciesinfo, experiment, padding=False):
         # print("I made it to spider")
         nchildren=len(fasta_files)
         super().__init__(fasta_files=fasta_files, speciesinfo=speciesinfo, experiment=experiment, nchildren=nchildren, padding=padding)
