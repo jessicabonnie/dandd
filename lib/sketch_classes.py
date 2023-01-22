@@ -61,6 +61,8 @@ class SketchFilePath:
         #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
         self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'], safety=experiment['safety'])
         self.dir = os.path.join(speciesinfo.sketchdir, "ngen" + str(self.ngen),"k"+ str(kval))
+        #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
+        self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'], tool=experiment['tool'], safety=experiment['safety'])
         self.relative = os.path.join("ngen" + str(self.ngen),"k"+ str(kval),self.base)+ self._get_ext(experiment['tool'])
         # self.full = os.path.join(speciesinfo.sketchdir, self.relative)
         self.full = os.path.join(self.dir, self.base)+ self._get_ext(experiment['tool'])
@@ -89,7 +91,7 @@ class SketchFilePath:
             output= hex(sum)
         return output
         
-    def assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool, safety=False):
+    def assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool, tool:str, safety=False):
         '''determine the base file name for the sketch using the properties that will be used to generate it'''
         fnames_key=''.join(self.files)
         # if the key (made by joining the ingredient filenames) isn't already in the fastahex dictionary mapping the combination of those files to a hexsum, calculate that hexsum and add it to the fastahex key
@@ -106,6 +108,16 @@ class SketchFilePath:
         # if the sketch is of a single input file, dashing will insist on naming it something specific, so we will use that base as a name for both dashing and kmc to make life easier
         if self.ngen == 1:
             sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
+            # if tool == 'dashing':
+            #     sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
+            # else:
+            #     sketchbase2=self.files[0] + "_k" + str(kval)
+            #     if not canonicalize:
+            #         sketchbase2=sketchbase2+'nc'
+            #     os.rename(os.path.join(self.dir,sketchbase+".kmc_pre"), os.path.join(self.dir,sketchbase2+".kmc_pre"))
+            #     os.rename(os.path.join(self.dir,sketchbase+".kmc_suf"), os.path.join(self.dir,sketchbase2+".kmc_suf"))
+                
+            #     sketchbase=sketchbase2
         # if sketch is of a combination of sketches, add a tag that will differentiate it from other combinations of the same sketches composed using different register counts or kvalues. Also guard against the low probability chance that there are overlapping hexsums of different numbers of fasta inputs
         else:
             suffix = str(registers) + "n" + str(self.ngen) + "k" + str(kval)
