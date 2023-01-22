@@ -483,7 +483,10 @@ class DeltaTree:
         filepath=fileprefix + '_dtree.pickle'
         with open(filepath,"wb") as f:
             pickle.dump(obj=self, file=f)
+        deltapath=fileprefix + '_deltas.csv'
         print("Tree Pickle saved to: "+filepath)
+        write_listdict_to_csv(deltapath,self.report_deltas())
+        print("Deltas saved to: " + deltapath)
         #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
         expmaploc=fileprefix + '_sketchdb.txt'
         explist=[self.speciesinfo.sketchinfo[item] for item in list(self.experiment["baseset"])]
@@ -491,6 +494,21 @@ class DeltaTree:
         print(f"Output Sketch/DB mapping saved to {expmaploc}.")
         return filepath
 
+    def report_deltas(self):
+        ''' Traverse the DeltaTree to return a dataframe with the delta values of the nodes in the tree.'''
+        root = self._dt[-1]
+        def _delta_recursive(node):
+            tmplist=[{"delta": node.delta, "k": node.bestk, "title": node.node_title, "ngen": node.ngen, "fastas": "|".join(node.fastas)}]
+            if node.children:
+                nchild=len(node.children)
+                for i in range(nchild):
+                    n=node.children[i]
+                    tmplist.extend(_delta_recursive(n))
+            return tmplist
+        
+        dictlist= _delta_recursive(root)
+        #print(dictlist)
+        return dictlist
   
     def summarize(self, mink=0, maxk=0):
         ''' Traverse the DeltaTree to return a dataframe with all possible delta values. -- this isn't actually summarizing, so the function should be renamed'''
