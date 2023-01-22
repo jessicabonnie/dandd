@@ -11,7 +11,7 @@ require(callr)
 codelib<-'/home/jessica/dandd/dev-dandD/lib/'
 source(file.path(codelib,'plot_progressive.R'))
 
-outdir<-'/scratch4/blangme2/jessica/dandd/scratch/HVSVC2'
+outdir<-'/scratch4/blangme2/jessica/dandd/scratch/HGSVC2'
 
 ```
 
@@ -22,31 +22,31 @@ outdir<-'/scratch4/blangme2/jessica/dandd/scratch/HVSVC2'
 codedir=/home/jbonnie1/dandd/dev-dandD/lib
 
 
-tag=HVSVC2
+tag=HGSVC2
 outdir=/scratch4/blangme2/jessica/dandd/scratch/${tag}
 cd ${outdir}
-filelist=/data/blangme2/jessica/HVSVC2/consensus_fastas_nonrel_female.txt
-python ${codedir}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
-tree_pick=/scratch4/blangme2/jessica/dandd/scratch/HVSVC2/HVSVC2_34_dashing_dtree.pickle
+filelist=/data/blangme2/jessica/HGSVC2/consensus_fastas_nonrel_female.txt
+python ${codedir}/dandd_cmd.py --safe tree -s ${tag} -f ${filelist} -o ${outdir} -k 19 
+tree_pick=/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/HGSVC2_34_dashing_dtree.pickle
 python ${codedir}/dandd_cmd.py progressive -d ${tree_pick} -n 120
-ordering_file=/scratch4/blangme2/jessica/dandd/scratch/HVSVC2/sketchdb/HVSVC2_34_orderings.pickle
+ordering_file=/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/sketchdb/HGSVC2_34_orderings.pickle
 
 
-tag=HVSVC2_snv
+tag=HGSVC2_snv
 outdir=/scratch4/blangme2/jessica/dandd/scratch/${tag}
 cd ${outdir}
-filelist=/data/blangme2/jessica/HVSVC2/consensus_snv_fastas_nonrel_female.txt
+filelist=/data/blangme2/jessica/HGSVC2/consensus_snv_fastas_nonrel_female.txt
   
 python ${codedir}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
 tree_pick=/scratch4/blangme2/jessica/dandd/scratch/${tag}/${tag}_34_dashing_dtree.pickle
 python ${codedir}/dandd_cmd.py progressive -d ${tree_pick} -r ${ordering_file}
 
-tag=HVSVC2_snv_indel
+tag=HGSVC2_snv_indel
 outdir=/scratch4/blangme2/jessica/dandd/scratch/${tag}
 cd ${outdir}
-filelist=/data/blangme2/jessica/HVSVC2/consensus_snv_indel_fastas_nonrel_female.txt
-python ${codedir}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
-tree_pick=/scratch4/blangme2/jessica/dandd/scratch/HVSVC2_snv_indel/HVSVC2_snv_indel_34_dashing_dtree.pickle
+filelist=/data/blangme2/jessica/HGSVC2/consensus_snv_indel_fastas_nonrel_female.txt
+python ${codedir}/dandd_cmd.py --safe tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+tree_pick=/scratch4/blangme2/jessica/dandd/scratch/HGSVC2_snv_indel/HGSVC2_snv_indel_34_dashing_dtree.pickle
 python ${codedir}/dandd_cmd.py progressive -d ${tree_pick} -r ${ordering_file}
 
 
@@ -56,16 +56,16 @@ python ${codedir}/dandd_cmd.py progressive -d ${tree_pick} -r ${ordering_file}
 
 
 ```{r draw_graphs1, cache=TRUE}
-tag='HVSVC2'
+tag='HGSVC2'
 outdir=file.path("/scratch4/blangme2/jessica/dandd/scratch",tag)
 
-hvsvc2 <- read.csv(paste0(outdir, "/",tag,"_progu120_34_dashing.csv")) %>% 
+hgsvc2 <- read.csv(paste0(outdir, "/",tag,"_progu120_34_dashing.csv")) %>% 
    mutate(dataset="SNVs + SVs + Indels") %>%
   mutate(delta_pos=delta, ngenomes=ngen)
-plotProgressiveUnion(species=tag, out = outdir, hvsvc2, nshow=5) + 
-  geom_line(data=(summarize(group_by(hvsvc2, ngen, dataset), mean=mean(delta_pos))),
+plotProgressiveUnion(species=tag, out = outdir, hgsvc2, nshow=5) + 
+  geom_line(data=(summarize(group_by(hgsvc2, ngen, dataset), mean=mean(delta_pos))),
             mapping=aes(y=mean,x=ngen))
-plotProgressiveUnion(species="HGHVC2", ngenome = ngenome, out = outdir, delta_snv, nshow=1)
+plotProgressiveUnion(species="HGSVC2", ngenome = ngenome, out = outdir, delta_snv, nshow=1)
 
 
 ```
@@ -75,37 +75,37 @@ plotProgressiveUnion(species="HGHVC2", ngenome = ngenome, out = outdir, delta_sn
 
 
 ```{r draw_graphs1, cache=TRUE}
-tag='HVSVC2_snv'
+tag='HGSVC2_snv'
 outdir=file.path("/scratch4/blangme2/jessica/dandd/scratch",tag)
 
-hvsvc2_snv <- read.csv(paste0(outdir, "/",tag,"_progu120_34_dashing.csv")) %>% 
+hgsvc2_snv <- read.csv(paste0(outdir, "/",tag,"_progu120_34_dashing.csv")) %>% 
    mutate(dataset="SNVs Only") %>%
   mutate(delta_pos=delta, ngenomes=ngen)
 
-plotProgressiveUnion(species=tag, out = outdir, hvsvc2_snv, nshow=5) + 
-  geom_line(data=(summarize(group_by(hvsvc2_snv, ngen, dataset), mean=mean(delta_pos))),
+plotProgressiveUnion(species=tag, out = outdir, hgsvc2_snv, nshow=5) + 
+  geom_line(data=(summarize(group_by(hgsvc2_snv, ngen, dataset), mean=mean(delta_pos))),
             mapping=aes(y=mean,x=ngen))
 
-plotProgressiveUnion(species="HGHVC2_snv", out = outdir, hvsvc2_snv, nshow=5)
-plotProgressiveUnion(species=tag, out = outdir, hvsvc2_snv, nshow=1)
+plotProgressiveUnion(species="HGSVC2_snv", out = outdir, hgsvc2_snv, nshow=5)
+plotProgressiveUnion(species=tag, out = outdir, hgsvc2_snv, nshow=1)
 
 
 ```
 
 
 ```{r draw_graphs1, cache=TRUE}
-tag='HVSVC2_snv_indel'
+tag='HGSVC2_snv_indel'
 outdir=file.path("/scratch4/blangme2/jessica/dandd/scratch",tag)
 
-hvsvc2_snv_indel <- read.csv(paste0(outdir, "/",tag,"_progu0_34_dashing.csv")) %>% 
+hgsvc2_snv_indel <- read.csv(paste0(outdir, "/",tag,"_progu0_34_dashing.csv")) %>% 
   mutate(dataset="SNVs + Indels") %>%
   mutate(delta_pos=delta, ngenomes=ngen)
 
-plotProgressiveUnion(species=tag, out = outdir, hvsvc2_snv_indel, nshow=5) + 
-  geom_line(data=(summarize(group_by(hvsvc2_snv_indel, ngen, dataset), mean=mean(delta_pos))),
+plotProgressiveUnion(species=tag, out = outdir, hgsvc2_snv_indel, nshow=5) + 
+  geom_line(data=(summarize(group_by(hgsvc2_snv_indel, ngen, dataset), mean=mean(delta_pos))),
             mapping=aes(y=mean,x=ngen))
-plotProgressiveUnion(species="HGHVC2_snv_indel", out = outdir, hvsvc2_snv_indel, nshow=5)
-plotProgressiveUnion(species="HGHVC2_snv_indel", out = outdir, hvsvc2_snv_indel, nshow=1)
+plotProgressiveUnion(species="HGSVC2_snv_indel", out = outdir, hgsvc2_snv_indel, nshow=5)
+plotProgressiveUnion(species="HGSVC2_snv_indel", out = outdir, hgsvc2_snv_indel, nshow=1)
 
 
 ```
@@ -114,15 +114,15 @@ plotProgressiveUnion(species="HGHVC2_snv_indel", out = outdir, hvsvc2_snv_indel,
 
 
 ```{r plot_across, cache=TRUE}
-norder=max(hvsvc2$ordering)
-gcount=max(hvsvc2$ngenomes)
+norder=max(hgsvc2$ordering)
+gcount=max(hgsvc2$ngenomes)
 
-# hvsvc2_sum<-hvsvc2 %>% group_by(ngenomes) %>% summarize(HVSVC2=mean(delta_pos))
-# hvsvc2_snv_sum<-hvsvc2_snv %>% group_by(ngenomes) %>% summarize(HVSVC2_SNV=mean(delta_pos))
-# hvsvc2_snv_indel_sum<-hvsvc2_snv_indel %>% group_by(ngenomes) %>% summarize(HVSVC2_SNV_INDEL=mean(delta_pos))
-# summary <- inner_join(hvsvc2_sum, hvsvc2_snv_sum) %>% inner_join(hvsvc2_snv_indel_sum) 
+# hgsvc2_sum<-hgsvc2 %>% group_by(ngenomes) %>% summarize(HGSVC2=mean(delta_pos))
+# hgsvc2_snv_sum<-hgsvc2_snv %>% group_by(ngenomes) %>% summarize(HGSVC2_SNV=mean(delta_pos))
+# hgsvc2_snv_indel_sum<-hgsvc2_snv_indel %>% group_by(ngenomes) %>% summarize(HGSVC2_SNV_INDEL=mean(delta_pos))
+# summary <- inner_join(hgsvc2_sum, hgsvc2_snv_sum) %>% inner_join(hgsvc2_snv_indel_sum) 
 
-summary<- bind_rows(hvsvc2,hvsvc2_snv,hvsvc2_snv_indel) %>% group_by(ngen, dataset) %>%
+summary<- bind_rows(hgsvc2,hgsvc2_snv,hgsvc2_snv_indel) %>% group_by(ngen, dataset) %>%
   summarize(mean=mean(delta_pos))
 
 summary %>% 
@@ -139,12 +139,12 @@ allg <-
   # # filter(ordering %in% c(1:20)) %>%
   # mutate(ngenomes=as.integer(ngenomes),kval=as.factor(kval))  %>%
   ggplot() +
-  geom_smooth(data = hvsvc2_snv, aes(y=delta_pos, x=ngenomes, color="SNV only"), formula=y~x,se=TRUE) +
+  geom_smooth(data = hgsvc2_snv, aes(y=delta_pos, x=ngenomes, color="SNV only"), formula=y~x,se=TRUE) +
   # geom_smooth(data = delta_snv_sv, aes(y=delta_pos, x=ngenomes, color="SNV + SV"), method='loess',formula=y~x,se = TRUE) +
-  geom_smooth(data = hvsvc2, aes(y=delta_pos, x=ngenomes, color="SNVs + Indels + SVs"), method='loess',formula=y~x, se=TRUE) +
+  geom_smooth(data = hgsvc2, aes(y=delta_pos, x=ngenomes, color="SNVs + Indels + SVs"), method='loess',formula=y~x, se=TRUE) +
   # geom_smooth(data = delta_indel, aes(y=delta_pos, x=ngenomes, color="Indels"), method='loess',formula=y~x, se=TRUE) +
   # geom_smooth(data = delta_sv, aes(y=delta_pos, x=ngenomes, color="SV only"), method='loess',formula=y~x, se=TRUE) +
-    geom_smooth(data = hvsvc2_snv_indel, aes(y=delta_pos, x=ngenomes, color="SNVs + Indels"), method='mean',formula=y~x, se=TRUE) +
+    geom_smooth(data = hgsvc2_snv_indel, aes(y=delta_pos, x=ngenomes, color="SNVs + Indels"), method='mean',formula=y~x, se=TRUE) +
 
   #geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=2) +
   # scale_linetype_manual(name=paste0("Fit (",norder," Orderings)"),values=c(2)) +

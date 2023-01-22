@@ -13,7 +13,7 @@ require(codetools)
 codelib<-'/home/jbonnie1/dandd/dev-dandD/lib/'
 source(file.path(codelib,'plot_progressive.R'))
 
-outdir<-'/home/jbonnie1/scr4_blangme2/jessica/dandd/scratch/HVSVC2'
+outdir<-'/home/jbonnie1/scr4_blangme2/jessica/dandd/scratch/HGSVC2'
 
 ```
 
@@ -22,21 +22,21 @@ outdir<-'/home/jbonnie1/scr4_blangme2/jessica/dandd/scratch/HVSVC2'
 
 ```{bash, eval=FALSE}
 codelib=/home/jbonnie1/dandd/dev-dandD/lib/
-outdir=/scratch4/blangme2/jessica/dandd/scratch/HVSVC2
+outdir=/scratch4/blangme2/jessica/dandd/scratch/HGSVC2
 tag=quad
-filelist=/data/blangme2/jessica/HVSVC2/consensus_mom_fchild_and_onef_1m1.txt
+filelist=/data/blangme2/jessica/HGSVC2/consensus_mom_fchild_and_onef_1m1.txt
 #_HG0111|
-grep -E "(_HG00513|_HG00514|_HG01114|_NA18534_1)" /scratch16/blangme2/jessica/data/HVSVC2/consensus_fastas.txt > ${filelist}
+grep -E "(_HG00513|_HG00514|_HG01114|_NA18534_1)" /scratch16/blangme2/jessica/data/HGSVC2/consensus_fastas.txt > ${filelist}
 
 sketchdir=${outdir}/sketchdb
 
 python ${codelib}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19 |& tee ${outdir}/${tag}_quad.log
 
-tree_pick=/scratch4/blangme2/jessica/dandd/scratch/HVSVC2/quad_7_dashing_dtree.pickle
+tree_pick=/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/quad_7_dashing_dtree.pickle
 
 python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 5040 #-o ${outdir}/${tag}_progu.csv
 
-#../scratch/progressive_union/sketches/HVSVC2/k20/ngen1/allvar_HG00513_1.fasta.gz.w.20.spacing.20.hll
+#../scratch/progressive_union/sketches/HGSVC2/k20/ngen1/allvar_HG00513_1.fasta.gz.w.20.spacing.20.hll
 quad_progu5040_7_dashing.csv
 ${codelib}/clean_abba.sh ${outdir}/${tag}_progu5040_7_dashing.csv > ${outdir}/${tag}_abba.csv 
 python ${codelib}/clean_abba.py ${outdir}/${tag}_abba.csv > ${outdir}/${tag}_abba_clean.csv
@@ -46,7 +46,7 @@ python ${codelib}/clean_abba.py ${outdir}/${tag}_abba.csv > ${outdir}/${tag}_abb
 
 
 ```{r draw_graphs1, cache=TRUE, echo=FALSE, eval=FALSE}
-progu <- read.csv('/scratch4/blangme2/jessica/dandd/scratch/HVSVC2/quad_progu5040_7_dashing.csv') %>% mutate(ngenomes=ngen, delta_pos=delta)
+progu <- read.csv('/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/quad_progu5040_7_dashing.csv') %>% mutate(ngenomes=ngen, delta_pos=delta)
 
 
 tag='quad'
@@ -54,7 +54,7 @@ ngenome=7
 
 abba.quad <- clean_abba(progu)
 
-# delta_quad<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/HVSVC2/quad_progu.csv') %>% 
+# delta_quad<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/quad_progu.csv') %>% 
   # rename(delta_pos=delta) #, ngenomes=ngen)
 plotProgressiveUnion(species=tag, out = outdir, abba.quad, nshow=10)
 ## Look at 1-0 or 0-1 for variants on the X Chromosome in vcf, other haplotype might always have 0
@@ -62,7 +62,7 @@ plotProgressiveUnion(species=tag, out = outdir, abba.quad, nshow=10)
 ```
 
 ```{r abba, cache=TRUE}
-# abba.quad <- read.csv('/scratch4/blangme2/jessica/dandd/scratch/HVSVC2/quad_abba_clean.csv')
+# abba.quad <- read.csv('/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/quad_abba_clean.csv')
 #abba.quad$added <- apply(select(abba.quad,-step), 1, function(data)
  #  names(which(data == 0)))
 
