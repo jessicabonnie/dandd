@@ -1,7 +1,7 @@
 #import parallel
 #import random
 #from ast import Str
-# import sys
+import sys
 import os
 import pickle
 #import hashlib
@@ -19,10 +19,20 @@ from sketch_classes import SketchObj, DashSketchObj, KMCSketchObj
 # import tabulate
 from typing import List, Dict, Set, Tuple, NamedTuple
 from string import ascii_uppercase
-from dandd_cmd import write_listdict_to_csv
+#from dandd_cmd import write_listdict_to_csv
 from math import factorial
 from itertools import permutations
 
+
+def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str=""):
+    writer = open(outfile+suffix, "w") if outfile is not None and outfile != '-' else sys.stdout
+    fieldnames=set()
+    for x in listdict:
+        fieldnames.update(x.keys())
+    dict_writer = csv.DictWriter(writer, fieldnames=list(fieldnames))
+    dict_writer.writeheader()
+    dict_writer.writerows(listdict)
+    writer.close()
 
 #This is assuming that the command for dashing has been aliased
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
@@ -45,7 +55,7 @@ def permute(length, norder, preexist=set())-> Set[Tuple[int]]:
     norder = min(norder, fact)
     print(f"{norder} permutations will be produced.")
     # if the number of permutations is low enough, generate all of them
-    if fact < 4000:
+    if fact < 4000 or norder==fact:
         print("fact less than 4000")
         # create a randomized list of all permutations
         newpermute=list(permutations(range(length)))
@@ -188,7 +198,7 @@ class DeltaTreeNode:
 
     def node_ksweep(self, mink: int, maxk: int):
         '''Sketch all of the ks for the node (and its decendent nodes)between mink and maxk (even when they weren't needed to calculate delta'''
-        print(len(self.ksketches))
+        
         maxk=int(maxk)
         mink=int(mink)
         if maxk > len(self.ksketches):
@@ -487,12 +497,12 @@ class DeltaTree:
         root = self._dt[-1]
         if mink == 0:
             mink=self.mink
-            if self.mink > 4:
-                mink=self.mink - 2
+            # if self.mink > 4:
+            #     mink=self.mink - 2
         if maxk == 0:
             maxk = self.maxk
-            if self.maxk <= 30:
-                maxk=self.maxk + 2
+            # if self.maxk <= 30:
+            #     maxk=self.maxk + 2
         self.ksweep(mink=mink, maxk=maxk)
         #print(root)
         def _delta_pos_recursive(node):
@@ -613,6 +623,7 @@ class DeltaTree:
                 sublist=[self.fastas[j] for j in ordering[:i]]
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
                 output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": number, "fastas": sublist})
+                # , "cmd": ospider.root.ksketches[ospider.root.root_k()].cmd})
                 summary.extend(ospider.summarize())
 
         return output, summary
@@ -753,6 +764,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
 
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)
+    
     #inputdir = speciesinfo.inputdir
     fastas=[]
     if flist_loc:
