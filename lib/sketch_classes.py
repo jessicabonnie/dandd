@@ -37,7 +37,8 @@ def parallel_progeny_command(sketchdir, kval:int, experiment) -> str:
     canon_command(experiment['canonicalize'], "dashing"),
     "-k" + str(kval), 
     "-S",str(experiment['registers']),
-        f"-p{experiment['nthreads']}","--prefix", progeny_dir, "--paths", "/dev/stdin"]
+        #f"-p{experiment['nthreads']}",
+        "--prefix", progeny_dir, "--paths", "/dev/stdin"]
             #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
     else:
         cmdlist=[]
@@ -58,8 +59,6 @@ class SketchFilePath:
         self.files= [os.path.basename(f) for f in self.ffiles]
         self.files.sort()
         self.ngen = len(filenames)
-        #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
-        self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'], safety=experiment['safety'])
         self.dir = os.path.join(speciesinfo.sketchdir, "ngen" + str(self.ngen),"k"+ str(kval))
         #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
         self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'], tool=experiment['tool'], safety=experiment['safety'])
@@ -269,6 +268,10 @@ class SketchObj(object):
     def check_cardinality(self, speciesinfo: SpeciesSpecifics, delay=False):
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. NOTE: delay argument not implemented relates to idea of a way to batch the card command by attatching the sketch to a card0 sketch list attached to the SpeciesSpecifics object'''
         
+        if self._sfp.full not in speciesinfo.cardkey.keys():
+            print("first criterion")
+        # if speciesinfo.cardkey[self._sfp.full] == 0:
+            # print("second criterion")
         if self._sfp.full not in speciesinfo.cardkey.keys() or speciesinfo.cardkey[self._sfp.full] == 0:
             self.individual_card(speciesinfo=speciesinfo)
             # if delay and self._sfp.full not in speciesinfo.card0:
@@ -287,38 +290,11 @@ class DashSketchObj(SketchObj):
     def card_command(self, sketch_paths=[]) -> str:
         if len(sketch_paths) == 0:
             sketch_paths=[self.sketch]
-        cmdlist = [DASHINGLOC,"card", "--presketched", f"-p{self.experiment['nthreads']}"]+ sketch_paths
+        cmdlist = [DASHINGLOC,"card", "--presketched"]+ sketch_paths
+        #, "-p10"
+        # , f"-p{self.experiment['nthreads']}"
         cmd = " ".join(cmdlist)
         return cmd
-    
-
-    # def individual_card(self, speciesinfo: SpeciesSpecifics):
-    #     '''Run cardinality for an individual sketch. Add it to a dictionary {path:value}'''
-    #     cmd = self.card_command()#[self._sfp.full])
-        
-    #     if self.experiment['debug']:
-    #         print(cmd)
-    #     #print(cmd)
-    #     try:
-    #         proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, check=True,universal_newlines=True)
-    #         # print("tried")
-    #         # for card in csv.DictReader(card_lines, delimiter='\t'):
-    #         #     speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-
-        # except subprocess.CalledProcessError:
-        #     # print("failed")
-        #     # warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=RuntimeWarning)
-        #     self.create_sketch(just_do_it=True)
-        #     # print("recreated sketch")
-        #     proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True)
-            
-        #     # card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout
-        # finally:
-        #     # print("I think I have a working sketch")
-        #     self.parse_card(speciesinfo=speciesinfo, proc=proc)
-        #     # for card in csv.DictReader(proc.stdout.splitlines(),delimiter='\t'):
-        #         # speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-        # #return super().individual_card(speciesinfo, debug)
 
     def parse_card(self, speciesinfo, proc):
         '''Parse the cardinality streaming from standard out for the card command'''
@@ -340,7 +316,8 @@ class DashSketchObj(SketchObj):
         canon_command(self.experiment['canonicalize'], "dashing"),
         "-k" + str(self.kval), 
         "-S",str(self.experiment['registers']),
-         f"-p{self.experiment['nthreads']}","--prefix", str(self._sfp.dir),
+        #  f"-p{self.experiment['nthreads']}",
+         "--prefix", str(self._sfp.dir),
           self._sfp.ffiles[0]]
                 #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
         cmd = " ".join(cmdlist)
@@ -349,7 +326,8 @@ class DashSketchObj(SketchObj):
     
     def union_command(self) -> str:
         '''Returns bash command to create a union sketch'''
-        cmdlist = [DASHINGLOC, "union", f"-p{self.experiment['nthreads']}","-z -o", str(self._sfp.full)] + self._presketches
+        cmdlist = [DASHINGLOC, "union", #f"-p{self.experiment['nthreads']}",
+        "-z -o", str(self._sfp.full)] + self._presketches
         cmd = " ".join(cmdlist)
         return cmd
         
@@ -359,20 +337,7 @@ class KMCSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
 
-    # def individual_card(self, speciesinfo: SpeciesSpecifics):
-    #     # cmdlist = ["kmc_tools","info",self.sketch] 
-    #     # cmd = " ".join(cmdlist)
-    #     cmd = self.card_command()
-    #     if self.experiment['debug']:
-    #         print(cmd)
-    #     proc=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True)
-    #     self.parse_card(speciesinfo, proc)
-    #     # for line in proc.stdout.readlines():
-    #     #     key, value = line.strip().split(':')
-    #     #     # print (f"{key},{value}")
-    #     #     if key.strip() == 'total k-mers':
-    #     #         speciesinfo.cardkey[self.sketch] = value.strip()
-    #     #return super().individual_card(speciesinfo, debug)
+    
     def parse_card(self, speciesinfo, proc):
         for line in proc.stdout.splitlines():
             key, value = line.strip().split(':')
