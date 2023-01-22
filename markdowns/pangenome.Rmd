@@ -70,7 +70,7 @@ outdir<-'/home/jbonnie1/scr4_blangme2/jessica/dandd/scratch/pangenome'
 ```{r females}
 tag='pangenome'
 females<-read.csv('/scratch4/blangme2/jessica/dandd/scratch/pangenome/female_progu30_56_dashing.csv') %>% 
-  rename(delta_pos=delta)#, ngenomes=ngen)
+  mutate(delta_pos=delta, ngenomes=ngen)
 plotProgressiveUnion(species=tag, out = outdir, females, nshow=5)
 
 
