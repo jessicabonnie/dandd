@@ -106,17 +106,17 @@ class SketchFilePath:
                     raise RuntimeError(f"Checksum does not match stored value for {fnames_key}: {checkval}, {stored_val}")
         # if the sketch is of a single input file, dashing will insist on naming it something specific, so we will use that base as a name for both dashing and kmc to make life easier
         if self.ngen == 1:
-            sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
-            # if tool == 'dashing':
-            #     sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
-            # else:
-            #     sketchbase2=self.files[0] + "_k" + str(kval)
-            #     if not canonicalize:
-            #         sketchbase2=sketchbase2+'nc'
-            #     os.rename(os.path.join(self.dir,sketchbase+".kmc_pre"), os.path.join(self.dir,sketchbase2+".kmc_pre"))
-            #     os.rename(os.path.join(self.dir,sketchbase+".kmc_suf"), os.path.join(self.dir,sketchbase2+".kmc_suf"))
+            # sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
+            if tool == 'dashing':
+                sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
+            else:
+                sketchbase=self.files[0] + "_k" + str(kval)
+                if not canonicalize:
+                    sketchbase=sketchbase+'nc'
+                # os.rename(os.path.join(self.dir,sketchbase+".kmc_pre"), os.path.join(self.dir,sketchbase2+".kmc_pre"))
+                # os.rename(os.path.join(self.dir,sketchbase+".kmc_suf"), os.path.join(self.dir,sketchbase2+".kmc_suf"))
                 
-            #     sketchbase=sketchbase2
+                # sketchbase=sketchbase2
         # if sketch is of a combination of sketches, add a tag that will differentiate it from other combinations of the same sketches composed using different register counts or kvalues. Also guard against the low probability chance that there are overlapping hexsums of different numbers of fasta inputs
         else:
             suffix = str(registers) + "n" + str(self.ngen) + "k" + str(kval)
