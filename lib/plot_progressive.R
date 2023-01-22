@@ -37,7 +37,7 @@ library("optparse")
 # opt_parser = OptionParser(option_list=option_list, resultsfile);
 # opt = parse_args(opt_parser);
 
-plotProgressiveUnion <- function(species, out, delta, nshow=Inf){
+plotProgressiveUnion <- function(species, out, delta, nshow=Inf, method='loess'){
 tag=species
 outdir=out
 gcount=max(delta$ngenomes)
@@ -50,7 +50,7 @@ tp <-
   # filter(ordering %in% c(1:20)) %>%
   mutate(ngenomes=as.integer(ngenomes),kval=as.factor(kval))  %>%
   ggplot(.) +
-  geom_smooth(aes(y=delta_pos, x=ngenomes, linetype="Loess"), method='loess',formula=y~x) +
+  geom_smooth(aes(y=delta_pos, x=ngenomes, linetype=method), method=method,formula=y~x) +
   geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=.5) +
   scale_linetype_manual(name=paste0("Fit (",norder," Orderings)"),values=c(2)) +
   geom_line(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes,
@@ -74,4 +74,90 @@ ggplot2::ggsave(filename = file.path(outdir,paste0("plot_",tag,"_",item,"_",nord
                 height = 10, 
                 units = "cm")
 return(tp)
+}
+
+
+
+
+
+
+
+plot_scatter <- function (item, ytitle, filename, heap, alpha, param, plotlog=T) {
+  param = latex2exp::TeX(param)
+  if (abs(alpha) <= 1) {
+    color_heap = "green"
+  } else {
+    color_heap = "red"
+  }
+  pl = ggplot(data = item, aes(x = x, y = y, color="Items")) +
+    geom_point()+
+    geom_line(data=heap,aes(x=x, y=y, color="Heap's law"), alpha=0.5)+
+    theme_classic() +
+    scale_color_manual(values=c(color_heap, "#000000"))+
+    xlab("No. of genomes") +
+    ylab(ytitle) + 
+    ggtitle(param) +
+    theme_bw(base_size = 16) + 
+    theme(legend.text = element_text(size=5), plot.title =
+            element_text(color="black", size=14))
+  if (plotlog) {
+    pl = pl + coord_trans(y='log10')#,x='log10')
+  }
+  plot(pl)
+  #ggsave(filename=file.path(DIROUT, filename), plot=pl)
+}
+
+# heaps <- function(progu.df){
+heaps <- function(ksweep.df){
+  # progu.df <- group_by (ngenmutate(progu.df, av)
+  avg.ksweep <- ksweep.df %>%
+    group_by(ordering) %>% 
+    mutate(delta_delta=delta_pos - lag(delta_pos, default = delta_pos[1])) %>%
+    ungroup() %>% group_by(ngen) %>% 
+    summarize(mean_delta=mean(delta_pos), mean_delta_delta2 = mean(delta_delta)) %>%
+    mutate(mean_delta_delta1 = mean_delta - lag(mean_delta, default = mean_delta[1]))
+  new_item <- avg.ksweep$mean_delta_delta1
+  N=length(new_item)
+  # ALPHA
+  x = 2:N
+  model = lm(log(new_item[x])~log(x))
+  #str(summary(model))
+  #summary(model)
+  adj.r.sq = summary(model)$adj.r.squared
+  x_h = seq(2,N,length.out=1000)
+  y_h = exp(model$coefficients[1])*x_h^(model$coefficients[2])
+  alpha = abs(model$coefficients[2])
+  print(alpha)
+  heap = data.frame(x=x_h,y=y_h)
+  param = paste0("$\\alpha = $", signif(alpha, digits=4))
+  plot_scatter(data.frame(x=2:N,y=new_item[2:N]), "No. of new items", 
+               paste0("new_items.png"), heap, alpha, param)
+  plot_scatter(data.frame(x=2:N,y=new_item[2:N]), "No. of new items", 
+               paste0("new_items_log.png"), heap, alpha, param, plotlog=T)
+  
+}
+
+
+
+clean_abba <- function(df, prefix="allvar_"){
+  tmp <- df %>% tibble()
+  tmp <- tmp %>% rowwise() %>%
+    mutate(flist1=stringr::str_split(gsub("\\[|\\ |\\]|\\'","",fastas), pattern=",")) %>%
+    mutate(flist2=list(gsub(paste0(prefix,"|.fasta.gz"),"",basename(flist1)))) %>%
+    mutate(flist3=list(lapply(flist1,function(z){gsub(paste0(prefix,"|.fasta.gz"),"",basename(z))}))) %>%
+    mutate(last = unlist(flist2)[[ngen]]) %>%
+    mutate(prior = list(sort(flist2[1:(ngen-1)]))) %>%
+    mutate(flist4=list(sort(flist2))) 
+  
+  allsets <- unique(tmp$last)
+  for (dataset in allsets){
+    tmp[[dataset]] <- -1
+    tmp[[dataset]][unlist(lapply(tmp$flist2, function(x){ dataset %in% x }))] <- 1
+    tmp[[dataset]][tmp$last==dataset] <- 0
+  }
+  tmp <- tmp %>% rename(step=ngen) %>% 
+    group_by(ordering) %>% 
+    mutate(deltadelta=delta-lag(delta,default=delta[2]))
+  tmp$deltadelta[tmp$step == 1] <- NA
+  return(tmp)
 }
