@@ -194,19 +194,19 @@ grep -vEf raw/SampleIds_male.txt consensus_sv_fastas_nonrel.txt | sort > consens
 ```
 
 ```{bash step4}
-mkdir consensus_autnosomes
-for i in ${samples[@]}; do
-bcftools view -t^chrX,^chrY -Oz -o samplevcf/allvar_autosomes_${i}.vcf.gz samplevcf/allvar_${i}.vcf.gz |& tee samplevcf/allvar_autosomes_${i}.log
-tabix -f samplevcf/allvar_autosomes_${i}.vcf.gz
+#mkdir consensus_autosomes
+#for i in ${samples[@]}; do
+#bcftools view -t^chrX,^chrY -Oz -o samplevcf/allvar_autosomes_${i}.vcf.gz samplevcf/allvar_${i}.vcf.gz |& tee samplevcf/allvar_autosomes_${i}.log
+#tabix -f samplevcf/allvar_autosomes_${i}.vcf.gz
 
 ## NOTE - HAVE CHOSEN ARBITRARY SELECTION OF HAPLOTYPE BASED ON ORDER
-bcftools consensus -H1 -o consensus_autosomes/allvar_autosomes_${i}_1.fasta -f raw/hg38.no_alt.fa.gz samplevcf/allvar_autosomes_${i}.vcf.gz |& tee consensus_autosomes/allvar_autosomes_${i}_1.log
-bcftools consensus -H2 -o consensus_autosomes/allvar_autosomes_${i}_2.fasta -f raw/hg38.no_alt.fa.gz samplevcf/allvar_autosomes_${i}.vcf.gz |& tee consensus_autosomes/allvar_autosomes_${i}_2.log
-gzip -v consensus_autosomes/allvar_autosomes_${i}_?.fasta
-done
-realpath consensus/*.gz > consensus_fastas.txt
-grep -vE "(_HG00514_|_HG00733_|_NA19240_)" consensus_fastas.txt > consensus_fastas_nonrel.txt
-grep -vEf raw/SampleIds_male.txt consensus_fastas_nonrel.txt | sort > consensus_fastas_nonrel_female.txt
+#bcftools consensus -H1 -o consensus_autosomes/allvar_autosomes_${i}_1.fasta -f raw/hg38.no_alt.fa.gz samplevcf/allvar_autosomes_${i}.vcf.gz |& tee consensus_autosomes/allvar_autosomes_${i}_1.log
+#bcftools consensus -H2 -o consensus_autosomes/allvar_autosomes_${i}_2.fasta -f raw/hg38.no_alt.fa.gz samplevcf/allvar_autosomes_${i}.vcf.gz |& tee consensus_autosomes/allvar_autosomes_${i}_2.log
+#gzip -v consensus_autosomes/allvar_autosomes_${i}_?.fasta
+#done
+#realpath consensus/*.gz > consensus_fastas.txt
+#grep -vE "(_HG00514_|_HG00733_|_NA19240_)" consensus_autosomes_fastas.txt > consensus_autosomes_fastas_nonrel.txt
+#grep -vEf raw/SampleIds_male.txt consensus_autosomes_fastas_nonrel.txt | sort > consensus_autosomes_fastas_nonrel_female.txt
 
 
 
