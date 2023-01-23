@@ -14,24 +14,91 @@ require(openssl)
 require(dplyr)
 require(optparse)
 require(callr)
-codelib<-'/home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/'
+codelib<-'/home/jbonnie1/dandd/dev-dandD/lib'
 source(file.path(codelib,'plot_progressive.R'))
 
 ```
 
-```{bash, include=FALSE}
+```{bash, eval=FALSE}
 tag=salmonellarz
-sketchdir=/home/jbonnie1/scr16_blangme2/jessica/dandd/r_z_d/sketch
-filelist=/scratch16/blangme2/jessica/data/salmonellarz_filelist.txt
+wkdir=/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/
+#/scratch4/blangme2/oahmed/r_and_z_results/data/global_path_filelist.txt
+filelist=/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/global_path_filelist.txt
+codelib=/home/jbonnie1/dandd/dev-dandD/lib
 
-python lib/dandd_cmd.py tree -s ${tag} --no-canon -f ${filelist} -c $sketchdir
+#python lib/dandd_cmd.py tree -s ${tag} --no-canon -f ${filelist} -o $wkdir
+python ${codelib}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o $wkdir --exact
+
+tag=salmonellarz_nocanon
+python ${codelib}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o $wkdir --exact --nocanon
+
+
+
+```
+
+
+```{bash, eval=FALSE}
+tagtop=salmonellarz_concat
+wkdir=/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/
+  timedir=${wkdir}/time
+  mkdir ${timedir}
+  #/scratch4/blangme2/oahmed/r_and_z_results/data/global_path_filelist.txt
+  summary=${wkdir}/${tagtop}_bench.csv
+  echo "ngen,MaxResSetSize_kb, WallClock_hms,SystemTime_sec,UserTime_sec, canon" > ${summary}
+for i in $(seq 1 50); do
+  fastaname=/scratch4/blangme2/oahmed/r_and_z_results/exp1_final_ref_files/ref_with_${i}_genomes_forward_only.fna
+  tag=${tagtop}${i}
+  cmd="echo "$fastaname" | python /home/jbonnie1/dandd/dev-dandD/lib/dandd_cmd.py tree -s "${tag}" --exact -k 14 -f /dev/stdin -e 1 -o "${wkdir}
+  /usr/bin/time -o ${timedir}/${tag}.out -v sh -c "${cmd}"
+  mrss=$(grep "Maximum resident" ${timedir}/${tag}.out | awk '{print $NF}')
+  wctime=$(grep "wall clock" ${timedir}/${tag}.out | awk '{print $NF}')
+  systime=$(grep "System time" ${timedir}/${tag}.out | awk '{print $NF}')
+  utime=$(grep "User time" ${timedir}/${tag}.out | awk '{print $NF}')
+  echo "${i},${mrss},${wctime},${systime},${utime},1" >> ${summary}
+  done
+  
+mkdir ${wkdir}/${tagtop}
+mv ${wkdir}/${tagtop}*_* ${wkdir}/${tagtop}/.
+
+filelist=/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/global_path_filelist.txt
+
+codelib=/home/jbonnie1/dandd/dev-dandD/lib
+
+#python lib/dandd_cmd.py tree -s ${tag} --no-canon -f ${filelist} -o $wkdir
+python ${codelib}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o $wkdir --exact
+
+tag=salmonellarz_nocanon
+python ${codelib}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o $wkdir --exact --nocanon
+
+
 
 ```
 
 
 
 ```{bash partest}
-/home/jbonnie1/scr16_blangme2/jessica/dandd/r_z_d/sketch/partest_500_dtree.pickle
+tagtop=salmonellarz_concat_nc
+wkdir=/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/
+cd ${wkdir}
+  timedir=${wkdir}/time
+  mkdir ${timedir}
+  #/scratch4/blangme2/oahmed/r_and_z_results/data/global_path_filelist.txt
+  summary=${wkdir}/${tagtop}_bench.csv
+  echo "ngen,MaxResSetSize_kb, WallClock_hms,SystemTime_sec,UserTime_sec, canon" > ${summary}
+for i in $(seq 1 50); do
+  fastaname=/scratch4/blangme2/oahmed/r_and_z_results/exp1_final_ref_files/ref_with_${i}_genomes_forward_only.fna
+  tag=${tagtop}${i}
+  cmd="echo "$fastaname" | python /home/jbonnie1/dandd/dev-dandD/lib/dandd_cmd.py tree -s "${tag}" --no-canon --exact -k 14 -f /dev/stdin -e 1 -o "${wkdir}
+  /usr/bin/time -o ${timedir}/${tag}.out -v sh -c "${cmd}"
+  mrss=$(grep "Maximum resident" ${timedir}/${tag}.out | awk '{print $NF}')
+  wctime=$(grep "wall clock" ${timedir}/${tag}.out | awk '{print $NF}')
+  systime=$(grep "System time" ${timedir}/${tag}.out | awk '{print $NF}')
+  utime=$(grep "User time" ${timedir}/${tag}.out | awk '{print $NF}')
+  echo "${i},${mrss},${wctime},${systime},${utime},0" >> ${summary}
+  done
+  
+mkdir ${wkdir}/${tagtop}
+mv ${wkdir}/${tagtop}*_* ${wkdir}/${tagtop}/.
 
 ```
 
