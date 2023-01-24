@@ -61,7 +61,7 @@ tp <-
   # scale_color_discrete(name = "Random Genome Ordering") +
   xlab("Number of Genomes in Set") +
   ylab("Value of \u03b4") +
-  ggtitle(label=paste0("Values of \u03b4 over orderings of ",gcount," ",stringr::str_to_title(tag)," Genomes")) +
+  ggtitle(label=paste0("Values of \u03b4* over orderings of ",gcount," ",stringr::str_to_title(tag)," Genomes")) +
   guides(color = 'none') +
   scale_y_continuous(labels = scales::label_number_auto())
 
@@ -76,6 +76,48 @@ ggplot2::ggsave(filename = file.path(outdir,paste0("plot_",tag,"_",item,"_",nord
 return(tp)
 }
 
+plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0){
+  gcount=max(progu$ngen)
+  norder=max(progu$ordering)
+
+  summary <- summarize(group_by(progu, ngen, dataset), mean=mean(delta))
+  print(names(summary))
+  
+  tp <-
+    ggplot() 
+  
+  if (nshow > 0){
+    progu <- progu %>%
+      mutate(Indicator=ordering <= nshow) %>%
+      # filter(ordering %in% c(1:20)) %>%
+      mutate(ngen=as.integer(ngen),kval=as.factor(kval))
+    tp <- tp +
+      geom_line(data=summary, aes(y=mean, x=ngen, linetype="Mean")) +
+    geom_point(data=filter(progu,Indicator),aes(y=delta, x=ngen, shape=kval), size=.5) +
+    geom_line(data=filter(progu,Indicator),
+              aes(y=delta, x=ngen,# linetype="Individual Ordering",
+                  group=ordering, color=as.factor(ordering)), size=.5) +
+      scale_shape_discrete(name="argmax(k)") +
+      guides(color = 'none')
+  }
+  else{
+    print(names(summary))
+    tp <- tp +
+      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=dataset)) 
+  }
+  
+  tp <- tp + 
+    scale_linetype_manual(name=paste0("Fit (",norder," Orderings)"),values=c(2)) +
+    theme_bw() +
+    scale_x_continuous(breaks= scales::pretty_breaks(10)) +
+    # scale_color_discrete(name = "Random Genome Ordering") +
+    xlab("Number of Genomes in Set") +
+    ylab("Value of \u03b4*") +
+    ggtitle(label=title)  +
+    scale_y_continuous(labels = scales::label_number_auto())
+
+  return(tp)
+}
 
 
 
@@ -107,26 +149,45 @@ plot_scatter <- function (item, ytitle, filename, heap, alpha, param, plotlog=T)
   #ggsave(filename=file.path(DIROUT, filename), plot=pl)
 }
 
-# heaps <- function(progu.df){
-heaps <- function(ksweep.df){
+alpha <- function(progu.df){
   # progu.df <- group_by (ngenmutate(progu.df, av)
-  avg.ksweep <- ksweep.df %>%
+  avg.progu <- progu.df %>%
+    group_by(ordering) %>% 
+    mutate(delta_delta=delta - lag(delta, default = delta[1])) %>%
+    ungroup() %>% group_by(ngen) %>% 
+    summarize(mean_delta=mean(delta), mean_delta_delta2 = mean(delta_delta)) %>%
+    mutate(mean_delta_delta1 = mean_delta - lag(mean_delta, default = mean_delta[1]))
+  new_item <- avg.progu$mean_delta_delta1
+  N=length(new_item)
+  # ALPHA
+  x = 2:N
+  model = lm(log(new_item[x])~log(x))
+  alpha = abs(model$coefficients[2])
+  return(alpha)
+  }
+
+graph_heaps <- function(){}
+
+heaps <- function(progu.df){
+  # progu.df <- group_by (ngenmutate(progu.df, av)
+  avg.progu <- progu.df %>%
     group_by(ordering) %>% 
     mutate(delta_delta=delta_pos - lag(delta_pos, default = delta_pos[1])) %>%
     ungroup() %>% group_by(ngen) %>% 
     summarize(mean_delta=mean(delta_pos), mean_delta_delta2 = mean(delta_delta)) %>%
     mutate(mean_delta_delta1 = mean_delta - lag(mean_delta, default = mean_delta[1]))
-  new_item <- avg.ksweep$mean_delta_delta1
+  new_item <- avg.progu$mean_delta_delta1
   N=length(new_item)
   # ALPHA
   x = 2:N
   model = lm(log(new_item[x])~log(x))
+  alpha = abs(model$coefficients[2])
+  
   #str(summary(model))
   #summary(model)
   adj.r.sq = summary(model)$adj.r.squared
   x_h = seq(2,N,length.out=1000)
   y_h = exp(model$coefficients[1])*x_h^(model$coefficients[2])
-  alpha = abs(model$coefficients[2])
   print(alpha)
   heap = data.frame(x=x_h,y=y_h)
   param = paste0("$\\alpha = $", signif(alpha, digits=4))
@@ -142,19 +203,29 @@ heaps <- function(ksweep.df){
 clean_abba <- function(df, prefix="allvar_"){
   tmp <- df %>% tibble()
   tmp <- tmp %>% rowwise() %>%
+    # make a column removing the brackets and spaces and quotes from the string(fasta list) column
     mutate(flist1=stringr::str_split(gsub("\\[|\\ |\\]|\\'","",fastas), pattern=",")) %>%
-    mutate(flist2=list(gsub(paste0(prefix,"|.fasta.gz"),"",basename(flist1)))) %>%
-    mutate(flist3=list(lapply(flist1,function(z){gsub(paste0(prefix,"|.fasta.gz"),"",basename(z))}))) %>%
+    # make a column stripping the file to the basename and removing expected extensions
+    mutate(flist2=list(gsub(paste0(prefix,"|.fasta.gz|.fa|.fasta"),"",basename(flist1)))) %>%
+    # mutate(flist3=list(lapply(flist1,function(z){gsub(paste0(prefix,"|.fasta.gz"),"",basename(z))}))) %>%
+    # get the name of the last haplotype added
     mutate(last = unlist(flist2)[[ngen]]) %>%
+    # get the sorted list of the previous ones (for combination in graph)
     mutate(prior = list(sort(flist2[1:(ngen-1)]))) %>%
+    # make a sorted list of the whole list
     mutate(flist4=list(sort(flist2))) 
   
+  # for each of the dataset names
   allsets <- unique(tmp$last)
   for (dataset in allsets){
+    # assign all -1
     tmp[[dataset]] <- -1
+    # reassign the ones that contain the dataset at issue to 1
     tmp[[dataset]][unlist(lapply(tmp$flist2, function(x){ dataset %in% x }))] <- 1
+    # reassign (again!) whichever one is in last place
     tmp[[dataset]][tmp$last==dataset] <- 0
   }
+  # rename and add desired columns
   tmp <- tmp %>% rename(step=ngen) %>% 
     group_by(ordering) %>% 
     mutate(deltadelta=delta-lag(delta,default=delta[2]))
