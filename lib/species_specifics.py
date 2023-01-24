@@ -73,8 +73,8 @@ class SpeciesSpecifics:
         
     def save_references(self, fast=True):
         if not fast:
-        self._save_fastahex()
-        self._save_sketchinfo()
+            self._save_fastahex()
+            self._save_sketchinfo()
         
 
     
@@ -90,9 +90,9 @@ class SpeciesSpecifics:
     def save_cardkey(self, tool: str, fast=False):
         '''Store cardinalities in species specific pickle'''
         if not fast:
-        cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
-        with open(cardpath,"wb") as f:
-            pickle.dump(file=f, obj=self.cardkey)
+            cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
+            with open(cardpath,"wb") as f:
+                pickle.dump(file=f, obj=self.cardkey)
             
     def _resolve_species(self):
         '''Parse the name of the species from the data description tag'''

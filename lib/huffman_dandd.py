@@ -482,14 +482,14 @@ class DeltaTree:
         print(fast)
         filepath=fileprefix + '_dtree.pickle'
         if not fast:
-        with open(filepath,"wb") as f:
-            pickle.dump(obj=self, file=f)
-        print("Tree Pickle saved to: "+filepath)
+            with open(filepath,"wb") as f:
+                pickle.dump(obj=self, file=f)
+            print("Tree Pickle saved to: "+filepath)
 
-        expmaploc=fileprefix + '_sketchdb.txt'
-        explist=[self.speciesinfo.sketchinfo[item] for item in list(self.experiment["baseset"])]
-        write_listdict_to_csv(outfile=expmaploc, listdict=explist)
-        print(f"Output Sketch/DB mapping saved to {expmaploc}.")
+            expmaploc=fileprefix + '_sketchdb.txt'
+            explist=[self.speciesinfo.sketchinfo[item] for item in list(self.experiment["baseset"])]
+            write_listdict_to_csv(outfile=expmaploc, listdict=explist)
+            print(f"Output Sketch/DB mapping saved to {expmaploc}.")
         deltapath=fileprefix + '_deltas.csv'
         write_listdict_to_csv(deltapath,self.report_deltas())
         print("Deltas saved to: " + deltapath)
@@ -675,8 +675,8 @@ class DeltaTree:
             # outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
             
         # results=[pairwise_helper(pair) for pair in pairings]
-        self.speciesinfo.save_references()
-        self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
+        self.speciesinfo.save_references(fast=self.experiment['fast'])
+        self.speciesinfo.save_cardkey(tool=self.experiment["tool"],fast=self.experiment['fast'])
         return kij_results, j_results
     
 
