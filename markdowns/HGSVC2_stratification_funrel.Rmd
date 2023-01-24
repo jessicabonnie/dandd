@@ -37,7 +37,7 @@ outdir=/scratch4/blangme2/jessica/dandd/scratch/${tag}
 cd ${outdir}
 filelist=/data/blangme2/jessica/HGSVC2/consensus_snv_fastas_nonrel_female.txt
   
-python ${codedir}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
+python ${codedir}/dandd_cmd.py --safe tree -s ${tag} -f ${filelist} -o ${outdir} -k 19
 tree_pick=/scratch4/blangme2/jessica/dandd/scratch/${tag}/${tag}_34_dashing_dtree.pickle
 python ${codedir}/dandd_cmd.py progressive -d ${tree_pick} -r ${ordering_file}
 
@@ -59,13 +59,14 @@ python ${codedir}/dandd_cmd.py progressive -d ${tree_pick} -r ${ordering_file}
 tag='HGSVC2'
 outdir=file.path("/scratch4/blangme2/jessica/dandd/scratch",tag)
 
-hgsvc2 <- read.csv(paste0(outdir, "/",tag,"_progu120_34_dashing.csv")) %>% 
-   mutate(dataset="SNVs + SVs + Indels") %>%
+hgsvc2 <- read.csv(file.path(outdir, paste0(tag,"_progu120_34_dashing.csv"))) %>% 
+   mutate(dataset=paste0("SNVs + SVs + Indels (alpha=",format(alpha(.),digits=2),")")) %>%
   mutate(delta_pos=delta, ngenomes=ngen)
-plotProgressiveUnion(species=tag, out = outdir, hgsvc2, nshow=5) + 
-  geom_line(data=(summarize(group_by(hgsvc2, ngen, dataset), mean=mean(delta_pos))),
-            mapping=aes(y=mean,x=ngen))
-plotProgressiveUnion(species="HGSVC2", ngenome = ngenome, out = outdir, delta_snv, nshow=1)
+# plotProgressiveUnion(species=tag, out = outdir, hgsvc2, nshow=5) + 
+  # geom_line(data=(summarize(group_by(hgsvc2, ngen, dataset), mean=mean(delta_pos))),
+            # mapping=aes(y=mean,x=ngen))
+# plotProgressiveUnion(species="HGSVC2", ngenome = ngenome, out = outdir, delta_snv, nshow=1)
+plotCumulativeUnion(progu = hgsvc2, summarize = TRUE, title = paste0("Values of \u03b4 over Orderings of ",tag), nshow=0)
 
 
 ```
@@ -76,18 +77,12 @@ plotProgressiveUnion(species="HGSVC2", ngenome = ngenome, out = outdir, delta_sn
 
 ```{r draw_graphs1, cache=TRUE}
 tag='HGSVC2_snv'
-outdir=file.path("/scratch4/blangme2/jessica/dandd/scratch",tag)
+outdir=file.path("/scratch4/blangme2/jessica/dandd/scratch/",tag)
 
-hgsvc2_snv <- read.csv(paste0(outdir, "/",tag,"_progu120_34_dashing.csv")) %>% 
-   mutate(dataset="SNVs Only") %>%
-  mutate(delta_pos=delta, ngenomes=ngen)
+hgsvc2_snv <- read.csv(paste0(outdir, "/",tag,"_progu0_34_dashing.csv")) %>% 
+   mutate(dataset=paste0("SNVs Only (alpha=",format(alpha(.),digits=2),")")) 
 
-plotProgressiveUnion(species=tag, out = outdir, hgsvc2_snv, nshow=5) + 
-  geom_line(data=(summarize(group_by(hgsvc2_snv, ngen, dataset), mean=mean(delta_pos))),
-            mapping=aes(y=mean,x=ngen))
-
-plotProgressiveUnion(species="HGSVC2_snv", out = outdir, hgsvc2_snv, nshow=5)
-plotProgressiveUnion(species=tag, out = outdir, hgsvc2_snv, nshow=1)
+plotCumulativeUnion(progu = hgsvc2_snv, summarize = TRUE, title = paste0("Values of \u03b4 over Orderings of ",tag), nshow=0)
 
 
 ```
@@ -95,21 +90,22 @@ plotProgressiveUnion(species=tag, out = outdir, hgsvc2_snv, nshow=1)
 
 ```{r draw_graphs1, cache=TRUE}
 tag='HGSVC2_snv_indel'
-outdir=file.path("/scratch4/blangme2/jessica/dandd/scratch",tag)
+outdir=file.path("/scratch4/blangme2/jessica/dandd/scratch/",tag)
 
 hgsvc2_snv_indel <- read.csv(paste0(outdir, "/",tag,"_progu0_34_dashing.csv")) %>% 
-  mutate(dataset="SNVs + Indels") %>%
-  mutate(delta_pos=delta, ngenomes=ngen)
+   mutate(dataset=paste0("SNVs + Indels (alpha=",format(alpha(.),digits=2),")")) 
 
-plotProgressiveUnion(species=tag, out = outdir, hgsvc2_snv_indel, nshow=5) + 
-  geom_line(data=(summarize(group_by(hgsvc2_snv_indel, ngen, dataset), mean=mean(delta_pos))),
-            mapping=aes(y=mean,x=ngen))
-plotProgressiveUnion(species="HGSVC2_snv_indel", out = outdir, hgsvc2_snv_indel, nshow=5)
-plotProgressiveUnion(species="HGSVC2_snv_indel", out = outdir, hgsvc2_snv_indel, nshow=1)
+plotCumulativeUnion(progu = hgsvc2_snv_indel, summarize = TRUE, title = paste0("Values of \u03b4 over Orderings of ",tag), nshow=0)
+
 
 
 ```
+```{r combine}
 
+all_hgsvc2 <- bind_rows(hgsvc2,hgsvc2_snv)
+plotCumulativeUnion(progu = all_hgsvc2, summarize = TRUE, title = paste0("Values of \u03b4 over Orderings of ",tag), nshow=0)
+
+```
 
 
 
@@ -124,6 +120,7 @@ gcount=max(hgsvc2$ngenomes)
 
 summary<- bind_rows(hgsvc2,hgsvc2_snv,hgsvc2_snv_indel) %>% group_by(ngen, dataset) %>%
   summarize(mean=mean(delta_pos))
+
 
 summary %>% 
   ggplot() + geom_line(mapping=aes(y=mean, x=ngen, color=dataset)) +

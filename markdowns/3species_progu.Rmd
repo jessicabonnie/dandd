@@ -51,62 +51,6 @@ python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} #-o ${outdir}/${tag}_
 ```{r heaps}
 
 
-
-plot_scatter <- function (item, ytitle, filename, heap, alpha, param, plotlog=T) {
-    param = latex2exp::TeX(param)
-    if (abs(alpha) <= 1) {
-        color_heap = "green"
-    } else {
-        color_heap = "red"
-    }
-    pl = ggplot(data = item, aes(x = x, y = y, color="Items")) +
-        geom_point()+
-        geom_line(data=heap,aes(x=x, y=y, color="Heap's law"), alpha=0.5)+
-        theme_classic() +
-        scale_color_manual(values=c(color_heap, "#000000"))+
-        xlab("No. of genomes") +
-        ylab(ytitle) + 
-        ggtitle(param) +
-        theme_bw(base_size = 16) + 
-        theme(legend.text = element_text(size=5), plot.title =
-              element_text(color="black", size=14))
-    if (plotlog) {
-       pl = pl + coord_trans(y='log10')#,x='log10')
-    }
-    plot(pl)
-    #ggsave(filename=file.path(DIROUT, filename), plot=pl)
-}
-
-# heaps <- function(progu.df){
-heaps <- function(ksweep.df){
-  # progu.df <- group_by (ngenmutate(progu.df, av)
- avg.ksweep <- ksweep.df %>%
-   group_by(ordering) %>% 
-   mutate(delta_delta=delta_pos - lag(delta_pos, default = delta_pos[1])) %>%
-   ungroup() %>% group_by(ngen) %>% 
-   summarize(mean_delta=mean(delta_pos), mean_delta_delta2 = mean(delta_delta)) %>%
-   mutate(mean_delta_delta1 = mean_delta - lag(mean_delta, default = mean_delta[1]))
-  View(avg.ksweep)
-  new_item <- avg.ksweep$mean_delta_delta1
-  N=length(new_item)
-# ALPHA
-x = 2:N
-model = lm(log(new_item[x])~log(x))
-#str(summary(model))
-#summary(model)
-adj.r.sq = summary(model)$adj.r.squared
-x_h = seq(2,N,length.out=1000)
-y_h = exp(model$coefficients[1])*x_h^(model$coefficients[2])
-alpha = abs(model$coefficients[2])
-print(alpha)
-heap = data.frame(x=x_h,y=y_h)
-param = paste0("$\\alpha = $", signif(alpha, digits=4))
-plot_scatter(data.frame(x=2:N,y=new_item[2:N]), "No. of new items", 
-             paste0("new_items.png"), heap, alpha, param)
-plot_scatter(data.frame(x=2:N,y=new_item[2:N]), "No. of new items", 
-             paste0("new_items_log.png"), heap, alpha, param, plotlog=T)
-
-}
 ```
 
 
@@ -176,14 +120,14 @@ cd ${outdir}
 
 python ${codelib}/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 18 --datadir ${genomedir}
 tree_pick=${outdir}/${tag}_12_dashing_dtree.pickle
-python ${codelib}/dandd_cmd.py progressive -d tree_pick -n 60
+python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 60
 python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} --mink 2 --maxk 32
 
 # python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py tree -s ${tag} -o ${outdir} -k 18 --datadir ${genomedir} --exact
 #tree_pick=${outdir}/${tag}_12_kmc_dtree.pickle
 #python /home/jbonnie1/scr16_blangme2/jessica/dandd/dev-dandD/lib/dandd_cmd.py info -d ${tree_pick} -o ${outdir}/ksweep_kmc.csv --mink 2 --maxk 37
 
-python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 60 
+#python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 60 
 ```
 
 
