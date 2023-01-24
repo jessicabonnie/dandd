@@ -26,13 +26,13 @@ outdir=/scratch4/blangme2/jessica/dandd/scratch/HGSVC2
 tag=quad
 filelist=/data/blangme2/jessica/HGSVC2/consensus_mom_fchild_and_onef_1m1.txt
 #_HG0111|
-grep -E "(_HG00513|_HG00514|_HG01114|_NA18534_1)" /scratch16/blangme2/jessica/data/HGSVC2/consensus_fastas.txt > ${filelist}
+grep -E "(_HG00513|_HG00514|_HG01114|_NA18534_1)" /data/blangme2/jessica/HGSVC2/consensus_fastas.txt > ${filelist}
 
 sketchdir=${outdir}/sketchdb
 
 python ${codelib}/dandd_cmd.py tree -s ${tag} -f ${filelist} -o ${outdir} -k 19 |& tee ${outdir}/${tag}_quad.log
 
-tree_pick=/scratch4/blangme2/jessica/dandd/scratch/HGSVC2/quad_7_dashing_dtree.pickle
+tree_pick=${outdir}/${tag}_7_dashing_dtree.pickle
 
 python ${codelib}/dandd_cmd.py progressive -d ${tree_pick} -n 5040 #-o ${outdir}/${tag}_progu.csv
 
@@ -111,12 +111,13 @@ individualsHap=list(HG00514_1="DM", HG00514_2= "DP", HG00513_1 = "M1", HG00513_2
 individuals=list(HG00514_1="DM", HG00514_2= "DP", HG00513_1 = "M", HG00513_2 = "M", NA18534_1 = "UM", 
                  HG01114_1="UF", HG01114_2="UF")
 
+# create a list containing the prior haplotypes added using their nicknames
 plot.dfj$who <- unlist(lapply(plot.dfj$prior, function(x){
   tmp <- lapply(x, function(y){individuals[y]})
   paste0(unlist(tmp),collapse = "_")
 }))
 
-
+# get rid of the duplicate rows (same component haplotypes in a different permutation at the same step)
 quad.dedup <- plot.dfj %>% 
   # rowwise() %>% 
   # mutate(flist4=list(sort(flist2))) %>%
@@ -141,11 +142,7 @@ filter(quad.dedup, step == 5) %>%
 
 
 ```{r explode, cache=TRUE, eval=FALSE, echo=FALSE}
-abba.quad %>% filter(HG00514_1 == 0 & step==3 & HG00513_1 == 1 & HG00513_2 == -1) -> mom1
-abba.quad %>% filter(HG00514_1 == 0 & step==3 & (HG00513_1 == 1 | HG00513_2 == 1)) -> allmommy
-abba.quad %>% filter(HG00514_1 == 0 & step==3 & HG00513_1 == -1 & HG00513_2 == 1) -> mom2
-abba.quad %>% filter(HG00514_1 == 0 & step==3 & HG00513_1 == -1 & HG00513_2 == -1) -> nomommy
-nomommy$deltadelta %>% unique()
+
 
 
 
@@ -154,18 +151,5 @@ nomommy$deltadelta %>% unique()
 
 ```{r mutate, cache=TRUE, echo=FALSE, eval=FALSE}
 
-abba.quad$Mom1_ChildMat <- ifelse(abba.quad$HG00513_1 %in% c(0,1) & abba.quad$HG00514_1 == -1,1,0)
-abba.quad$Mom2_ChildMat <- ifelse(abba.quad$HG00513_2 %in% c(0,1) & abba.quad$HG00514_1 == -1,1,0)
-abba.quad$Mom_ChildMat <- ifelse((abba.quad$HG00513_1 & abba.quad$HG00513_2) %in% c(0,1) & abba.quad$HG00514_1 == -1,1,0)
-abba.quad$ChildMat_Mom1 <- ifelse(abba.quad$HG00514_1 %in% c(0,1) & abba.quad$HG00513_1 == -1,1,0)
-abba.quad$ChildMat_Mom2 <- ifelse(abba.quad$HG00514_1 %in% c(0,1) & abba.quad$HG00513_2 == -1,1,0)
-abba.quad$ChildMat_Mom <- ifelse((abba.quad$HG00514_1) %in% c(0,1) & (abba.quad$HG00513_1 & abba.quad$HG00513_2) == -1,1,0)
-
-abba.quad$Mom1_ChildPat <- ifelse(abba.quad$HG00513_1 %in% c(0,1) & abba.quad$HG00514_2 == -1,1,0)
-abba.quad$Mom2_ChildPat <- ifelse(abba.quad$HG00513_2 %in% c(0,1) & abba.quad$HG00514_2 == -1,1,0)
-abba.quad$Mom_ChildPat <- ifelse((abba.quad$HG00513_1 & abba.quad$HG00513_2) %in% c(0,1) & abba.quad$HG00514_2 == -1,1,0)
-abba.quad$ChildPat_Mom1 <- ifelse(abba.quad$HG00514_2 %in% c(0,1) & abba.quad$HG00513_1 == -1,1,0)
-abba.quad$ChildPat_Mom2 <- ifelse(abba.quad$HG00514_2 %in% c(0,1) & abba.quad$HG00513_2 == -1,1,0)
-abba.quad$ChildPat_Mom <- ifelse((abba.quad$HG00514_2) %in% c(0,1) & (abba.quad$HG00513_1 & abba.quad$HG00513_2) == -1,1,0)
 ```
 
