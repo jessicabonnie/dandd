@@ -36,10 +36,10 @@ def tree_command(args):
         
     os.makedirs(args.outdir, exist_ok=True)
     # os.chdir(args.sketchdir)
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety)
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety, fast=args.fast)
 
     fileprefix = dtree.make_prefix(outdir=args.outdir, tag=args.tag, label=args.label)
-    dtree.save(fileprefix=fileprefix)
+    dtree.save(fileprefix=fileprefix, fast=args.fast)
     #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
     # explist=[dtree.speciesinfo.sketchinfo[item] for item in list(dtree.experiment["baseset"])]
     # expmaploc=os.path.join(args.outdir,  args.tag + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')
@@ -52,6 +52,7 @@ def progressive_command(args):
         
     dtree.experiment["debug"] = args.debug
     dtree.experiment["safety"] = args.safety
+    dtree.experiment["fast"] = args.fast
     # dtree.speciesinfo.kstart=25
     results, summary=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
     
@@ -112,6 +113,7 @@ def parse_arguments():
     parser.add_argument("-v", "--verbose", action="count", default=0)
     parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
     parser.add_argument( "--safe", action="store_true", default=False, dest="safety",   help="Double check all sketch hashes to make sure they match the sums of the fasta hashes.")
+    parser.add_argument( "--fast", action="store_true", default=False, dest="fast",   help="Don't save so much stuff for second usage.")
 
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
 

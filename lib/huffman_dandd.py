@@ -256,7 +256,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False}, padding=True):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False}, padding=True):
         # self.fastahex = speciesinfo.fastahex
         self.experiment=experiment
         self._symbols = []
@@ -273,7 +273,7 @@ class DeltaTree:
         self.delta = self.root_delta()
         self.fastas = fasta_files
         speciesinfo.kstart = self.root_k()
-        self.speciesinfo.save_references()
+        self.speciesinfo.save_references(fast=experiment['fast'])
     def __sub__(self, other):
         # sub = subtraction
         print("Larger Tree Delta: ", self.delta)
@@ -473,25 +473,27 @@ class DeltaTree:
         fileprefix=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] )
         return fileprefix
 
-    def save(self, fileprefix:str):
+    def save(self, fileprefix:str, fast=False):
         '''Save the delta tree for future retrieval
         '''
         # if not label == "":
         #     label = "_"+label
         # fileprefix=self.make_prefix(tag=tag, label=label, outdir=outdir)
-        
+        print(fast)
         filepath=fileprefix + '_dtree.pickle'
+        if not fast:
         with open(filepath,"wb") as f:
             pickle.dump(obj=self, file=f)
-        deltapath=fileprefix + '_deltas.csv'
         print("Tree Pickle saved to: "+filepath)
-        write_listdict_to_csv(deltapath,self.report_deltas())
-        print("Deltas saved to: " + deltapath)
-        #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
+
         expmaploc=fileprefix + '_sketchdb.txt'
         explist=[self.speciesinfo.sketchinfo[item] for item in list(self.experiment["baseset"])]
         write_listdict_to_csv(outfile=expmaploc, listdict=explist)
         print(f"Output Sketch/DB mapping saved to {expmaploc}.")
+        deltapath=fileprefix + '_deltas.csv'
+        write_listdict_to_csv(deltapath,self.report_deltas())
+        print("Deltas saved to: " + deltapath)
+        #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
         return filepath
 
     def report_deltas(self):
@@ -627,8 +629,8 @@ class DeltaTree:
                 o["ordering"] = i+1
             results.extend(oresults)
             summary.extend(osummary)
-            self.speciesinfo.save_references()
-            self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
+            self.speciesinfo.save_references(fast=self.experiment['fast'])
+            self.speciesinfo.save_cardkey(tool=self.experiment["tool"],fast=self.experiment['fast'])
         return results, summary
 
     def sketch_ordering(self, ordering, number, step=1)->List[dict]:
@@ -692,7 +694,7 @@ class SubSpider(DeltaTree):
         self.fastas=self.root.fastas
         self.ngen = len(self.fastas)
         self.delta = self.root_delta()
-        self.speciesinfo.save_references()
+        self.speciesinfo.save_references(fast=self.experiment['fast'])
         #super().__new__(self)
 
     def _build_tree(self, leafnodes):
@@ -765,7 +767,7 @@ class DeltaSpider(DeltaTree):
 #         raise NotImplementedError
 
 
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10, safety=False):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10, safety=False, fast=False):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
@@ -778,7 +780,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     tool = string indicating which tool to use for kmer cardinality
     choices=["dashing","kmc"] '''
     # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
-    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set(), 'safety':safety}
+    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set(), 'safety':safety, 'fast':fast}
 
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)
@@ -808,7 +810,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
     
     # cardpath=os.path.join(speciesinfo.sketchdir, f'{tag}_{tool}_cardinalities.pickle')
-    speciesinfo.save_cardkey(tool=tool)
-    speciesinfo.save_references()
+    speciesinfo.save_cardkey(tool=tool,fast=fast)
+    speciesinfo.save_references(fast=fast)
     #print(dtree)#.print_tree()
     return dtree
