@@ -157,11 +157,12 @@ class SketchObj(object):
         self.sketch = None
         self.cmd = None
         self._sfp = sfp
+        self.speciesinfo=speciesinfo
         experiment['baseset'].add(sfp.base)
         self.experiment=experiment
         self._presketches = presketches
         self.create_sketch()
-        self.card = self.check_cardinality(speciesinfo=speciesinfo)
+        self.card = self.check_cardinality()
         self.delta_pos = self.card/self.kval
     
     def __lt__(self, other):
@@ -247,10 +248,10 @@ class SketchObj(object):
     
     def card_command(self, sketch_paths=[]):
         raise NotImplementedError("Subclass must define this.")
-    def parse_card(self, speciesinfo, proc):
+    def parse_card(self, proc):
         raise NotImplementedError("Subclass must define this.")
 
-    def individual_card(self, speciesinfo:SpeciesSpecifics):
+    def individual_card(self):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
         cmd = self.card_command()#[self._sfp.full])
         if self.experiment['debug']:
@@ -263,22 +264,22 @@ class SketchObj(object):
             # print("recreated sketch")
             proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True)
         finally:
-            self.parse_card(speciesinfo=speciesinfo, proc=proc)
+            self.parse_card(proc=proc)
         
-    def check_cardinality(self, speciesinfo: SpeciesSpecifics, delay=False):
+    def check_cardinality(self, delay=False):
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. NOTE: delay argument not implemented relates to idea of a way to batch the card command by attatching the sketch to a card0 sketch list attached to the SpeciesSpecifics object'''
         
-        if self._sfp.full not in speciesinfo.cardkey.keys():
+        if self._sfp.full not in self.speciesinfo.cardkey.keys():
             print("first criterion")
         # if speciesinfo.cardkey[self._sfp.full] == 0:
             # print("second criterion")
-        if self._sfp.full not in speciesinfo.cardkey.keys() or speciesinfo.cardkey[self._sfp.full] == 0:
-            self.individual_card(speciesinfo=speciesinfo)
+        if self._sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self._sfp.full] == 0:
+            self.individual_card()
             # if delay and self._sfp.full not in speciesinfo.card0:
             #     speciesinfo.card0.append(self._sfp.full)
             #     return 0
             # else:
-        return float(speciesinfo.cardkey[self.sketch])
+        return float(self.speciesinfo.cardkey[self.sketch])
     
     # def summarize(self):
     #     outdict = {"kval":self.kval, "card":self.card, "delta_pos":self.delta_pos}
@@ -296,10 +297,10 @@ class DashSketchObj(SketchObj):
         cmd = " ".join(cmdlist)
         return cmd
 
-    def parse_card(self, speciesinfo, proc):
+    def parse_card(self, proc):
         '''Parse the cardinality streaming from standard out for the card command'''
         for card in csv.DictReader(proc.stdout.splitlines(),delimiter='\t'):
-                speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+                self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
 
     def sketch_check(self) -> bool:
         '''Check that sketch at full path exists and is not empty'''
@@ -338,12 +339,12 @@ class KMCSketchObj(SketchObj):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
 
     
-    def parse_card(self, speciesinfo, proc):
+    def parse_card(self, proc):
         for line in proc.stdout.splitlines():
             key, value = line.strip().split(':')
             # print (f"{key},{value}")
             if key.strip() == 'total k-mers':
-                speciesinfo.cardkey[self.sketch] = value.strip()
+                self.speciesinfo.cardkey[self.sketch] = value.strip()
 
     def card_command(self, sketch_paths:list=[]) -> str:
         if len(sketch_paths) == 0:

@@ -113,13 +113,13 @@ class SpeciesSpecifics:
         else:
             return os.path.join(genomedir)
         
-    def check_cardinality(self, fullpath):
-        '''NOT IN USE. Check if cardinality has already been calculated for a sketch. If so, return it, if not add it to a list of cardinalities to be calculated and then return 0'''
-        if fullpath in self.cardkey.keys() and self.cardkey[fullpath] != 0:
-            return float(self.cardkey[fullpath])
-        elif fullpath not in self.card0:
-            self.card0.append(fullpath)
-        return 0
+    # def check_cardinality(self, fullpath):
+    #     '''NOT IN USE. Check if cardinality has already been calculated for a sketch. If so, return it, if not add it to a list of cardinalities to be calculated and then return 0'''
+    #     if fullpath in self.cardkey.keys() and self.cardkey[fullpath] != 0:
+    #         return float(self.cardkey[fullpath])
+    #     elif fullpath not in self.card0:
+    #         self.card0.append(fullpath)
+    #     return 0
 
     def retrieve_fasta_files(self, full=True)->list:
         '''return a list of all fasta files in a directory accounting for all the possible extensions'''

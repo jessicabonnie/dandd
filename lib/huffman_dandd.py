@@ -129,7 +129,7 @@ class DeltaTreeNode:
         if not self.progeny:
             self.progeny=[self]
             self.fastas=[self.node_title]
-            self.node_title=os.path.basename(self.node_title)
+            self.node_title=os.path.splitext(os.path.basename(self.node_title))[0]
     
 
     def find_delta_helper(self, kval: int, direction=1):
@@ -254,7 +254,7 @@ class DeltaTreeNode:
         for sketch in self.ksketches:
             if sketch is not None:
                 if sketch.sketch in sketches:
-                    sketch.check_cardinality()
+                    sketch.card=sketch.check_cardinality()
                     sketch.delta_pos=sketch.card/sketch.kval
 
 class DeltaTree:
@@ -307,24 +307,24 @@ class DeltaTree:
         _print_tree_recursive(root)
 
     ## NOTE batch_update_card not in use
-    def batch_update_card(self):
-        '''Update the cardinality dictionary for any sketches which have been added to the card0 list in speciesinfo '''
-        if len(self.speciesinfo.card0) > 0:
-            # TODO check for kmc v dashing
-            cmdlist = [DASHINGLOC,"card --presketched -p10"] +  self.speciesinfo.card0
-            cmd = " ".join(cmdlist)
-            if self.experiment['debug']:
-                print(cmd)
-            card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-            for card in csv.DictReader(card_lines, delimiter='\t'):
-                self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-            for node in self._dt:
-                for sketch in node.ksketches:
-                    if sketch:
-                        if sketch.sketch in self.speciesinfo.card0:
-                            sketch.card=self.speciesinfo.check_cardinality(sketch.sketch)
-                            sketch.delta_pos=sketch.card/sketch.kval
-            self.speciesinfo.card0 = []
+    # def batch_update_card(self):
+    #     '''Update the cardinality dictionary for any sketches which have been added to the card0 list in speciesinfo '''
+    #     if len(self.speciesinfo.card0) > 0:
+    #         # TODO check for kmc v dashing
+    #         cmdlist = [DASHINGLOC,"card --presketched -p10"] +  self.speciesinfo.card0
+    #         cmd = " ".join(cmdlist)
+    #         if self.experiment['debug']:
+    #             print(cmd)
+    #         card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
+    #         for card in csv.DictReader(card_lines, delimiter='\t'):
+    #             self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+    #         for node in self._dt:
+    #             for sketch in node.ksketches:
+    #                 if sketch:
+    #                     if sketch.sketch in self.speciesinfo.card0:
+    #                         sketch.card=self.check_cardinality()
+    #                         sketch.delta_pos=sketch.card/sketch.kval
+    #         self.speciesinfo.card0 = []
     
     def root_delta(self):
         '''retrieve the root node of the tree'''
