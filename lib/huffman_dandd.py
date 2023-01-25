@@ -670,6 +670,9 @@ class DeltaTree:
 
     def prepare_AFproject(self, kijsummary, jsummary):
         all_out=set()
+        # Records in j_and_kij_summ are of the form (tool, name1, name2, k, j, k1, k2, k12)
+        #  - When name1 == name2, the tuple describes a single dataset
+        #  - When name1 != name2, the tuple describes a pair of datasets
         
         tool = self.experiment["tool"]
         for dictitem in kijsummary:
@@ -677,8 +680,8 @@ class DeltaTree:
             # print(dictitem["Atitle"])
             outtuple_list = [
             (tool, dictitem["Atitle"], dictitem["Btitle"], 0,  dictitem["KIJ"], dictitem["Ak"], dictitem["Bk"], dictitem["ABk"]),
-            (tool, dictitem["Atitle"], dictitem["Atitle"], 0,  None, dictitem["Ak"], dictitem["Ak"], dictitem["Ak"]),
-            (tool, dictitem["Btitle"], dictitem["Btitle"], 0,  None, dictitem["Ak"], dictitem["Ak"], dictitem["Ak"])
+            (tool, dictitem["Atitle"], dictitem["Atitle"], 0,  1, dictitem["Ak"], dictitem["Ak"], dictitem["Ak"]),
+            (tool, dictitem["Btitle"], dictitem["Btitle"], 0, 1, dictitem["Bk"], dictitem["Bk"], dictitem["Bk"])
             ]
             all_out.update(outtuple_list)
 
