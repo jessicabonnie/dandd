@@ -114,7 +114,7 @@ class DeltaTreeNode:
         self.delta = 0
         self.ksketches = [None] * RANGEK
         self.assign_progeny()
-        self.fastas = [f.node_title for f in self.progeny]
+        self.fastas = [f.fastas[0] for f in self.progeny]
         self.ngen = len(self.progeny)
 
     def __repr__(self):
@@ -128,6 +128,8 @@ class DeltaTreeNode:
         '''If a node doesn't have progeny, it is it's own progeny'''
         if not self.progeny:
             self.progeny=[self]
+            self.fastas=[self.node_title]
+            self.node_title=os.path.basename(self.node_title)
     
 
     def find_delta_helper(self, kval: int, direction=1):
@@ -353,7 +355,7 @@ class DeltaTree:
         # create leaf nodes for all the provided fastas
         inputs = [
             DeltaTreeNode(
-                node_title=os.path.basename(s), children=[], speciesinfo=self.speciesinfo, experiment=self.experiment, progeny=[]
+                node_title=s, children=[], speciesinfo=self.speciesinfo, experiment=self.experiment, progeny=[]
             ) for s in symbol]
         inputs.sort()
         ## TODO: parallelize right here
@@ -716,7 +718,7 @@ class SubSpider(DeltaTree):
         progeny=[p.progeny for p in children]
         #flatten the progeny list
         progeny=[item for sublist in progeny for item in sublist]
-        child_titles=[c.node_title for c in children]
+        child_titles=[os.path.basename(c.node_title) for c in children]
         body_node = DeltaTreeNode(
             node_title="_".join(child_titles), speciesinfo=self.speciesinfo,
             children = children,
