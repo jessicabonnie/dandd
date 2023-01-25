@@ -657,7 +657,7 @@ class DeltaTree:
         kij_results=[]
         j_results=[]
         new_experiment = self.experiment.copy()
-        new_experiment.update({'fast': True , 'safe': False})
+        new_experiment.update({'fast': False , 'safe': False})
         for pair in pairings:
 
             pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=new_experiment)
@@ -676,18 +676,20 @@ class DeltaTree:
         
         tool = self.experiment["tool"]
         for dictitem in kijsummary:
-            print(dictitem["Atitle"])
+            
             # print(dictitem["Atitle"])
             outtuple_list = [
-            (tool, dictitem["Atitle"], dictitem["Btitle"], 0,  dictitem["KIJ"], dictitem["Ak"], dictitem["Bk"], dictitem["ABk"]),
-            (tool, dictitem["Atitle"], dictitem["Atitle"], 0,  1, dictitem["Ak"], dictitem["Ak"], dictitem["Ak"]),
-            (tool, dictitem["Btitle"], dictitem["Btitle"], 0, 1, dictitem["Bk"], dictitem["Bk"], dictitem["Bk"])
+            (tool, dictitem["Atitle"], dictitem["Btitle"], 0,  dictitem["KIJ"], dictitem["Ak"], dictitem["Bk"], dictitem["ABk"])#,
+            # (tool, dictitem["Atitle"], dictitem["Atitle"], 0,  1, dictitem["Ak"], dictitem["Ak"], dictitem["Ak"]),
+            # (tool, dictitem["Btitle"], dictitem["Btitle"], 0, 1, dictitem["Bk"], dictitem["Bk"], dictitem["Bk"])
             ]
             all_out.update(outtuple_list)
 
         for dictitem in jsummary:
             outtuple_list = [
-                (tool, dictitem["Atitle"], dictitem["Btitle"], dictitem["kval"], dictitem["jaccard"], None, None, None)
+                (tool, dictitem["Atitle"], dictitem["Btitle"], dictitem["kval"], dictitem["jaccard"], None, None, None)#,
+                # (tool, dictitem["Atitle"], dictitem["Atitle"], dictitem["kval"], 1, None, None, None),
+                # (tool, dictitem["Btitle"], dictitem["Btitle"], dictitem["kval"], 1, None, None, None)
             ]
             all_out.update(outtuple_list)
         return list(all_out)
@@ -745,7 +747,7 @@ class SubSpider(DeltaTree):
         if names != sorted(names):
             childA=self._dt[1]
             childB=self._dt[0]
-        outdict={"A":os.path.basename(childA.fastas[0]), "B":os.path.basename(childB.fastas[0]),
+        outdict={"A":childA.fastas[0], "B":childB.fastas[0],
             "Adelta":childA.delta, "Bdelta":childB.delta,
             "Ak":childA.bestk, "Bk":childB.bestk,
             "ABdelta":self.delta, "ABk":self.root.bestk, "Atitle": childA.node_title, "Btitle": childB.node_title}
