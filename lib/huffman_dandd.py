@@ -36,6 +36,7 @@ def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str=""):
 
 #This is assuming that the command for dashing has been aliased
 DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
+#DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
 RANGEK=100
 
 # def permutations(elements):
@@ -217,7 +218,7 @@ class DeltaTreeNode:
             mink=self.mink
         if maxk == 0:
             maxk=self.maxk
-        labels=[ascii_uppercase[i]+ ascii_uppercase[j] for i in range(26) for j in range(26)]
+        #labels=[ascii_uppercase[i]+ ascii_uppercase[j] for i in range(26) for j in range(26)]
 
         for kval in range(mink, maxk+1):
             if self.ksketches[kval]:
@@ -463,8 +464,6 @@ class DeltaTree:
         #     dict_writer = csv.DictWriter(writer, fieldnames=keys)
         #     dict_writer.writeheader()
         #     dict_writer.writerows(explist)
-
-
     def make_prefix(self, tag: str, label="", outdir:str=None):
         if not outdir:
             outdir=os.path.curdir
@@ -472,7 +471,6 @@ class DeltaTree:
             label = "_"+label
         fileprefix=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] )
         return fileprefix
-
     def save(self, fileprefix:str, fast=False):
         '''Save the delta tree for future retrieval
         '''
@@ -647,8 +645,6 @@ class DeltaTree:
                 summary.extend(ospider.summarize())
 
         return output, summary
-
-    
     def pairwise_spiders(self, sublist=[], mink=0, maxk=0):
         '''Create values for K-Independent-Jaccard. '''
         # super_spider=self.to_spider()
@@ -658,26 +654,42 @@ class DeltaTree:
         pairings=[[a, b] for idx, a in enumerate(sublist) for b in sublist[idx + 1:]]
         kij_results=[]
         j_results=[]
+        new_experiment = self.experiment.copy()
+        new_experiment.update({'fast': True , 'safe': False})
         for pair in pairings:
 
-        # def pairwise_helper(pair):
-            pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=self.experiment)
+            pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=new_experiment)
             pspider.ksweep(mink=mink, maxk=maxk)
             kij_results.append(pspider.kij_summarize())
-            j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))
-            # pspider.ksweep(mink=mink, maxk=maxk)
-            # childA=pspider._dt[0]
-            # childB=pspider._dt[1]
-            # outdict={"A":childA.fastas[0], "B":childB.fastas[0],
-            # "Adelta":childA.delta, "Bdelta":childB.delta,
-            # "Ak":childA.bestk, "Bk":childB.bestk,
-            # "ABdelta":pspider.delta, "ABk":pspider.root.bestk}
-            # outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
-            
-        # results=[pairwise_helper(pair) for pair in pairings]
+            j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))  
         self.speciesinfo.save_references(fast=self.experiment['fast'])
-        self.speciesinfo.save_cardkey(tool=self.experiment["tool"],fast=self.experiment['fast'])
+        self.speciesinfo.save_cardkey(tool=new_experiment["tool"],fast=new_experiment['fast'])
         return kij_results, j_results
+
+    def prepare_AFproject(self, kijsummary, jsummary):
+        all_out=set()
+        
+        tool = self.experiment["tool"]
+        for dictitem in kijsummary:
+            outtuple_list = [
+            (tool, dictitem["Atitle"], dictitem["Btitle"], 0,  dictitem["KIJ"], dictitem["Ak"], dictitem["Bk"], dictitem["ABk"]),
+            (tool, dictitem["Atitle"], dictitem["Atitle"], 0,  None, dictitem["Ak"], dictitem["Ak"], dictitem["Ak"]),
+            (tool, dictitem["Btitle"], dictitem["Btitle"], 0,  None, dictitem["Ak"], dictitem["Ak"], dictitem["Ak"])
+            ]
+            all_out.update(outtuple_list)
+
+        for dictitem in jsummary:
+            outtuple_list = [
+                (tool, dictitem["Atitle"], dictitem["Btitle"], dictitem["kval"], dictitem["jaccard"], None, None, None)
+            ]
+            all_out.update(outtuple_list)
+        return list(all_out)
+         #  - When the record describes a J, then there are k tuples for each pair/singleton
+        #    + k is positive
+        #    + k1, k2, and k12 are all None
+        #    + j = J (or J_k)
+        #
+
     
 
 class SubSpider(DeltaTree):
@@ -721,28 +733,50 @@ class SubSpider(DeltaTree):
             raise ValueError("KIJ can only be calculated on spider/trees with 2 children")
         childA=self._dt[0]
         childB=self._dt[1]
+        # sort in lexigraphical order so duplicates
+        names = [childA.node_title,childB.node_title]
+        if names != sorted(names):
+            childA=self._dt[1]
+            childB=self._dt[0]
         outdict={"A":childA.fastas[0], "B":childB.fastas[0],
             "Adelta":childA.delta, "Bdelta":childB.delta,
             "Ak":childA.bestk, "Bk":childB.bestk,
-            "ABdelta":self.delta, "ABk":self.root.bestk}
+            "ABdelta":self.delta, "ABk":self.root.bestk, "Atitle": childA.node_title, "Btitle": childB.node_title}
         outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
+        
         return outdict
-    
+    # Records in j_and_kij_summ are of the form (tool, name1, name2, k, j, k1, k2, k12)
+    #  - When name1 == name2, the tuple describes a single dataset
+    #  - When name1 != name2, the tuple describes a pair of datasets
+
+     #  - When the record describes a J, then there are k tuples for each pair/singleton
+    #    + k is positive
+    #    + k1, k2, and k12 are all None
+    #    + j = J (or J_k)
+    #
+
+
     def jaccard_summarize(self, mink=0, maxk=0):
         '''Calculate jaccard distance for the subspider'''
         ##TODO: Write this to handle more than 2 children?
         if len(self.fastas) != 2:
-            raise ValueError("KIJ can only be calculated on spider/trees with 2 children")
+            raise ValueError("KIJ can only be calculated on spider/trees with 2 or more children")
         childA=self._dt[0]
         childB=self._dt[1]
         jevals=[]
-        outdict={"A":childA.fastas[0], "B":childB.fastas[0]}
+        if [childA.node_title, childB.node_title] != [childA.node_title, childB.node_title]:
+            childA = self._dt[1]
+            childB = self._dt[0]
+        outdict={"A":childA.fastas[0], "B":childB.fastas[0],
+        "Atitle": os.path.basename(childA.fastas[0]), "Btitle": os.path.basename(childB.fastas[0])}
         # self.ksweep(mink=mink,maxk=maxk)
         for k in range(mink,maxk+1):
-            outdict.update({"kval":k , "Acard": childA.ksketches[k].card, "Bcard": childB.ksketches[k].card, "ABcard":self.root.card})
-            outdict["jaccard"] = (outdict["Acard"] + outdict["Bcard"] - outdict["ABcard"])/outdict["ABcard"]
-            jevals.append(outdict)
+            odict = outdict.copy()
+            odict.update({"kval":k , "Acard": childA.ksketches[k].card, "Bcard": childB.ksketches[k].card, "ABcard":self.root.card})
+            odict["jaccard"] = (odict["Acard"] + odict["Bcard"] - odict["ABcard"])/odict["ABcard"]
+            jevals.append(odict)
         return jevals
+
 
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
