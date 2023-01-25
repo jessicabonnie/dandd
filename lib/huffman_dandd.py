@@ -434,9 +434,6 @@ class DeltaTree:
 
     def to_spider(self):
         '''Transform tree into a spider if it isn't'''
-        #TODO: make this use the leaf nodes of self
-        # dspider = DeltaSpider(fasta_files=self.fastas,speciesinfo=self.speciesinfo,experiment=self.experiment)
-        # self._dt = self.leaf_nodes()
 
         children=self.leaf_nodes()
         progeny=[p.progeny for p in children]
@@ -451,21 +448,7 @@ class DeltaTree:
             )
         body_node.find_delta(kval=self.speciesinfo.kstart)
         self._dt = children + [body_node]
-        
-    # def get_experiment_map(self, sketchinfo):
-    #     return sketchinfo.fromkeys(self.experiment["baseset"])
     
-    # def name_exmap(self, outdir, tag, label):
-        # bases=list(self.experiment["baseset"])
-        # print(bases)
-        # explist=[self.speciesinfo.sketchinfo[item] for item in bases]
-        # keys=explist[0].keys()
-        # filepath=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')
-        # return filepath
-        # with open(filepath, "w") as writer:
-        #     dict_writer = csv.DictWriter(writer, fieldnames=keys)
-        #     dict_writer.writeheader()
-        #     dict_writer.writerows(explist)
     def make_prefix(self, tag: str, label="", outdir:str=None):
         if not outdir:
             outdir=os.path.curdir
@@ -537,7 +520,6 @@ class DeltaTree:
             return tmplist
         
         dictlist= _delta_pos_recursive(root)
-        #print(dictlist)
         return dictlist
 
     def nodes_from_fastas(self, fasta_list):
@@ -545,8 +527,6 @@ class DeltaTree:
 
     def find_delta_delta(self, fasta_subset: List[str]) -> float:
         '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
-        # majord = self.delta
-        # majork = self.root_k()
         # create list of fastas that are in the original spider that are not in the subset provided --> i.e. the complement
         fastas = [f for f in self.fastas if f not in fasta_subset]
 
@@ -604,7 +584,6 @@ class DeltaTree:
                 raise ValueError("You must provide a value for count when there is no default ordering file")
         
         orderings = permute(length=len(fastas), norder=count, preexist=orderings)
-        # orderings = random_orderings(length=len(fastas), norder=count-len(orderings), preexist=orderings)
         # save the orderings for use next run of species 
         with open(ordering_file,"wb") as f:
             pickle.dump(orderings, f)
@@ -679,17 +658,13 @@ class DeltaTree:
             
             # print(dictitem["Atitle"])
             outtuple_list = [
-            (tool, dictitem["Atitle"], dictitem["Btitle"], 0,  dictitem["KIJ"], dictitem["Ak"], dictitem["Bk"], dictitem["ABk"])#,
-            # (tool, dictitem["Atitle"], dictitem["Atitle"], 0,  1, dictitem["Ak"], dictitem["Ak"], dictitem["Ak"]),
-            # (tool, dictitem["Btitle"], dictitem["Btitle"], 0, 1, dictitem["Bk"], dictitem["Bk"], dictitem["Bk"])
+            (tool, dictitem["Atitle"], dictitem["Btitle"], 0,  dictitem["KIJ"], dictitem["Ak"], dictitem["Bk"], dictitem["ABk"])
             ]
             all_out.update(outtuple_list)
 
         for dictitem in jsummary:
             outtuple_list = [
-                (tool, dictitem["Atitle"], dictitem["Btitle"], dictitem["kval"], dictitem["jaccard"], None, None, None)#,
-                # (tool, dictitem["Atitle"], dictitem["Atitle"], dictitem["kval"], 1, None, None, None),
-                # (tool, dictitem["Btitle"], dictitem["Btitle"], dictitem["kval"], 1, None, None, None)
+                (tool, dictitem["Atitle"], dictitem["Btitle"], dictitem["kval"], dictitem["jaccard"], None, None, None)
             ]
             all_out.update(outtuple_list)
         return list(all_out)
@@ -754,15 +729,6 @@ class SubSpider(DeltaTree):
         outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
         
         return outdict
-    # Records in j_and_kij_summ are of the form (tool, name1, name2, k, j, k1, k2, k12)
-    #  - When name1 == name2, the tuple describes a single dataset
-    #  - When name1 != name2, the tuple describes a pair of datasets
-
-     #  - When the record describes a J, then there are k tuples for each pair/singleton
-    #    + k is positive
-    #    + k1, k2, and k12 are all None
-    #    + j = J (or J_k)
-    #
 
 
     def jaccard_summarize(self, mink=0, maxk=0):
