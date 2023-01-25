@@ -353,7 +353,7 @@ class DeltaTree:
         # create leaf nodes for all the provided fastas
         inputs = [
             DeltaTreeNode(
-                node_title=s, children=[], speciesinfo=self.speciesinfo, experiment=self.experiment, progeny=[]
+                node_title=os.path.basename(s), children=[], speciesinfo=self.speciesinfo, experiment=self.experiment, progeny=[]
             ) for s in symbol]
         inputs.sort()
         ## TODO: parallelize right here
@@ -671,6 +671,8 @@ class DeltaTree:
         
         tool = self.experiment["tool"]
         for dictitem in kijsummary:
+            print(dictitem["Atitle"])
+            # print(dictitem["Atitle"])
             outtuple_list = [
             (tool, dictitem["Atitle"], dictitem["Btitle"], 0,  dictitem["KIJ"], dictitem["Ak"], dictitem["Bk"], dictitem["ABk"]),
             (tool, dictitem["Atitle"], dictitem["Atitle"], 0,  None, dictitem["Ak"], dictitem["Ak"], dictitem["Ak"]),
@@ -738,7 +740,7 @@ class SubSpider(DeltaTree):
         if names != sorted(names):
             childA=self._dt[1]
             childB=self._dt[0]
-        outdict={"A":childA.fastas[0], "B":childB.fastas[0],
+        outdict={"A":os.path.basename(childA.fastas[0]), "B":os.path.basename(childB.fastas[0]),
             "Adelta":childA.delta, "Bdelta":childB.delta,
             "Ak":childA.bestk, "Bk":childB.bestk,
             "ABdelta":self.delta, "ABk":self.root.bestk, "Atitle": childA.node_title, "Btitle": childB.node_title}
@@ -768,7 +770,7 @@ class SubSpider(DeltaTree):
             childA = self._dt[1]
             childB = self._dt[0]
         outdict={"A":childA.fastas[0], "B":childB.fastas[0],
-        "Atitle": os.path.basename(childA.fastas[0]), "Btitle": os.path.basename(childB.fastas[0])}
+        "Atitle": childA.node_title, "Btitle": childB.node_title}
         # self.ksweep(mink=mink,maxk=maxk)
         for k in range(mink,maxk+1):
             odict = outdict.copy()

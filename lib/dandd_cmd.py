@@ -86,9 +86,9 @@ def kij_command(args):
     dtree.ksweep(mink=args.mink,maxk=args.maxk)
     kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk)
     write_listdict_to_csv(outfile=args.outfile, listdict=kij_results)
-    kij_tuples, j_tuples = dtree.prepare_AFproject(kij_results, j_results)
+    tuples_list = dtree.prepare_AFproject(kij_results, j_results)
     with open(args.outfile+"_tuples.pickle","wb") as f:
-        pickle.dump(obj=[kij_tuples, j_tuples], file=f)
+        pickle.dump(obj=tuples_list, file=f)
 
     # writer = open(args.outfile, "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
     # dict_writer = csv.DictWriter(writer, fieldnames=kij_results[0].keys())
