@@ -200,39 +200,33 @@ omar50.noncanon <- omar50 %>%
 omar <- bind_rows(omar50.canon, omar50.noncanon) %>% pivot_longer(cols=c(r,z), names_to="metric", values_to="value")
 
 bench_k14<-bind_rows(fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/salmonellarz_concat_bench.csv"),fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/salmonellarz_concat_nc_bench.csv")) %>%
-  mutate(metric="delta_k14")
+  mutate(metric="delta")
 bench_k15<-bind_rows(fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta_k15/salmonellarz_concat_bench.csv"),fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta_k15/salmonellarz_concat_nc_bench.csv")) %>%
   mutate(metric="delta_k15")
+#bind_rows(bench_k14,bench_k15)
+bench<- bench_k14 %>% mutate(type="time", scaled="unscaled",WallClock_sec=as.numeric(ms(WallClock_hms))) %>% select(ngenomes=ngen,type,canon,metric,value=UserTime_sec, scaled, WallClock_hms)
 
-bench<-bind_rows(bench_k14,bench_k15) %>% mutate(type="time", scaled="unscaled",WallClock_sec=period_to_seconds(hms(WallClock_hms))) %>% select(ngenomes=ngen,type,canon,metric,value=UserTime_sec, scaled, WallClock_hms)
+bind_rows(omar,salmonellarz) %>% filter(scaled=="scaled", type=="value", canon==1) %>% 
+  ggplot() + 
+  geom_line(aes(x=ngenomes,y=value,  color=metric), size=1) +
+  ggtitle(label = "Values of r,z, and \u03b4 with cumulative salmonella genomes") +
+  labs(color="", x="Number of Concatenated Salmonella Genomes", y="Scaled Metric Value") +
+  theme_bw()
 
-bind_rows(omar,salmonellarz) %>% filter(scaled=="scaled", type=="value") %>% ggplot() + geom_line(aes(x=ngenomes,y=value, linetype=as.factor(canon), color=metric))
-
-
-bind_rows(omar,salmonellarz) %>% filter(scaled=="unscaled", type=="value") %>% ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric)) + facet_wrap(~canon)
-
-bind_rows(omar,bench) %>% filter(scaled=="unscaled", type=="time") %>% ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric)) + ylab("WallClock Time (sec)") + facet_wrap(~canon)
-bind_rows(omar,bench) %>% filter(scaled=="unscaled", type=="time") %>% ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric)) + ylab("UserTime_sec") + facet_wrap(~canon)
-
-# deltarz<-salmonellarz1 %>% 
-#   select(-k) %>%
-#   pivot_wider(id_cols = ngenomes, names_from = canon, names_prefix="canon", values_from = delta) %>%
-#   inner_join(omar50) 
-
-test <- deltarz %>% 
-  mutate(across(c(canon0,canon1,z,r,zwithrevcomp,rwithrevcomp), scale, .names = "{.col}_scale")) %>%
+# 
+# bind_rows(omar,salmonellarz) %>% filter(scaled=="unscaled", type=="value") %>% ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric)) + facet_wrap(~canon)
+# 
+bind_rows(omar,bench) %>% 
+  filter(scaled=="unscaled", type=="time", canon==1) %>% 
+  ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric), size=1) + 
+  labs(y="WallClock Time (sec)", color="", x="Number of Concatenated Salmonella Genomes") +
+  ggtitle("Timing Metrics for r,z, and \u03b4 with cumulative salmonella genomes") +
+  theme_bw()
   
-#   std.canon1=(canon1 - mean(canon1)) / sd(canon1),
-#   std.canon0=(canon0 - mean(canon0)) / sd(canon0),
-#   std.r=(r - mean(r)) / sd(r),
-#   std.z=(z - mean(z)) / sd(z),
-#   std.rrc=(rwithrevcomp - mean(rwithrevcomp)) / sd(rwithrevcomp),
-#   std.zrc=(zwithrevcomp - mean(zwithrevcomp)) / sd(zwithrevcomp)
-# )
+# bind_rows(omar,bench) %>% filter(scaled=="unscaled", type=="time") %>% ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric)) + ylab("UserTime_sec") + facet_wrap(~canon)
 
-gg_dr <- ggplot(data=omar50) + 
-  geom_line(mapping=aes(x=ngenomes,y=r, color="r"), size=1.25) 
-gg_dr
+
+
 ```
 
 
