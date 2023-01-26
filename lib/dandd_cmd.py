@@ -7,6 +7,8 @@ import os
 # from tabulate import tabulate
 import csv
 from typing import List, Dict, Set, Tuple, NamedTuple
+from allpairs import summ_to_phylip, run_fneighbor
+import json
 
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
 
@@ -85,17 +87,34 @@ def kij_command(args):
 
     dtree.ksweep(mink=args.mink,maxk=args.maxk)
     kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk)
-    write_listdict_to_csv(outfile=args.outfile, listdict=kij_results)
-    tuples_list = dtree.prepare_AFproject(kij_results, j_results)
-    with open(args.outfile+"_tuples.pickle","wb") as f:
-        pickle.dump(obj=tuples_list, file=f)
+    write_listdict_to_csv(outfile=args.outfile+".kij.csv", listdict=kij_results)
+    j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
+    
+    # with open(args.outfile+"_tuples.pickle","wb") as f:
+    #     pickle.dump(obj=tuples_list, file=f)
 
     # writer = open(args.outfile, "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
     # dict_writer = csv.DictWriter(writer, fieldnames=kij_results[0].keys())
     # dict_writer.writeheader()
     # dict_writer.writerows(kij_results)
     # writer.close()
-    
+    if args.phylo_ref:
+        j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
+        args.j_results_phylip=args.outfile + '.sim.phylip'
+        args.j_tree=args.outfile + '.kij.newick'
+        args.j_results=args.outfile + '.sim.tsv'
+        args.j_tree_compare=args.outfile + '.kij.stats'
+        args.replicates=10
+        args.rename_seqs=True
+        args.fneighbor_replicates=10
+        args.nest=262144
+        args.bitsper=8
+        args.cpu=-1
+        args.ref_tree=os.path.join(os.path.dirname(args.phylo_ref), 'tree.Fischer2013.newick')
+        args.fneighbor='fneighbor'
+        print(os.path.dirname(dtree.fastas[0]))
+        phylogeny_comparison(args, datadir=os.path.dirname(dtree.fastas[0]), j_and_kij_summ=j_and_kij_summ)
+
     if args.jaccard:
         write_listdict_to_csv(outfile=args.outfile,listdict=j_results,suffix=".jaccard")
         # writer = open(args.outfile+".jaccard", "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
@@ -104,8 +123,57 @@ def kij_command(args):
         # dict_writer.writerows(j_results)
         # writer.close()
 
-    
-    
+def phylogeny_comparison(args, datadir, j_and_kij_summ):
+    if not os.path.exists(args.phylo_ref):
+        raise RuntimeError('No dataset file "%s"' % args.dataset)
+    with open(args.phylo_ref, 'rt') as fh:
+        data = json.load(fh)
+    seqid_to_treid, treid_to_seqid = {}, {}
+    assert len(data['treids']) == 0 or len(data['treids']) == len(data['seqids'])
+    if len(data['treids']) == 0:
+        for sid in data['seqids']:
+            seqid_to_treid[sid] = sid
+    else:
+        for sid, tid in zip(data['seqids'], data['treids']):
+            seqid_to_treid[sid] = tid
+            treid_to_seqid[tid] = sid
+    assert len(seqid_to_treid) > 0
+    inputs, input_names = [], []
+    for i, inp in enumerate(data['seqids']):
+        inp = os.path.join(datadir,inp+'.fasta')
+        if not os.path.exists(inp):
+            raise RuntimeError('Input path does not exist: "%s"' % inp)
+        inputs.append(inp)
+        inp_base = os.path.basename(inp)
+        assert inp_base.count('.') == 1
+        input_names.append(inp_base.split('.')[0])
+    for k in [0] + list(map(int, range(args.mink, args.maxk))):
+        summ = list(filter(lambda x: x[3] == k, j_and_kij_summ))
+        k1, k2, k12 = summ[0][-3:]
+        assert len(summ) > 0
+        name = 'kij' if k == 0 else 'k%d' % k
+
+        def _customize_fn(_fn):
+            toks = _fn.split('.')
+            return '.'.join(toks[:-1] + [name] + [toks[-1]])
+
+        # write Phylip output for KIJ/J
+        if args.j_results_phylip:
+            fn = _customize_fn(args.j_results_phylip)
+            summ_to_phylip(summ, seqid_to_treid, fn)
+            assert os.path.exists(fn)
+
+        # write fneighbor tree output for 1-Jaccard / 1-KIJ
+        j_tree_fn = _customize_fn(args.j_tree)
+        if args.j_tree:
+            assert args.j_tree_compare is not None
+            j_stats_fn = _customize_fn(args.j_tree_compare)
+            phylip_fn = _customize_fn(args.j_results_phylip)
+            stats = run_fneighbor(phylip_fn, j_tree_fn, seqid_to_treid, args.ref_tree, rename_seqs=args.rename_seqs, fneighbor_exe=args.fneighbor, nreplicates=args.fneighbor_replicates)
+            with open(j_stats_fn, 'wt') as fh:
+                for i, (nrf, rf, max_rf) in enumerate(stats):
+                    print('\t'.join(map(str, ['j', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='program to explore delta values for a set of fasta files')
@@ -213,6 +281,8 @@ def parse_arguments():
     kij_parser.add_argument("-f", "--fastas", dest="flist_loc", default=None, type=str, metavar="FASTA LIST FILE", help="filepath to a subset of fasta files from the original tree which should be analyzed.")
 
     kij_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
+
+    kij_parser.add_argument("--phylo-ref", dest="phylo_ref", default=None, type=str, help="path to the phylogenic reference from AF project.")
 
     # kij_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
