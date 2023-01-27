@@ -206,12 +206,15 @@ bench_k15<-bind_rows(fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta_k1
 #bind_rows(bench_k14,bench_k15)
 bench<- bench_k14 %>% mutate(type="time", scaled="unscaled",WallClock_sec=as.numeric(ms(WallClock_hms))) %>% select(ngenomes=ngen,type,canon,metric,value=UserTime_sec, scaled, WallClock_hms)
 
-bind_rows(omar,salmonellarz) %>% filter(scaled=="scaled", type=="value", canon==1) %>% 
+salmonellarz <- mutate(salmonellarz,metric=ifelse(metric=="delta","\u03b4",metric))
+
+#pgraph <- 
+  bind_rows(omar,salmonellarz) %>% filter(scaled=="scaled", type=="value", canon==1) %>%
   ggplot() + 
   geom_line(aes(x=ngenomes,y=value,  color=metric), size=1) +
   ggtitle(label = "Values of r,z, and \u03b4 with cumulative salmonella genomes") +
   labs(color="", x="Number of Concatenated Salmonella Genomes", y="Scaled Metric Value") +
-  theme_bw()
+  theme_bw() + theme(legend.position=c(.9,.25))
 
 # 
 # bind_rows(omar,salmonellarz) %>% filter(scaled=="unscaled", type=="value") %>% ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric)) + facet_wrap(~canon)
@@ -225,209 +228,12 @@ bind_rows(omar,bench) %>%
   
 # bind_rows(omar,bench) %>% filter(scaled=="unscaled", type=="time") %>% ggplot() + geom_line(aes(x=ngenomes,y=value, color=metric)) + ylab("UserTime_sec") + facet_wrap(~canon)
 
-
-
-```
-
-
-```{r deltar, echo=FALSE}
-deltaratio = max(deltarz$canon1)/max(deltarz$canon0)
-deltashift = min(deltarz$canon0) - min(deltarz$canon1)/deltaratio
-deltar = max(deltarz$r)/max(deltarz$canon0)
-rshift=min(deltarz$canon0) - min(deltarz$r)/deltar
-
-
-gg_dr <- ggplot() + 
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=canon0, color="delta-noncanon"), size=1.25) +
-    geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=canon1/deltaratio + deltashift, color="delta-canon"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=r/deltar+rshift, color="r"), size=1.25) +
-  # scale_y_continuous(
-  #   name = "Value of \u03b4 Non-Canonical",
-    # sec.axis = sec_axis(~.*deltar- min(deltarz$r)/deltar, name="Value of r (scaled to \u03b4)")
-  # ) +
-  theme_bw() +
-  labs( title="Growth of r and \u03b4 with number of salmonella genomes") +
-  xlab("# genomes") +
-  ylab("Value of \u03b4 Non-Canonical")
-# +
-  #geom_text(aes(x=100,y=2.5e6, color="delta"),label='\u03b4', size=6) +
-  #geom_text(aes(x=220,y=3.32e6, color="r"),label='r', size=6) +
-  # guides(color="none")
+ggsave("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/r_z_delta.png",
+       pgraph,
+       device="png",
+       height = 5,
+       width = 8
   
-gg_dr
+)
 
-# deltaratio = max(deltarz$canon1)/max(deltarz$canon0)
-# deltashift = min(deltarz$canon0) - min(deltarz$canon1)/deltaratio
-rdelta0 = max(deltarz$canon0)/max(deltarz$r)
-rshift0=min(deltarz$r) - min(deltarz$canon0)/rdelta0
-
-rdelta1 = max(deltarz$canon1)/max(deltarz$r)
-rshift1=min(deltarz$r) - min(deltarz$canon1)/rdelta1
-
-gg_dr2 <- ggplot() + 
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=canon0/rdelta0 + rshift0, color="delta-noncanon"), size=1.25) +
-    geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=canon1/rdelta1 + rshift1, color="delta-canon"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=r, color="r"), size=1.25) +
-  # scale_y_continuous(
-  #   name = "Value of \u03b4 Non-Canonical",
-    # sec.axis = sec_axis(~.*deltar- min(deltarz$r)/deltar, name="Value of r (scaled to \u03b4)")
-  # ) +
-  theme_bw() +
-  labs( title="Growth of r and \u03b4 with number of salmonella genomes") +
-  xlab("# genomes") +
-  ylab("Value of r")
-
-gg_dr2
-
-
-gg_dr_scale <- ggplot() + 
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=scale(canon0), color="delta-noncanon"), size=1.25) +
-    geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=scale(canon1), color="delta-canon"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=scale(r), color="r"), size=1.25) +
-  # scale_y_continuous(
-  #   name = "Value of \u03b4 Non-Canonical",
-    # sec.axis = sec_axis(~.*deltar- min(deltarz$r)/deltar, name="Value of r (scaled to \u03b4)")
-  # ) +
-  theme_bw() +
-  labs( title="Growth of r and \u03b4 with number of salmonella genomes") +
-  xlab("# genomes") +
-  ylab("Value of \u03b4 Non-Canonical")
-
-gg_dr_scale
-
-
-gg_dr_std <- ggplot() + 
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=std.canon0, color="delta-noncanon"), size=1.25) +
-    geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=std.canon1, color="delta-canon"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=std.r, color="r"), size=1.25) +
-  # scale_y_continuous(
-  #   name = "Value of \u03b4 Non-Canonical",
-    # sec.axis = sec_axis(~.*deltar- min(deltarz$r)/deltar, name="Value of r (scaled to \u03b4)")
-  # ) +
-  theme_bw() +
-  labs( title="Growth of r and \u03b4 with number of salmonella genomes") +
-  xlab("# genomes") +
-  ylab("Standardized Measure Value")
-
-gg_dr_std
-
-
-gg_drz_std <- ggplot() + 
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=std.canon0, color="delta-noncanon"), size=1.25) +
-    geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=std.canon1, color="delta-canon"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=std.r, color="r"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=std.z, color="z"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=std.rrc, color="r with revcomp"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=std.zrc, color="z with revcomp"), size=1.25) +
-  # scale_y_continuous(
-  #   name = "Value of \u03b4 Non-Canonical",
-    # sec.axis = sec_axis(~.*deltar- min(deltarz$r)/deltar, name="Value of r (scaled to \u03b4)")
-  # ) +
-  theme_bw() +
-  labs( title="Growth of r, z, and \u03b4 with number of salmonella genomes") +
-  xlab("# genomes") +
-  ylab("Standardized Measure Value")
-
-gg_drz_std
-```
-
-
-```{r deltaz, echo=FALSE}
-
-deltaz = max(deltarz$z)/max(deltarz$canon0)
-zshift=min(deltarz$canon0) - min(deltarz$z)/deltaz
-
-gg_dz <- ggplot() + 
-  geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=canon0, color="delta non-canon"), size=1.25) +
-  geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=canon1/deltaratio + deltashift, color="delta canon"), size=1.25) + 
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=z/deltaz+zshift, color="z"), size=1.25) +
-  # scale_y_continuous(
-  #   name = "Value of \u03b4",
-  #   sec.axis = sec_axis(~.*deltaz- min(deltarz$z)/deltaz, name="Value of z (scaled to \u03b4)")
-  # ) +
-  theme_bw() +
-  labs( title="Growth of z and \u03b4 with number of salmonella genomes") +
-  xlab("# genomes") +
-   ylab("Value of \u03b4 Non-Canonical")
-  #geom_text(aes(x=100,y=2.5e6, color="delta"),label='\u03b4', size=6) +
-  #geom_text(aes(x=220,y=3.32e6, color="r"),label='r', size=6) +
-  # guides(color="none")
-  
-gg_dz
-
-
-```
-
-
-```{r rz, echo=FALSE}
-
-rz = max(deltarz$z)/max(deltarz$r)
-#min(deltarz$r)/deltar
-
-
-#min(deltarz$z)/deltaz
-zrshift=min(deltarz$r) - min(deltarz$z)/rz
-
-gg_rz <- ggplot() + 
-  geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=r, color="r"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=z/rz - zrshift, color="z"), size=1.25) +
-  scale_y_continuous(
-    name = "Value of r*",
-    sec.axis = sec_axis(~.*rz+ min(deltarz$z)/rz, name="Value of z")
-  ) +
-  theme_bw() +
-  labs( title="Growth of z and r with number of salmonella genomes") +
-  xlab("# genomes") 
-#+
-  #geom_text(aes(x=100,y=2.5e6, color="delta"),label='\u03b4', size=6) +
-  #geom_text(aes(x=220,y=3.32e6, color="r"),label='r', size=6) +
-  #guides(color="none")
-  
-gg_rz
-```
-
-```{r deltarz, echo=FALSE}
-
-deltar = max(deltarz$r)/max(deltarz$delta)
-deltaz = max(deltarz$z)/max(deltarz$delta)
-
-#min(deltarz$r)/deltar
-rshift=min(deltarz$delta) - min(deltarz$r)/deltar
-
-#min(deltarz$z)/deltaz
-zshift=min(deltarz$delta) - min(deltarz$z)/deltaz
-
-gg_dzr <- ggplot() + 
-  geom_line(data=deltarz ,mapping=aes(x=ngenomes,y=delta, color="\u03b4*"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=z/deltaz+zshift, color="z"), size=1.25) +
-  geom_line(data=deltarz,mapping=aes(x=ngenomes,y=r/deltar+rshift, color="r"), size=1.25) +
-  scale_y_continuous(
-    name = "Value of \u03b4 and r,z scaled to \u03b4*") +
-# ,
-#     sec.axis = sec_axis(~.*deltar, name="Value of r")
-#   ) + 
-  # sec.axis = sec_axis(~.*deltaz, name="Value of z") +
-  
-  theme_bw() +
-  labs( title="Growth of r, z, and \u03b4* with number of salmonella genomes") +
-  xlab("# genomes") 
-#+
-  #geom_text(aes(x=100,y=2.5e6, color="delta"),label='\u03b4', size=6) +
-  #geom_text(aes(x=220,y=3.32e6, color="r"),label='r', size=6) +
- # guides(color="none")
-  
-gg_dzr
-```
-
-
-
-
-```{r timing}
-
-bench_k14<-bind_rows(fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/salmonellarz_concat_bench.csv"),fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta/salmonellarz_concat_nc_bench.csv")) %>%
-  mutate(kstart="kstart14")
-bench_k15<-bind_rows(fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta_k15/salmonellarz_concat_bench.csv"),fread("/scratch4/blangme2/jessica/dandd/RECOMB/r_z_delta_k15/salmonellarz_concat_nc_bench.csv")) %>%
-  mutate(kstart="kstart15")
-
-bench<-bind_rows(bench_k14,bench_k15)
 ```
