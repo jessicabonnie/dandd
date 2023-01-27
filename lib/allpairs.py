@@ -231,7 +231,7 @@ def run_fneighbor(phylip_fn, tree_fn_base, seqid_to_treid, ref_tree_fn,
         raise RuntimeError('Could not find fneighbor binary in path')
     results = []
     for i in range(nreplicates):
-        seed = i * 2 - 1
+        seed = i * 2 + 1
         fneighbor_fn = '%s.%d.fneighbor' % (tree_fn_base, seed)
         tree_fn = '%s.%d.newick' % (tree_fn_base, seed)
         cmd = '%s -datafile %s -outfile %s -outtreefile %s -matrixtype l -jumble -seed %d' % \

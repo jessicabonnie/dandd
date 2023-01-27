@@ -112,6 +112,7 @@ def kij_command(args):
         args.cpu=-1
         args.ref_tree=os.path.join(os.path.dirname(args.phylo_ref), 'tree.Fischer2013.newick')
         args.fneighbor='fneighbor'
+        #args.fneighbor='/scratch16/blangme2/langmead/bin/fneighbor'
         print(os.path.dirname(dtree.fastas[0]))
         phylogeny_comparison(args, datadir=os.path.dirname(dtree.fastas[0]), j_and_kij_summ=j_and_kij_summ)
 
@@ -169,7 +170,7 @@ def phylogeny_comparison(args, datadir, j_and_kij_summ):
             assert args.j_tree_compare is not None
             j_stats_fn = _customize_fn(args.j_tree_compare)
             phylip_fn = _customize_fn(args.j_results_phylip)
-            stats = run_fneighbor(phylip_fn, j_tree_fn, seqid_to_treid, args.ref_tree, rename_seqs=args.rename_seqs, fneighbor_exe=args.fneighbor, nreplicates=args.fneighbor_replicates)
+            stats = run_fneighbor(phylip_fn, j_tree_fn, seqid_to_treid, args.ref_tree, fneighbor_exe=args.fneighbor, nreplicates=args.fneighbor_replicates)
             with open(j_stats_fn, 'wt') as fh:
                 for i, (nrf, rf, max_rf) in enumerate(stats):
                     print('\t'.join(map(str, ['j', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
