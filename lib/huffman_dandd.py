@@ -23,7 +23,7 @@ from string import ascii_uppercase
 from math import factorial
 from itertools import permutations
 
-
+##TODO: make fasta the last column when it's in the keys
 def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str=""):
     writer = open(outfile+suffix, "w") if outfile is not None and outfile != '-' else sys.stdout
     fieldnames=set()
