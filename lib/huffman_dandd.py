@@ -747,7 +747,7 @@ class SubSpider(DeltaTree):
         # self.ksweep(mink=mink,maxk=maxk)
         for k in range(mink,maxk+1):
             odict = outdict.copy()
-            odict.update({"kval":k , "Acard": childA.ksketches[k].card, "Bcard": childB.ksketches[k].card, "ABcard":self.root.card})
+            odict.update({"kval":k , "Acard": childA.ksketches[k].card, "Bcard": childB.ksketches[k].card, "ABcard":self.root.ksketches[k].card})
             odict["jaccard"] = (odict["Acard"] + odict["Bcard"] - odict["ABcard"])/odict["ABcard"]
             jevals.append(odict)
         return jevals
