@@ -219,7 +219,7 @@ def mash_distance(j, k):
 
 
 def run_fneighbor(phylip_fn, tree_fn_base, seqid_to_treid, ref_tree_fn,
-                  rename_seqs=False, fneighbor_exe=None, nreplicates=1):
+                  rename_seqs=False, fneighbor_exe=None, nreplicates=1, debug=False):
     """
     mamba install embassy-phylip
     fneighbor -datafile input.phylip -outfile output.fneighbor \
@@ -237,6 +237,8 @@ def run_fneighbor(phylip_fn, tree_fn_base, seqid_to_treid, ref_tree_fn,
         cmd = '%s -datafile %s -outfile %s -outtreefile %s -matrixtype l -jumble -seed %d' % \
               (fneighbor_exe, phylip_fn, fneighbor_fn, tree_fn + '.tmp', seed)
         ret = os.system(cmd)
+        if debug:
+            print(cmd)
         if ret != 0:
             raise RuntimeError('Non-zero return code (%d) from command "%s"' % (ret, cmd))
         assert os.path.exists(fneighbor_fn)
