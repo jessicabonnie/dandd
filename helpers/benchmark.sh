@@ -7,13 +7,13 @@ approach=$2
 kval=$3
 upperout=$4
 
-datadir=/home/jbonnie1/scr16_blangme2/jessica/data/${species}
+datadir=/data/blangme2/jessica/${species}
 outdir=${upperout}/${species}
 apout=${outdir}/${approach}
-dashing=/home/jbonnie1/lib/dashing/dashing
+dashing=/home/jbonnie1/mini/dashing/dashing
 outprefix=${outdir}_${approach}_k${kval}
 summary=${outdir}_${approach}_k${kval}.csv
-nthreads=8
+#nthreads=8
 
 mkdir -p ${apout}
 cd ${datadir}
@@ -34,13 +34,13 @@ for fasta in ${fastalist[@]}; do
 
   if [ $approach == 'kmc' ]; then
     outsketch=${apout}/${fasta}.kmc
-    /usr/bin/time -o ${outprefix}.out -v sh -c "kmc -v -t${nthreads} -k${kval} -ci1 -fm ${datadir}/${fasta} ${apout}/${fasta}.kmc ${outdir}/kmc > ${cardloc}"
+    /usr/bin/time -o ${outprefix}.out -v sh -c "kmc -v -k${kval} -ci1 -fm ${datadir}/${fasta} ${apout}/${fasta}.kmc ${outdir}/kmc > ${cardloc}"
     card=$(grep "No. of unique counted k-mers" ${cardloc} | awk '{print $NF}')
 
   elif [ $approach == 'dashing' ]; then
     outsketch=${apout}/${fasta}.w.${kval}.spacing.20.hll
-    /usr/bin/time -o ${outprefix}.out -v sh -c "${dashing} sketch -p ${nthreads} -k ${kval} -S 20 ${fasta} -P ${apout}"
-    ${dashing} card -p ${nthreads} --presketched ${outsketch} > ${cardloc}
+    /usr/bin/time -o ${outprefix}.out -v sh -c "${dashing} sketch  -k ${kval} -S 20 ${fasta} -P ${apout}"
+    ${dashing} card  --presketched ${outsketch} > ${cardloc}
     card=$(awk 'NR==2{print $NF}' ${cardloc})
   fi
 #capture benchmarking values
@@ -74,15 +74,6 @@ sum(){
 }
 
 
-union_and_count()
-{
-  prefix=$1
-  karg=$2
-  ${dashing} union -p ${nthreads} -z -o ${prefix}_k${karg}.hll -F ${prefix}.txt
-  ${dashing} card -p ${nthreads} --presketched ${prefix}_k${karg}.hll > ${prefix}_k${karg}.card
-  
-}
-export -f union_and_count
 
 ## create an array of randomized indices using a predetermined seed
 rand_ind=( $(shuf -i0-$((${nfasta}-1)) --random-source=<(get_seeded_random 42)) )
@@ -163,7 +154,7 @@ for howmany in $(seq 1 $nfasta); do
       
       # using the previous created sketch, get the cardinality for the first db in the random ordering
       # TODO : update to use info command 
-      cmd="kmc_tools -t${nthreads} transform ${curunion} histogram ${newhist}"
+      cmd="kmc_tools transform ${curunion} histogram ${newhist}"
       echo ${cmd}
       /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
       cut -f2 ${newhist} | paste -sd+ | bc > ${cardloc}
@@ -178,10 +169,10 @@ for howmany in $(seq 1 $nfasta); do
       # benchmark timing for progressive union of sketches
       # TODO : update to use info command 
 
-      cmd="kmc_tools -t${nthreads} simple ${curunion} ${newguy} union ${newunion}" 
+      cmd="kmc_tools  simple ${curunion} ${newguy} union ${newunion}" 
       echo ${cmd}
       /usr/bin/time -o ${timeout} -v sh -c "$cmd"
-       kmc_tools -t${nthreads} transform ${newunion} histogram ${newhist}
+       kmc_tools  transform ${newunion} histogram ${newhist}
           cut -f2 ${newunion}.hist | paste -sd+ | bc > ${cardloc}
       
       #A new union is made when sketch number > 1 so pass that along to the start of the next loop
@@ -194,9 +185,9 @@ for howmany in $(seq 1 $nfasta); do
   elif [ $approach == 'dashing' ]; then
     newunion=${apout}/c${howmany}_k${kval}.hll
     if [[ "$howmany" -eq 1 ]]; then
-      /usr/bin/time -v -o ${timeout} sh -c "${dashing} card -p ${nthreads} --presketched ${curunion} > ${cardloc}"
+      /usr/bin/time -v -o ${timeout} sh -c "${dashing} card  --presketched ${curunion} > ${cardloc}"
     else
-    /usr/bin/time -v -o ${timeout} sh -c "${dashing} union -p 10 -z -o ${newunion} ${curunion} ${sketched[${howmany}-1]}; ${dashing} card -p ${nthreads} --presketched ${newunion} > ${cardloc}"
+    /usr/bin/time -v -o ${timeout} sh -c "${dashing} union -p 10 -z -o ${newunion} ${curunion} ${sketched[${howmany}-1]}; ${dashing} card --presketched ${newunion} > ${cardloc}"
     curunion=${newunion}
     fi
     card=$(awk 'NR==2{print $NF}' ${cardloc})
@@ -234,17 +225,17 @@ if [ $approach == 'kmc' ]; then
   #Benchmarch the process
   # TODO : update to use info command 
 
-  cmd="kmc_tools -t${nthreads} complex ${apout}/complex_union.txt" 
+  cmd="kmc_tools  complex ${apout}/complex_union.txt" 
   echo ${cmd}
   /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
-  kmc_tools -t${nthreads} transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}
+  kmc_tools  transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}
   
 elif [ $approach == 'dashing' ]; then
-cmd="${dashing} union -p ${nthreads} -z -o ${fullunion} ${sketched[@]}"
+cmd="${dashing} union  -z -o ${fullunion} ${sketched[@]}"
 echo ${cmd}
 /usr/bin/time -v -o ${timeout} sh -c "${cmd}"
 
-${dashing} card -p ${nthreads} -S 20 --presketched ${fullunion} > ${cardloc}
+${dashing} card  -S 20 --presketched ${fullunion} > ${cardloc}
   
 card=$(awk 'NR==2{print $NF}' ${cardloc})
 fi
@@ -267,10 +258,10 @@ timeout=${outprefix}_fullunionf_k${kval}.out
 
 if [ $approach == 'kmc' ]; then
   #echo "kmc -k${kval} -ci1 -fm \@${apout}/all_fastas.txt ${fullunionf} ${outdir}/kmcfullf 2> ${fullunionf}.card"
-  /usr/bin/time -o ${timeout} -v sh -c "kmc -t${nthreads} -k${kval} -ci1 -fm @${apout}/all_fastas.txt ${fullunionf} ${outdir}/kmc > ${cardloc}"
+  /usr/bin/time -o ${timeout} -v sh -c "kmc  -k${kval} -ci1 -fm @${apout}/all_fastas.txt ${fullunionf} ${outdir}/kmc > ${cardloc}"
 
 elif [ $approach == 'dashing' ]; then
-cmd="${dashing} hll -k ${kval} -p ${nthreads}  -S 20 ${apout}/all_fastas.txt  > ${cardloc}"
+cmd="${dashing} hll -k ${kval}  -S 20 ${apout}/all_fastas.txt  > ${cardloc}"
 echo ${cmd}
   /usr/bin/time -v -o ${timeout} sh -c "$cmd"
   card=$(awk 'NR==2{print $NF}' ${cardloc})
