@@ -39,7 +39,7 @@ for fasta in ${fastalist[@]}; do
 
   elif [ $approach == 'dashing' ]; then
     outsketch=${apout}/${fasta}.w.${kval}.spacing.20.hll
-    /usr/bin/time -o ${outprefix}.out -v sh -c "${dashing} sketch  -k ${kval} -S 20 ${fasta} -P ${apout}"
+    /usr/bin/time -o ${outprefix}.out -v sh -c "${dashing} sketch  -k ${kval} -S 20 --prefix ${apout} ${fasta}"
     ${dashing} card  --presketched ${outsketch} > ${cardloc}
     card=$(awk 'NR==2{print $NF}' ${cardloc})
   fi
@@ -65,13 +65,13 @@ get_seeded_random()
   openssl enc -aes-256-ctr -pass pass:"$seed" -nosalt \
     </dev/zero 2>/dev/null
 }
-
-sum(){
-  #function to extract and sum one column from a space delimited file
-  filename=$1
-  col=$2
-  cut -d ' ' -f${col} ${filename}| paste -sd+ | bc
-}
+# 
+# sum(){
+#   #function to extract and sum one column from a space delimited file
+#   filename=$1
+#   col=$2
+#   cut -d ' ' -f${col} ${filename}| paste -sd+ | bc
+# }
 
 
 
@@ -143,7 +143,7 @@ for howmany in $(seq 1 $nfasta); do
     newunion=${apout}/c${howmany}_k${kval}.kmc
     echo "Random Sketches in New Union:"
     echo ${sketched[@]:0:${howmany}}
-    newhist=${newunion}.hist
+    #newhist=${newunion}.hist
     
     if [[ "$howmany" -eq '1' ]]; 
     then
@@ -153,11 +153,10 @@ for howmany in $(seq 1 $nfasta); do
       curunion=${sketched[0]}
       
       # using the previous created sketch, get the cardinality for the first db in the random ordering
-      # TODO : update to use info command 
-      cmd="kmc_tools transform ${curunion} histogram ${newhist}"
+      cmd="kmc_tools info ${curunion} > ${cardloc}"
       echo ${cmd}
       /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
-      cut -f2 ${newhist} | paste -sd+ | bc > ${cardloc}
+      #cut -f2 ${newhist} | paste -sd+ | bc > ${cardloc}
       
     else
       echo "INSIDE HOW MANY IS GREATER"
@@ -169,25 +168,26 @@ for howmany in $(seq 1 $nfasta); do
       # benchmark timing for progressive union of sketches
       # TODO : update to use info command 
 
-      cmd="kmc_tools  simple ${curunion} ${newguy} union ${newunion}" 
+      cmd="kmc_tools  simple ${curunion} ${newguy} union ${newunion}; kmc_tools info ${newunion}> ${cardloc}" 
       echo ${cmd}
       /usr/bin/time -o ${timeout} -v sh -c "$cmd"
-       kmc_tools  transform ${newunion} histogram ${newhist}
-          cut -f2 ${newunion}.hist | paste -sd+ | bc > ${cardloc}
+       # kmc_tools  transform ${newunion} histogram ${newhist}
+       #    cut -f2 ${newunion}.hist | paste -sd+ | bc > ${cardloc}
       
       #A new union is made when sketch number > 1 so pass that along to the start of the next loop
       curunion=${newunion}
       #/usr/bin/time -o ${outprefix}_c${howmany}.out -v kmc -ci1 -k${kval} -fm @${apout}/c${howmany}.txt ${apout}/c${howmany}_k${kval}.kmc ${outdir}/kmc > ${apout}/c${howmany}_k${kval}.card
       #rm -r ${tmpdir}
     fi
-    card=$(cat ${cardloc})
+    card=$(awk 'NR==2{print $NF}' ${cardloc})
+    echo $card
     
   elif [ $approach == 'dashing' ]; then
     newunion=${apout}/c${howmany}_k${kval}.hll
     if [[ "$howmany" -eq 1 ]]; then
-      /usr/bin/time -v -o ${timeout} sh -c "${dashing} card  --presketched ${curunion} > ${cardloc}"
+      /usr/bin/time -v -o ${timeout} sh -c "${dashing} card --presketched ${curunion} > ${cardloc}"
     else
-    /usr/bin/time -v -o ${timeout} sh -c "${dashing} union -p 10 -z -o ${newunion} ${curunion} ${sketched[${howmany}-1]}; ${dashing} card --presketched ${newunion} > ${cardloc}"
+    /usr/bin/time -v -o ${timeout} sh -c "${dashing} union -z -o ${newunion} ${curunion} ${sketched[${howmany}-1]}; ${dashing} card --presketched ${newunion} > ${cardloc}"
     curunion=${newunion}
     fi
     card=$(awk 'NR==2{print $NF}' ${cardloc})
@@ -223,12 +223,12 @@ if [ $approach == 'kmc' ]; then
   echo ${string} >> ${apout}/complex_union.txt
   
   #Benchmarch the process
-  # TODO : update to use info command 
 
-  cmd="kmc_tools  complex ${apout}/complex_union.txt" 
+  cmd="kmc_tools complex ${apout}/complex_union.txt; kmc_tools info ${fullunion} > ${cardloc}" 
   echo ${cmd}
   /usr/bin/time -o ${timeout} -v sh -c "${cmd}"
-  kmc_tools  transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}
+  card=$(awk 'NR==2{print $NF}' ${cardloc})
+  #kmc_tools  transform ${fullunion} histogram ${fullunion}.hist; cut -f2 ${fullunion}.hist | paste -sd+ | bc > ${cardloc}
   
 elif [ $approach == 'dashing' ]; then
 cmd="${dashing} union  -z -o ${fullunion} ${sketched[@]}"
