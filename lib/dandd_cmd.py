@@ -88,10 +88,12 @@ def kij_command(args):
     dtree.ksweep(mink=args.mink,maxk=args.maxk)
     kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk)
     write_listdict_to_csv(outfile=args.outfile+".kij.csv", listdict=kij_results)
+    write_listdict_to_csv(outfile=args.outfile+".j.csv", listdict=j_results)
     j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
+    #print(j_and_kij_summ)
     
-    # with open(args.outfile+"_tuples.pickle","wb") as f:
-    #     pickle.dump(obj=tuples_list, file=f)
+    with open(args.outfile+"_tuples.pickle","wb") as f:
+        pickle.dump(obj=j_and_kij_summ, file=f)
 
     # writer = open(args.outfile, "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
     # dict_writer = csv.DictWriter(writer, fieldnames=kij_results[0].keys())
@@ -104,12 +106,13 @@ def kij_command(args):
         args.j_tree=args.outfile + '.kij.newick'
         args.j_results=args.outfile + '.sim.tsv'
         args.j_tree_compare=args.outfile + '.kij.stats'
-        args.replicates=10
+        args.replicates=1
         args.rename_seqs=True
-        args.fneighbor_replicates=10
+        args.fneighbor_replicates=1
         args.nest=262144
         args.bitsper=8
         args.cpu=-1
+        ##TODO FIX THIS TO GENERALIZE
         args.ref_tree=os.path.join(os.path.dirname(args.phylo_ref), 'tree.Fischer2013.newick')
         args.fneighbor='fneighbor'
         #args.fneighbor='/scratch16/blangme2/langmead/bin/fneighbor'
