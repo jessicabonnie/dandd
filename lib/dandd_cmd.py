@@ -101,11 +101,17 @@ def kij_command(args):
     # dict_writer.writerows(kij_results)
     # writer.close()
     if args.phylo_ref and args.ref_tree:
+        upperout=os.path.dirname(args.outfile)
+        outbase=os.path.basename(args.outfile)
+        dir_dict=dict([(x, os.path.join(upperout,x)) for x in ["phylip","newick", "stats", "fneighbor"]])
+        #dir_dict.update({ x : os.path.join(upperout,x) } for x in ["phylip","newick", "stats", "fneighbor"])
+        [os.makedirs(x,exist_ok=True) for x in dir_dict.values()]
+        print(dir_dict)
         j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
-        args.j_results_phylip=args.outfile + '.sim.phylip'
-        args.j_tree=args.outfile + '.kij.newick'
-        args.j_results=args.outfile + '.sim.tsv'
-        args.j_tree_compare=args.outfile + '.kij.stats'
+        args.j_results_phylip=os.path.join(dir_dict["phylip"], outbase + '.sim.phylip')
+        args.j_tree=os.path.join(dir_dict["newick"], outbase + '.newick')
+        #args.j_results=args.outfile + '.sim.tsv'
+        args.j_tree_compare=os.path.join(dir_dict["stats"], outbase + '.stats')
         args.replicates=1
         args.rename_seqs=True
         args.fneighbor_replicates=1
