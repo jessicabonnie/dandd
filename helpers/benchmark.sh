@@ -11,7 +11,7 @@ datadir=/data/blangme2/jessica/${species}
 outdir=${upperout}/${species}
 apout=${outdir}/${approach}
 dashing=dashing
-outprefix=${outdir}_${approach}_k${kval}
+outprefix=${outdir}/${species}_${approach}_k${kval}
 summary=${outdir}_${approach}_k${kval}.csv
 #nthreads=8
 
