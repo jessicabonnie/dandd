@@ -88,7 +88,7 @@ def kij_command(args):
     dtree.ksweep(mink=args.mink,maxk=args.maxk)
     kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk)
     write_listdict_to_csv(outfile=args.outfile+".kij.csv", listdict=kij_results)
-    write_listdict_to_csv(outfile=args.outfile+".j.csv", listdict=j_results)
+    #write_listdict_to_csv(outfile=args.outfile+".j.csv", listdict=j_results)
     j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
     #print(j_and_kij_summ)
     
@@ -100,7 +100,7 @@ def kij_command(args):
     # dict_writer.writeheader()
     # dict_writer.writerows(kij_results)
     # writer.close()
-    if args.phylo_ref and args.phylo_tree:
+    if args.phylo_ref and args.ref_tree:
         j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
         args.j_results_phylip=args.outfile + '.sim.phylip'
         args.j_tree=args.outfile + '.kij.newick'
@@ -112,15 +112,13 @@ def kij_command(args):
         args.nest=262144
         args.bitsper=8
         args.cpu=-1
-        ##TODO FIX THIS TO GENERALIZE
+       
         #args.phylo_tree=os.path.join(os.path.dirname(args.phylo_ref), 'tree.Fischer2013.newick')
         args.fneighbor='fneighbor'
-        #args.fneighbor='/scratch16/blangme2/langmead/bin/fneighbor'
-        print(os.path.dirname(dtree.fastas[0]))
         phylogeny_comparison(args, datadir=os.path.dirname(dtree.fastas[0]), j_and_kij_summ=j_and_kij_summ)
 
     if args.jaccard:
-        write_listdict_to_csv(outfile=args.outfile,listdict=j_results,suffix=".jaccard")
+        write_listdict_to_csv(outfile=args.outfile,listdict=j_results,suffix=".jaccard.csv")
         # writer = open(args.outfile+".jaccard", "w") if args.outfile is not None and args.outfile != '-' else sys.stdout
         # dict_writer = csv.DictWriter(writer, fieldnames=j_results[0].keys())
         # dict_writer.writeheader()
@@ -128,6 +126,9 @@ def kij_command(args):
         # writer.close()
 
 def phylogeny_comparison(args, datadir, j_and_kij_summ):
+    '''Create necessary files for comparison using AFproject.
+    NOTE: very brittle in terms of expectation of relationship of file names to sample
+    '''
     if not os.path.exists(args.phylo_ref):
         raise RuntimeError('No dataset file "%s"' % args.dataset)
     with open(args.phylo_ref, 'rt') as fh:
@@ -286,13 +287,13 @@ def parse_arguments():
 
     kij_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
 
-    kij_parser.add_argument("--phylo-tree", dest="phylo_tree", default=None, type=str, help="path to the phylogenic reference tree from AF project. Must match --phylo-ref. None or Both flags should be included.")
+    kij_parser.add_argument("--phylo-tree", dest="ref_tree", default=None, type=str, help="path to the phylogenic reference tree from AF project. Must match --phylo-ref. None or Both flags should be included.")
 
     kij_parser.add_argument("--phylo-ref", dest="phylo_ref", default=None, type=str, help="path to the reference dataset from AF project. Must match --phylo-tree. None or Both flags should be included.")
 
     # kij_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
-    # kij_parser.add_argument("--jaccard", dest="jaccard", default=False, action="store_true", help="Indicate whether to include output for standard jaccard difference for indicated ks")
+    kij_parser.add_argument("--jaccard", dest="jaccard", default=False, action="store_true", help="Indicate whether to include output for standard jaccard difference for indicated ks")
 
     kij_parser.add_argument("--mash", dest="mash", default=False, action="store_true", help="Indicate whether to include output for mash difference for indicated ks")
 
