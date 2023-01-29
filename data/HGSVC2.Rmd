@@ -36,7 +36,7 @@ echo ${samples[@]}
 
 cat raw/igsr-human_genome_structural_variation_consortium_phase2.tsv | awk '$2=="female"{print $1}' > raw/SampleIds_female.txt
 cat raw/igsr-human_genome_structural_variation_consortium_phase2.tsv | awk '$2=="male"{print $1}' > raw/SampleIds_male.txt
-echo HG00514_HG00733_NA19240 | sed 's/_/\n/g/' > raw/SampleIds_relatives.txt
+echo HG00514_HG00733_NA19240 | sed 's/_/\n/g' > raw/SampleIds_relatives.txt
 
 ```
 
