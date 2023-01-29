@@ -100,7 +100,7 @@ def kij_command(args):
     # dict_writer.writeheader()
     # dict_writer.writerows(kij_results)
     # writer.close()
-    if args.phylo_ref:
+    if args.phylo_ref and args.phylo_tree:
         j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
         args.j_results_phylip=args.outfile + '.sim.phylip'
         args.j_tree=args.outfile + '.kij.newick'
@@ -113,7 +113,7 @@ def kij_command(args):
         args.bitsper=8
         args.cpu=-1
         ##TODO FIX THIS TO GENERALIZE
-        args.ref_tree=os.path.join(os.path.dirname(args.phylo_ref), 'tree.Fischer2013.newick')
+        #args.phylo_tree=os.path.join(os.path.dirname(args.phylo_ref), 'tree.Fischer2013.newick')
         args.fneighbor='fneighbor'
         #args.fneighbor='/scratch16/blangme2/langmead/bin/fneighbor'
         print(os.path.dirname(dtree.fastas[0]))
@@ -286,11 +286,13 @@ def parse_arguments():
 
     kij_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
 
-    kij_parser.add_argument("--phylo-ref", dest="phylo_ref", default=None, type=str, help="path to the phylogenic reference from AF project.")
+    kij_parser.add_argument("--phylo-tree", dest="phylo_tree", default=None, type=str, help="path to the phylogenic reference tree from AF project. Must match --phylo-ref. None or Both flags should be included.")
+
+    kij_parser.add_argument("--phylo-ref", dest="phylo_ref", default=None, type=str, help="path to the reference dataset from AF project. Must match --phylo-tree. None or Both flags should be included.")
 
     # kij_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
-    kij_parser.add_argument("--jaccard", dest="jaccard", default=False, action="store_true", help="Indicate whether to include output for standard jaccard difference for indicated ks")
+    # kij_parser.add_argument("--jaccard", dest="jaccard", default=False, action="store_true", help="Indicate whether to include output for standard jaccard difference for indicated ks")
 
     kij_parser.add_argument("--mash", dest="mash", default=False, action="store_true", help="Indicate whether to include output for mash difference for indicated ks")
 
