@@ -7,6 +7,7 @@ require(ggplot2)
 require(data.table)
 require(openssl)
 require(dplyr)
+require(latex2exp)
 
 # tag="HVSVC2_2"
 # outdir="/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union"
@@ -79,20 +80,24 @@ return(tp)
 plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0){
   gcount=max(progu$ngen)
   norder=max(progu$ordering)
+  
+  alphas <- sapply(unique(progu$dataset),function(x){as.numeric(alpha(progu,x))}, USE.NAMES = TRUE)
+  summary <- summarize(group_by(progu, ngen, dataset), mean=mean(delta)) %>%
+    mutate(alpha=alphas[[dataset]]) %>% 
+    mutate(legend.name=paste0(dataset," (\u03b1=",format(alpha,digits=3),")"))
 
-  summary <- summarize(group_by(progu, ngen, dataset), mean=mean(delta))
-  print(names(summary))
   
   tp <-
     ggplot() 
   
   if (nshow > 0){
+    meanlinetype=c(2,3)
     progu <- progu %>%
       mutate(Indicator=ordering <= nshow) %>%
       # filter(ordering %in% c(1:20)) %>%
       mutate(ngen=as.integer(ngen),kval=as.factor(kval))
     tp <- tp +
-      geom_line(data=summary, aes(y=mean, x=ngen, linetype="Mean")) +
+      geom_line(data=summary, aes(y=mean, x=ngen, linetype=legend.name)) +
     geom_point(data=filter(progu,Indicator),aes(y=delta, x=ngen, shape=kval), size=.5) +
     geom_line(data=filter(progu,Indicator),
               aes(y=delta, x=ngen,# linetype="Individual Ordering",
@@ -101,13 +106,14 @@ plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0){
       guides(color = 'none')
   }
   else{
+    meanlinetype=c(1)
     print(names(summary))
     tp <- tp +
-      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=dataset)) 
+      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.name)) 
   }
   
   tp <- tp + 
-    scale_linetype_manual(name=paste0("Fit (",norder," Orderings)"),values=c(2)) +
+    scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) +
     theme_bw() +
     scale_x_continuous(breaks= scales::pretty_breaks(10)) +
     # scale_color_discrete(name = "Random Genome Ordering") +
@@ -149,9 +155,12 @@ plot_scatter <- function (item, ytitle, filename, heap, alpha, param, plotlog=T)
   #ggsave(filename=file.path(DIROUT, filename), plot=pl)
 }
 
-alpha <- function(progu.df){
+alpha <- function(progu.df, dataset="dataset"){
   # progu.df <- group_by (ngenmutate(progu.df, av)
-  avg.progu <- progu.df %>%
+  if (! dataset %in% colnames(progu.df)){
+    progu.df <- mutate(progu.df, dataset="dataset")
+  }
+  avg.progu <- progu.df %>% filter(dataset==dataset) %>%
     group_by(ordering) %>% 
     mutate(delta_delta=delta - lag(delta, default = delta[1])) %>%
     ungroup() %>% group_by(ngen) %>% 
