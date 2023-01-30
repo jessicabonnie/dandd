@@ -81,10 +81,11 @@ plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0){
   gcount=max(progu$ngen)
   norder=max(progu$ordering)
   
-  alphas <- sapply(unique(progu$dataset),function(x){as.numeric(alpha(progu,x))}, USE.NAMES = TRUE)
+  alphas <- sapply(unique(progu$dataset),function(x){as.numeric(alpha(filter(progu,dataset==x)))}, USE.NAMES = TRUE)
+print(alphas)
   summary <- summarize(group_by(progu, ngen, dataset), mean=mean(delta)) %>%
-    mutate(alpha=alphas[[dataset]]) %>% 
-    mutate(legend.name=paste0(dataset," (\u03b1=",format(alpha,digits=3),")"))
+    mutate(alpha=alphas[dataset]) %>% 
+    mutate(legend.name=paste0(dataset," (\u03b1=",round(alpha,3),")"))
 
   
   tp <-
@@ -109,7 +110,8 @@ plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0){
     meanlinetype=c(1)
     print(names(summary))
     tp <- tp +
-      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.name)) 
+      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.name),linetype=c(1)) +
+      scale_color_discrete(name = NULL) 
   }
   
   tp <- tp + 
@@ -120,7 +122,8 @@ plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0){
     xlab("Number of Genomes in Set") +
     ylab("Value of \u03b4*") +
     ggtitle(label=title)  +
-    scale_y_continuous(labels = scales::label_number_auto())
+    scale_y_continuous(labels = scales::label_number_auto()) +
+    theme(legend.position = c(.75,.25))
 
   return(tp)
 }
@@ -155,12 +158,12 @@ plot_scatter <- function (item, ytitle, filename, heap, alpha, param, plotlog=T)
   #ggsave(filename=file.path(DIROUT, filename), plot=pl)
 }
 
-alpha <- function(progu.df, dataset="dataset"){
+alpha <- function(progu.df){
   # progu.df <- group_by (ngenmutate(progu.df, av)
-  if (! dataset %in% colnames(progu.df)){
-    progu.df <- mutate(progu.df, dataset="dataset")
-  }
-  avg.progu <- progu.df %>% filter(dataset==dataset) %>%
+  # if (! dataset %in% colnames(progu.df)){
+  #   progu.df <- ungroup(mutate(progu.df, dataset="dataset"))
+  # }
+  avg.progu <- ungroup(progu.df) %>% 
     group_by(ordering) %>% 
     mutate(delta_delta=delta - lag(delta, default = delta[1])) %>%
     ungroup() %>% group_by(ngen) %>% 
