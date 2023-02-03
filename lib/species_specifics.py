@@ -47,6 +47,11 @@ class SpeciesSpecifics:
         # usual=os.path.join(self.sketchdir,self.tag+'_fastahex.pickle')
         # usual=self._fastahex_loc()
         return self.read_pickle(self._sketchinfo_loc())
+
+    def update(self, tool):
+        self.fastahex=self._read_fastahex()
+        self.cardkey=self._read_cardkey(tool=tool)
+        self.sketchinfo=self._read_sketchinfo()
     ##TODO: Consider creating self.keys dict object to track the keys and writing a single save function
     # def save_key(self,obj,name):
     #     pass

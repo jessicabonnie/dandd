@@ -56,7 +56,7 @@ def progressive_command(args):
     dtree.experiment["debug"] = args.debug
     dtree.experiment["safety"] = args.safety
     dtree.experiment["fast"] = args.fast
-    # dtree.speciesinfo.kstart=25
+    dtree.speciesinfo.update(tool=dtree.experiment["tool"])
     results, summary=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
     
     write_listdict_to_csv(outfile=args.outfile+'.csv', listdict=results)
