@@ -158,7 +158,20 @@ plot_scatter <- function (item, ytitle, filename, heap, alpha, param, plotlog=T)
   #ggsave(filename=file.path(DIROUT, filename), plot=pl)
 }
 
+
+
+alphas <- function(progu){
+  output <- sapply(unique(progu$dataset),
+                   function(x){as.numeric(alpha(filter(progu,dataset==x)))}, USE.NAMES = TRUE)
+return(output)
+}
+
+
 alpha <- function(progu.df){
+  avg.progu <- ungroup(progu.df) 
+  if (! "mean_delta" %in% colnames(progu.df)){
+    avg.progu <- progu
+  }
   # progu.df <- group_by (ngenmutate(progu.df, av)
   # if (! dataset %in% colnames(progu.df)){
   #   progu.df <- ungroup(mutate(progu.df, dataset="dataset"))
