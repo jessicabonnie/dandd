@@ -50,3 +50,9 @@ This creates `sketchdb/small_fish_5_orderings.pickle` containing the orderings. 
 ../lib/dandd_cmd.py progressive --dtree small_fish_5_dashing_dtree.pickle --norder 30 
 ```
 
+### K-Independent Jaccard
+If we wish to calculate the K-Independent Jaccard (KIJ) for our set, we use the `kij` command. If we also want the non-k independent pairwise jaccard values we use the `--jaccard` flag and provide a window of `--mink` and `--maxk` over which we would like our non-k independent Jaccards to be calculated.
+
+```
+../lib/dandd_cmd.py kij --dtree small_fish_5_dashing_dtree.pickle
+```

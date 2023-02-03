@@ -626,7 +626,7 @@ class DeltaTree:
                 summary.extend(ospider.summarize())
 
         return output, summary
-    def pairwise_spiders(self, sublist=[], mink=0, maxk=0):
+    def pairwise_spiders(self, sublist=[], mink=0, maxk=0, jaccard=True):
         '''Create values for K-Independent-Jaccard. '''
         # super_spider=self.to_spider()
 
@@ -638,13 +638,16 @@ class DeltaTree:
         new_experiment = self.experiment.copy()
         new_experiment.update({'fast': False , 'safe': False})
         for pair in pairings:
-
             pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=new_experiment)
-            pspider.ksweep(mink=mink, maxk=maxk)
+            
             kij_results.append(pspider.kij_summarize())
+            if jaccard:
+                pspider.ksweep(mink=mink, maxk=maxk)
+                j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))  
             j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))  
-        self.speciesinfo.save_references(fast=self.experiment['fast'])
-        self.speciesinfo.save_cardkey(tool=new_experiment["tool"],fast=new_experiment['fast'])
+                j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))  
+        # self.speciesinfo.save_references(fast=self.experiment['fast'])
+        # self.speciesinfo.save_cardkey(tool=new_experiment["tool"],fast=new_experiment['fast'])
         return kij_results, j_results
 
     def prepare_AFproject(self, kijsummary, jsummary):

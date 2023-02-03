@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import huffman_dandd
 from huffman_dandd import write_listdict_to_csv
@@ -43,10 +44,7 @@ def tree_command(args):
 
     fileprefix = dtree.make_prefix(outdir=args.outdir, tag=args.tag, label=args.label)
     dtree.save(fileprefix=fileprefix, fast=args.fast)
-    #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
-    # explist=[dtree.speciesinfo.sketchinfo[item] for item in list(dtree.experiment["baseset"])]
-    # expmaploc=os.path.join(args.outdir,  args.tag + "_" + str(self.ngen) + "_" + self.experiment["tool"] + '_sketchdb.txt')
-    # write_listdict_to_csv(outfile=args.outdir, tag=args.tag, label=args.label)
+   
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -81,15 +79,18 @@ def info_command(args):
 
 def kij_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
+    if not args.outfile:
+        args.outfile = dtree.make_prefix(tag=dtree.speciesinfo.tag, label=f"abba")
     fastas=[]
     if args.flist_loc:
         with open(args.flist_loc) as file:
             fastas = [line.strip() for line in file]
 
     dtree.ksweep(mink=args.mink,maxk=args.maxk)
-    kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk)
+    kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk, jaccard=args.jaccard)
     write_listdict_to_csv(outfile=args.outfile+".kij.csv", listdict=kij_results)
-    #write_listdict_to_csv(outfile=args.outfile+".j.csv", listdict=j_results)
+    if args.jaccard:
+        write_listdict_to_csv(outfile=args.outfile+".j.csv", listdict=j_results)
     j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
     #print(j_and_kij_summ)
     
@@ -227,7 +228,7 @@ def parse_arguments():
 
     tree_parser.add_argument("-r", "--registers", dest="registers", metavar="INTEGER", default=20, help="number of registers to use during sketching")
 
-    tree_parser.add_argument("-e", "--nthreads", dest="nthreads", metavar="INTEGER", type=int, default=10, help="number of threads to use in calls to associated kmer counting/estimating tool")
+    tree_parser.add_argument("-e", "--nthreads", dest="nthreads", metavar="INTEGER", type=int, default=10, help="number of threads to use in calls to KMC ONLY. Dashing is not currently set to use threads.")
 
 
     tree_parser.add_argument("-C", "--no-canon", action="store_false", default=True,  dest="canonicalize", help="instruct dashing to use non-canonicalized kmers")
@@ -248,6 +249,9 @@ def parse_arguments():
     progressive_parser.add_argument("-n", "--norderings", dest="norderings", default=0, type=int, help="number of random orderings to explore. If not provided, the orderings stored in the ordering pickle will be used. If that file does not exist / is not provided, program will terminate.")
 
     progressive_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path prefix to write the output tables and tree.")
+
+    progressive_parser.add_argument( "--ksweep", dest="ksweep", default=False,
+    action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
 
     # progressive_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
@@ -306,7 +310,7 @@ def parse_arguments():
 
     kij_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, type=int, default=10, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    kij_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, type=int, default=32, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    kij_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, type=int, default=20, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     kij_parser.set_defaults(func=kij_command)
 
