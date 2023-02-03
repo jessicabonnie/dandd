@@ -214,15 +214,15 @@ def parse_arguments():
 
     tree_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
-    tree_parser.add_argument("-c", "--sketchdir", dest="sketchdir", default=None, help="sketch directory for species", type=str, metavar="SKETCHDIR")
+    tree_parser.add_argument("-c", "--sketchdir", dest="sketchdir", default=None, help="sketch directory to use for experiment. Default to sketchdb inside the top level output directory", type=str, metavar="SKETCHDIR")
 
     tree_parser.add_argument("-k", "--kstart", dest="kstart", default=12, help="kmer length at which to start the search for delta (different species have different optimal k values)", type=int, metavar="INT")
     
-    tree_parser.add_argument("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout. NOT IMPLEMENTED.")
+    # tree_parser.add_argument("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout. NOT IMPLEMENTED.")
 
     tree_parser.add_argument("-f", "--fastas", dest="flist_loc", metavar="FILE", type=str, default=None, help="filepath to a subset of fasta files to use in the species directory -- no title, one per line")
 
-    tree_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default="", help="NOT IMPLEMENTED. label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list). NOT IMPLEMENTED", required=False)
+    tree_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default="", help="NOT IMPLEMENTED. label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False)
 
     tree_parser.add_argument("-n", "--nchildren", dest="nchildren", metavar="INTEGER", type=int, default=None, help="number of children for each node in the delta tree -- default is to create a tree of only 2 levels with all individual sketches as the children of the root node.")
 
@@ -271,7 +271,7 @@ def parse_arguments():
 
     info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    info_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
+    info_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, default will use the tag for the provided tree.")
 
 
     info_parser.set_defaults(func=info_command)
