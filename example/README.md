@@ -19,10 +19,16 @@ The first step will be to create intial sketches of the fasta files and find del
 ../lib/dandd_cmd.py tree --datadir ./assembled-fish_mito --tag fish-mito
 
 ```
-The table of delta values for the sketches is saved to: `fish-mito_25_dashing_deltas.csv`. The `sketchdb` directory contains the dashing sketches pertaining to everything run in this output directory, as well as the `fastahex.pickle` and `sketchinfo.pickle` with metadata for DandD to track them. For a human readable table tracking the fastas and their associated sketches for each experiment see `{experiment_tag}_{#fastas}_{tool}_sketchdb.txt`.
+The table of delta values for the sketches is saved to: `fish-mito_25_dashing_deltas.csv`. The `sketchdb` directory contains the dashing sketches pertaining to everything run in this output directory, as well as the `fastahex.pickle` and `sketchinfo.pickle` with metadata for DandD to track them. For a human readable table tracking the fastas and their associated sketches for each experiment see `fish-mito_25_dashing_sketchdb.txt`. (`{experiment_tag}_{#fastas}_{tool}_sketchdb.txt`)
+
+## Children
+DandD will default to unioning all of the sketches/databases at once to obtain n+1 deltas. You can also ask it to combine them in a tree-like manner by indicating the maximum number of childnodes that should be combined at each level.
+```
+../lib/dandd_cmd.py tree --datadir ./assembled-fish_mito --tag fish-mito --nchildren 2
+```
 
 ## SubTree
-Suppose you are only interested in a subset of the fastas for a particular experiment? You can do that too! DandD will use the sketches already produced to create this smaller tree.
+Suppose you are only interested in a subset of the fastas for a particular experiment? You can do that too! DandD will use the sketches already produced to create this smaller tree. You will note that the only sketching/kmer counting being performed is on the union of the subset.  
 
 ```
 realpath ./assembled-fish_mito/* | head -n5 > fish_subset.txt
