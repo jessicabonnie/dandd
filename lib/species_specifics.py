@@ -13,7 +13,7 @@ class SpeciesSpecifics:
         self.species=self._resolve_species()
         self.fastahex=self._read_fastahex()
         self.cardkey=self._read_cardkey(tool=tool)
-        self.inputdir=self._locate_input(genomedir)
+        self.inputdir=genomedir
         self.card0 = []
         self.kstart = kstart
         self.orderings = None
@@ -71,7 +71,7 @@ class SpeciesSpecifics:
     #         dict_writer.writerows(expdict)
         # writer.close()
         
-    def save_references(self, fast=True):
+    def save_references(self, fast=False):
         if not fast:
             self._save_fastahex()
             self._save_sketchinfo()
@@ -91,6 +91,8 @@ class SpeciesSpecifics:
         '''Store cardinalities in species specific pickle'''
         if not fast:
             cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
+            #cardkey=self._read_cardkey(tool)
+            #self.cardkey.update(cardkey)
             with open(cardpath,"wb") as f:
                 pickle.dump(file=f, obj=self.cardkey)
             
@@ -102,16 +104,6 @@ class SpeciesSpecifics:
         # os.warnings("FOR SOME REASON I DON'T RECOGNIZE THAT SPECIES TAG!!!")
         return self.tag
     
-    def _locate_input(self, genomedir: str):
-        '''Determine if there is a subdirectory structure in the input directory (current applies to HVSVC2 inputs)'''
-        
-        #grandfather in some old code
-        if os.path.exists(os.path.join(genomedir, self.species)):
-            if self.species == 'HVSVC2':
-                return os.path.join(genomedir, self.species, self.tag.replace('HVSVC2','consensus'))
-            return(os.path.join(genomedir, self.tag))
-        else:
-            return os.path.join(genomedir)
         
     # def check_cardinality(self, fullpath):
     #     '''NOT IN USE. Check if cardinality has already been calculated for a sketch. If so, return it, if not add it to a list of cardinalities to be calculated and then return 0'''
