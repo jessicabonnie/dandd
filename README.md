@@ -3,7 +3,11 @@ Tool to estimate deltas for sequence sets and answer questions about relative co
 
 ## Installation
 **Note**: The version of *Dashing* currently available on bioconda is **not** recent enough. Please install the latest version from github
-: [https://github.com/dnbaker/dashing](https://github.com/dnbaker/dashing)
+: [https://github.com/dnbaker/dashing](https://github.com/dnbaker/dashing):  
+```
+git clone --recursive https://github.com/dnbaker/dashing  
+cd dashing && make dashing
+```
 
 
 ## File Output 
