@@ -22,7 +22,7 @@ from subprocess import PIPE
 import argparse
 import multiprocessing as mp
 # you may have to pip or conda install this
-from ete3 import Tree
+# from ete3 import Tree
 
 
 # assume they're in PATH
@@ -218,60 +218,60 @@ def mash_distance(j, k):
         raise RuntimeError('Could not compute mash distance for k=%d, j=%f' % (k, j))
 
 
-def run_fneighbor(phylip_fn, tree_fn_base, seqid_to_treid, ref_tree_fn,
-                  rename_seqs=False, fneighbor_exe=None, nreplicates=1, debug=False):
-    """
-    mamba install embassy-phylip
-    fneighbor -datafile input.phylip -outfile output.fneighbor \
-        -outtreefile output.newick -matrixtype l -jumble -seed N
-    """
-    if fneighbor_exe is None:
-        fneighbor_exe = shutil.which("fneighbor")
-    if fneighbor_exe is None:
-        raise RuntimeError('Could not find fneighbor binary in path')
-    results = []
-    for i in range(nreplicates):
-        seed = i * 2 + 1
-        fneighbor_fn = '%s.%d.fneighbor' % (tree_fn_base, seed)
-        tree_fn = '%s.%d.newick' % (tree_fn_base, seed)
-        cmd = '%s -datafile %s -outfile %s -outtreefile %s -matrixtype l -jumble -seed %d' % \
-              (fneighbor_exe, phylip_fn, fneighbor_fn, tree_fn + '.tmp', seed)
-        ret = os.system(cmd)
-        if debug:
-            print(cmd)
-        if ret != 0:
-            raise RuntimeError('Non-zero return code (%d) from command "%s"' % (ret, cmd))
-        assert os.path.exists(fneighbor_fn)
-        assert os.path.exists(tree_fn + '.tmp')
-        if rename_seqs:
-            with open(tree_fn, 'wt') as tree_fh:
-                orig_tree = open(tree_fn + '.tmp', 'rt').read()
-                output_tree = rename_seqids_in_tree(orig_tree, seqid_to_treid)
-                print(output_tree, file=tree_fh)
-        else:
-            shutil.copyfile(tree_fn + '.tmp', tree_fn)
-        nrf, rf, max_rf = ete_compare(tree_fn, ref_tree_fn)
-        results.append([nrf, rf, max_rf])
-    return results
+# def run_fneighbor(phylip_fn, tree_fn_base, seqid_to_treid, ref_tree_fn,
+#                   rename_seqs=False, fneighbor_exe=None, nreplicates=1, debug=False):
+#     """
+#     mamba install embassy-phylip
+#     fneighbor -datafile input.phylip -outfile output.fneighbor \
+#         -outtreefile output.newick -matrixtype l -jumble -seed N
+#     """
+#     if fneighbor_exe is None:
+#         fneighbor_exe = shutil.which("fneighbor")
+#     if fneighbor_exe is None:
+#         raise RuntimeError('Could not find fneighbor binary in path')
+#     results = []
+#     for i in range(nreplicates):
+#         seed = i * 2 + 1
+#         fneighbor_fn = '%s.%d.fneighbor' % (tree_fn_base, seed)
+#         tree_fn = '%s.%d.newick' % (tree_fn_base, seed)
+#         cmd = '%s -datafile %s -outfile %s -outtreefile %s -matrixtype l -jumble -seed %d' % \
+#               (fneighbor_exe, phylip_fn, fneighbor_fn, tree_fn + '.tmp', seed)
+#         ret = os.system(cmd)
+#         if debug:
+#             print(cmd)
+#         if ret != 0:
+#             raise RuntimeError('Non-zero return code (%d) from command "%s"' % (ret, cmd))
+#         assert os.path.exists(fneighbor_fn)
+#         assert os.path.exists(tree_fn + '.tmp')
+#         if rename_seqs:
+#             with open(tree_fn, 'wt') as tree_fh:
+#                 orig_tree = open(tree_fn + '.tmp', 'rt').read()
+#                 output_tree = rename_seqids_in_tree(orig_tree, seqid_to_treid)
+#                 print(output_tree, file=tree_fh)
+#         else:
+#             shutil.copyfile(tree_fn + '.tmp', tree_fn)
+#         nrf, rf, max_rf = ete_compare(tree_fn, ref_tree_fn)
+#         results.append([nrf, rf, max_rf])
+#     return results
 
 
-def ete_compare(usr_tree_str, ref_tree_str, outgroup_id=None):
-    """
-    This code was adapted from https://github.com/afproject-org/afproject/blob/master/libs/treeutils.py
-    Available under a Mozilla Public License
-    The code is used in publicly available webservice AFproject (http://afproject.org).
-    """
-    qt = Tree(open(usr_tree_str, 'rt').read())
-    rt = Tree(open(ref_tree_str, 'rt').read())
-    if outgroup_id:
-        qt.set_outgroup(outgroup_id)
-        rt.set_outgroup(outgroup_id)
-    res = qt.compare(rt, unrooted=False if outgroup_id else True)
-    rf = res["rf"]
-    max_rf = res["max_rf"]
-    nrf = res["norm_rf"]
-    assert len(res["common_edges"]) > 0
-    return nrf, rf, max_rf
+# def ete_compare(usr_tree_str, ref_tree_str, outgroup_id=None):
+#     """
+#     This code was adapted from https://github.com/afproject-org/afproject/blob/master/libs/treeutils.py
+#     Available under a Mozilla Public License
+#     The code is used in publicly available webservice AFproject (http://afproject.org).
+#     """
+#     qt = Tree(open(usr_tree_str, 'rt').read())
+#     rt = Tree(open(ref_tree_str, 'rt').read())
+#     if outgroup_id:
+#         qt.set_outgroup(outgroup_id)
+#         rt.set_outgroup(outgroup_id)
+#     res = qt.compare(rt, unrooted=False if outgroup_id else True)
+#     rf = res["rf"]
+#     max_rf = res["max_rf"]
+#     nrf = res["norm_rf"]
+#     assert len(res["common_edges"]) > 0
+#     return nrf, rf, max_rf
 
 
 def rename_seqids_in_tree(orig_tree, seqid_to_treid):
@@ -409,19 +409,19 @@ def go():
             summ_to_phylip(summ, seqid_to_treid, fn)
             assert os.path.exists(fn)
 
-        # write fneighbor tree output for 1-Jaccard / 1-KIJ
-        j_tree_fn = _customize_fn(args.j_tree)
-        if args.j_tree:
-            assert args.j_tree_compare is not None
-            j_stats_fn = _customize_fn(args.j_tree_compare)
-            phylip_fn = _customize_fn(args.j_results_phylip)
-            stats = run_fneighbor(phylip_fn, j_tree_fn, seqid_to_treid, args.ref_tree,
-                                  rename_seqs=args.rename_seqs,
-                                  fneighbor_exe=args.fneighbor,
-                                  nreplicates=args.fneighbor_replicates)
-            with open(j_stats_fn, 'wt') as fh:
-                for i, (nrf, rf, max_rf) in enumerate(stats):
-                    print('\t'.join(map(str, ['j', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
+        # # write fneighbor tree output for 1-Jaccard / 1-KIJ
+        # j_tree_fn = _customize_fn(args.j_tree)
+        # if args.j_tree:
+        #     assert args.j_tree_compare is not None
+        #     j_stats_fn = _customize_fn(args.j_tree_compare)
+        #     phylip_fn = _customize_fn(args.j_results_phylip)
+        #     stats = run_fneighbor(phylip_fn, j_tree_fn, seqid_to_treid, args.ref_tree,
+        #                           rename_seqs=args.rename_seqs,
+        #                           fneighbor_exe=args.fneighbor,
+        #                           nreplicates=args.fneighbor_replicates)
+        #     with open(j_stats_fn, 'wt') as fh:
+        #         for i, (nrf, rf, max_rf) in enumerate(stats):
+        #             print('\t'.join(map(str, ['j', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
 
         # write Phylip output for ANI
         if args.ani_results_phylip:
@@ -429,19 +429,19 @@ def go():
             summ_to_phylip(summ, seqid_to_treid, fn, convert_to_ani=True)
             assert os.path.exists(fn)
 
-        # write fneighbor tree output for ANI
-        ani_tree_fn = _customize_fn(args.ani_tree)
-        if args.ani_tree:
-            assert args.ani_tree_compare is not None
-            ani_stats_fn = _customize_fn(args.ani_tree_compare)
-            phylip_fn = _customize_fn(args.ani_results_phylip)
-            stats = run_fneighbor(phylip_fn, ani_tree_fn, seqid_to_treid, args.ref_tree,
-                                  rename_seqs=args.rename_seqs,
-                                  fneighbor_exe=args.fneighbor,
-                                  nreplicates=args.fneighbor_replicates)
-            with open(ani_stats_fn, 'wt') as fh:
-                for i, (nrf, rf, max_rf) in enumerate(stats):
-                    print('\t'.join(map(str, ['ani', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
+        # # write fneighbor tree output for ANI
+        # ani_tree_fn = _customize_fn(args.ani_tree)
+        # if args.ani_tree:
+        #     assert args.ani_tree_compare is not None
+        #     ani_stats_fn = _customize_fn(args.ani_tree_compare)
+        #     phylip_fn = _customize_fn(args.ani_results_phylip)
+        #     stats = run_fneighbor(phylip_fn, ani_tree_fn, seqid_to_treid, args.ref_tree,
+        #                           rename_seqs=args.rename_seqs,
+        #                           fneighbor_exe=args.fneighbor,
+        #                           nreplicates=args.fneighbor_replicates)
+        #     with open(ani_stats_fn, 'wt') as fh:
+        #         for i, (nrf, rf, max_rf) in enumerate(stats):
+        #             print('\t'.join(map(str, ['ani', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
 
 
 if __name__ == '__main__':

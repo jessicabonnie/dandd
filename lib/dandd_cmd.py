@@ -7,7 +7,8 @@ import os
 # from tabulate import tabulate
 import csv
 from typing import List, Dict, Set, Tuple, NamedTuple
-from allpairs import summ_to_phylip, run_fneighbor
+from allpairs import summ_to_phylip
+# from allpairs import run_fneighbor
 import json
 
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
@@ -175,15 +176,15 @@ def phylogeny_comparison(args, datadir, j_and_kij_summ):
             assert os.path.exists(fn)
 
         # write fneighbor tree output for 1-Jaccard / 1-KIJ
-        j_tree_fn = _customize_fn(args.j_tree)
-        if args.j_tree:
-            assert args.j_tree_compare is not None
-            j_stats_fn = _customize_fn(args.j_tree_compare)
-            phylip_fn = _customize_fn(args.j_results_phylip)
-            stats = run_fneighbor(phylip_fn, j_tree_fn, seqid_to_treid, args.ref_tree, fneighbor_exe=args.fneighbor, nreplicates=args.fneighbor_replicates)
-            with open(j_stats_fn, 'wt') as fh:
-                for i, (nrf, rf, max_rf) in enumerate(stats):
-                    print('\t'.join(map(str, ['j', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
+        # j_tree_fn = _customize_fn(args.j_tree)
+        # if args.j_tree:
+        #     assert args.j_tree_compare is not None
+        #     j_stats_fn = _customize_fn(args.j_tree_compare)
+        #     phylip_fn = _customize_fn(args.j_results_phylip)
+        #     stats = run_fneighbor(phylip_fn, j_tree_fn, seqid_to_treid, args.ref_tree, fneighbor_exe=args.fneighbor, nreplicates=args.fneighbor_replicates)
+        #     with open(j_stats_fn, 'wt') as fh:
+        #         for i, (nrf, rf, max_rf) in enumerate(stats):
+        #             print('\t'.join(map(str, ['j', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
 
 
 def parse_arguments():
