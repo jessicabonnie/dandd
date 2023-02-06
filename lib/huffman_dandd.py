@@ -644,8 +644,7 @@ class DeltaTree:
             if jaccard:
                 pspider.ksweep(mink=mink, maxk=maxk)
                 j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))  
-            j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))  
-                j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))  
+              
         # self.speciesinfo.save_references(fast=self.experiment['fast'])
         # self.speciesinfo.save_cardkey(tool=new_experiment["tool"],fast=new_experiment['fast'])
         return kij_results, j_results
