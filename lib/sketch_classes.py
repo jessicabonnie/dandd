@@ -1,16 +1,16 @@
 from species_specifics import SpeciesSpecifics
 import os
 import hashlib
-import warnings
 import subprocess
 import csv
-import sys
 import tempfile
 import shutil
 
-DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
+# This assumes that the command for dashing has been aliased
+DASHINGLOC="dashing" 
 
 def blake2b(fname):
+    '''Create a blake2b hexsum from a file'''
     hash_blake2b = hashlib.blake2b()
     with open(fname, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
@@ -18,19 +18,21 @@ def blake2b(fname):
     return hash_blake2b.hexdigest()
 
 def canon_command(canon:bool, tool='dashing'):
-        outstr=''
-        if not canon:
-            if tool == 'dashing':
-                outstr='--no-canon'
-            if tool == 'kmc':
-                outstr='-b'
-        return outstr
+    '''Determine what should be added to sketching command when not canonicalizing
+    '''
+    outstr=''
+    if not canon:
+        if tool == 'dashing':
+            outstr='--no-canon'
+        if tool == 'kmc':
+            outstr='-b'
+    return outstr
 
 
 def parallel_progeny_command(sketchdir, kval:int, experiment) -> str:
     '''Produce the necessary leaf sketches for a node further up the tree in a single batch command to dashing/kmc
     NOTE: NOT CURRENTLY USED'''
-        # fasta_list="\n".join(self._sfp.ffiles)
+        # fasta_list="\n".join(self.sfp.ffiles)
     if experiment["tool"] == "dashing":
         progeny_dir=os.path.join(sketchdir, "ngen" + str(1),"k"+ str(kval))
         cmdlist = [ DASHINGLOC, "sketch", 
@@ -61,7 +63,7 @@ class SketchFilePath:
         self.ngen = len(filenames)
         self.dir = os.path.join(speciesinfo.sketchdir, "ngen" + str(self.ngen),"k"+ str(kval))
         #self.baseold = self.nameSketch(speciesinfo=speciesinfo, kval=kval)
-        self.base =self.assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'], tool=experiment['tool'], safety=experiment['safety'])
+        self.base =self._assign_base(speciesinfo=speciesinfo, kval=kval, registers=experiment['registers'], canonicalize=experiment['canonicalize'], tool=experiment['tool'], safety=experiment['safety'])
         self.relative = os.path.join("ngen" + str(self.ngen),"k"+ str(kval),self.base)+ self._get_ext(experiment['tool'])
         # self.full = os.path.join(speciesinfo.sketchdir, self.relative)
         self.full = os.path.join(self.dir, self.base)+ self._get_ext(experiment['tool'])
@@ -80,7 +82,8 @@ class SketchFilePath:
             raise ValueError("is there another option for tool other than kmc or dashing?")
         return ext
         
-    def hashsum(self, speciesinfo:SpeciesSpecifics):
+    def _hashsum(self, speciesinfo:SpeciesSpecifics):
+        '''Calculate the blake2b hexsum of an individual fastas or sum the hexsums of component fastas to create hexidecimal identifiers for combinations of fastas'''
         if self.ngen == 1:
             output= blake2b(self.ffiles[0])
         else:
@@ -90,33 +93,28 @@ class SketchFilePath:
             output= hex(sum)
         return output
         
-    def assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool, tool:str, safety=False):
+    def _assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool, tool:str, safety=False) -> str:
         '''determine the base file name for the sketch using the properties that will be used to generate it'''
         fnames_key=''.join(self.files)
         # if the key (made by joining the ingredient filenames) isn't already in the fastahex dictionary mapping the combination of those files to a hexsum, calculate that hexsum and add it to the fastahex key
         if fnames_key not in speciesinfo.fastahex.keys():
-            speciesinfo.fastahex[fnames_key]= self.hashsum(speciesinfo)   
+            speciesinfo.fastahex[fnames_key]= self._hashsum(speciesinfo)   
             stored_val=speciesinfo.fastahex[fnames_key]
         # if the key is there, calculate what we expect the hashsum value to be based on the hexes of the components -- this is just to confirm that nothing has gotten confused somehow
         else:
             stored_val=speciesinfo.fastahex[fnames_key]
             if safety:
-                checkval=self.hashsum(speciesinfo)
+                checkval=self._hashsum(speciesinfo)
                 if checkval != stored_val:
                     raise RuntimeError(f"Checksum does not match stored value for {fnames_key}: {checkval}, {stored_val}")
         # if the sketch is of a single input file, dashing will insist on naming it something specific, so we will use that base as a name for both dashing and kmc to make life easier
         if self.ngen == 1:
-            # sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
             if tool == 'dashing':
                 sketchbase=self.files[0] + ".w." + str(kval) + ".spacing." + str(registers)
             else:
                 sketchbase=self.files[0] + "_k" + str(kval)
                 if not canonicalize:
                     sketchbase=sketchbase+'nc'
-                # os.rename(os.path.join(self.dir,sketchbase+".kmc_pre"), os.path.join(self.dir,sketchbase2+".kmc_pre"))
-                # os.rename(os.path.join(self.dir,sketchbase+".kmc_suf"), os.path.join(self.dir,sketchbase2+".kmc_suf"))
-                
-                # sketchbase=sketchbase2
         # if sketch is of a combination of sketches, add a tag that will differentiate it from other combinations of the same sketches composed using different register counts or kvalues. Also guard against the low probability chance that there are overlapping hexsums of different numbers of fasta inputs
         else:
             suffix = str(registers) + "n" + str(self.ngen) + "k" + str(kval)
@@ -156,7 +154,7 @@ class SketchObj(object):
         self.kval = kval
         self.sketch = None
         self.cmd = None
-        self._sfp = sfp
+        self.sfp = sfp
         self.speciesinfo=speciesinfo
         experiment['baseset'].add(sfp.base)
         self.experiment=experiment
@@ -174,21 +172,18 @@ class SketchObj(object):
     def __repr__(self):
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
-    # def sketch_usable(self) -> bool:
-        # raise NotImplementedError
-    
     def sketch_check(self)->bool:
         raise NotImplementedError("Subclass needs to define this.")
         
-    def leaf_command(self, tmpdir) -> str:
+    def _leaf_command(self, tmpdir) -> str:
         raise NotImplementedError("Subclass needs to define this.")
     def command_check(self):
         pass
 
-    def leaf_sketch(self, just_do_it=False):
+    def _leaf_sketch(self, just_do_it=False):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
         tmpdir=tempfile.mkdtemp()
-        cmd = self.leaf_command(tmpdir=tmpdir)
+        cmd = self._leaf_command(tmpdir=tmpdir)
         if self.experiment['debug']:
             print(cmd)
         if just_do_it:
@@ -197,7 +192,6 @@ class SketchObj(object):
             print("Just did it.")
             self.cmd=cmd
         elif not self.sketch_check():
-            # print("The sketch file {0} either doesn't exist or is empty".format(self._sfp.full))
             subprocess.call(cmd, shell=True)
             self.cmd=cmd
             
@@ -209,41 +203,36 @@ class SketchObj(object):
         #print(self.cmd)
     #     filename =os.path.basename(filename)
     
-    def union_command(self)->str:
+    def _union_command(self)->str:
         raise NotImplementedError("Subclass needs to define this.")
 
     
-    def union_sketch(self, just_do_it=False):
+    def _union_sketch(self, just_do_it=False):
         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
-        cmd = self.union_command()
+        cmd = self._union_command()
         if just_do_it:
             subprocess.call(cmd, shell=True)
             self.cmd = cmd
-            # subprocess.call(cmd, shell=True)
         elif not self.sketch_check():
-            # print(f"The sketch file {self._sfp.full} either doesn't exist or is empty")
-            #self.cmd=subprocess.run(cmdlist)
+            # print(f"The sketch file {self.sfp.full} either doesn't exist or is empty")
             subprocess.call(cmd, shell=True)
-            # subprocess.call(cmd, shell=True)
             self.cmd = cmd
         
         self.cmd = cmd
-            #" ".join(cmdlist)
         if self.experiment['debug']:
             print(self.cmd)
-    ##TODO: make leaf sketch and union sketch private
         
     def create_sketch(self, just_do_it=False):
         ''' If sketch file exists, assign path to self.sketch and return path. 
             If not create sketch, assign, and then return path.'''
-        if self._sfp.ngen == 1:
-            self.leaf_sketch(just_do_it=just_do_it)
-        elif self._sfp.ngen > 1:
-            self.union_sketch(just_do_it=just_do_it)
+        if self.sfp.ngen == 1:
+            self._leaf_sketch(just_do_it=just_do_it)
+        elif self.sfp.ngen > 1:
+            self._union_sketch(just_do_it=just_do_it)
         else:
             raise RuntimeError("For some reason you are trying to sketch an empty list of files. Don't do that.")
         
-        self.sketch = self._sfp.full
+        self.sketch = self.sfp.full
         return self.sketch
     
     def card_command(self, sketch_paths=[]):
@@ -253,13 +242,13 @@ class SketchObj(object):
 
     def individual_card(self):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
-        cmd = self.card_command()#[self._sfp.full])
+        cmd = self.card_command()#[self.sfp.full])
         if self.experiment['debug']:
             print(cmd)
         try:
             proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, check=True,universal_newlines=True)
         except subprocess.CalledProcessError:
-            # warnings.warn(message=f"{self._sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=RuntimeWarning)
+            # warnings.warn(message=f"{self.sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=RuntimeWarning)
             self.create_sketch(just_do_it=True)
             # print("recreated sketch")
             proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True)
@@ -269,16 +258,10 @@ class SketchObj(object):
     def check_cardinality(self, delay=False):
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. NOTE: delay argument not implemented relates to idea of a way to batch the card command by attatching the sketch to a card0 sketch list attached to the SpeciesSpecifics object'''
         
-        if self._sfp.full not in self.speciesinfo.cardkey.keys():
+        if self.sfp.full not in self.speciesinfo.cardkey.keys():
             print("Sketch File Path is not in cardkey.")
-        # if speciesinfo.cardkey[self._sfp.full] == 0:
-            # print("second criterion")
-        if self._sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self._sfp.full] == 0:
+        if self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0:
             self.individual_card()
-            # if delay and self._sfp.full not in speciesinfo.card0:
-            #     speciesinfo.card0.append(self._sfp.full)
-            #     return 0
-            # else:
         return float(self.speciesinfo.cardkey[self.sketch])
     
     # def summarize(self):
@@ -305,30 +288,29 @@ class DashSketchObj(SketchObj):
     def sketch_check(self) -> bool:
         '''Check that sketch at full path exists and is not empty'''
         
-        if os.path.exists(self._sfp.full) and os.stat(self._sfp.full).st_size != 0:
+        if os.path.exists(self.sfp.full) and os.stat(self.sfp.full).st_size != 0:
             return True
         else:
             return False
     
     
-    def leaf_command(self, tmpdir) -> str:
+    def _leaf_command(self, tmpdir) -> str:
         '''Command string to produce the sketch from a fasta based on the information used to initiate the sketch obj'''
         cmdlist = [DASHINGLOC, "sketch", 
         canon_command(self.experiment['canonicalize'], "dashing"),
         "-k" + str(self.kval), 
         "-S",str(self.experiment['registers']),
         #  f"-p{self.experiment['nthreads']}",
-         "--prefix", str(self._sfp.dir),
-          self._sfp.ffiles[0]]
+         "--prefix", str(self.sfp.dir),
+          self.sfp.ffiles[0]]
                 #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
         cmd = " ".join(cmdlist)
         return cmd
-
     
-    def union_command(self) -> str:
+    def _union_command(self) -> str:
         '''Returns bash command to create a union sketch'''
         cmdlist = [DASHINGLOC, "union", #f"-p{self.experiment['nthreads']}",
-        "-z -o", str(self._sfp.full)] + self._presketches
+        "-z -o", str(self.sfp.full)] + self._presketches
         cmd = " ".join(cmdlist)
         return cmd
         
@@ -353,26 +335,26 @@ class KMCSketchObj(SketchObj):
         cmd = " ".join(cmdlist)
         return cmd
     def sketch_check(self) -> bool:
-        if (os.path.exists(self._sfp.full +".kmc_pre")) and (os.path.exists(self._sfp.full +".kmc_suf")) and os.stat(self._sfp.full +".kmc_suf").st_size != 0:
+        if (os.path.exists(self.sfp.full +".kmc_pre")) and (os.path.exists(self.sfp.full +".kmc_suf")) and os.stat(self.sfp.full +".kmc_suf").st_size != 0:
             return True
         else:
             return False
 
-    def leaf_command(self,tmpdir) -> str:
+    def _leaf_command(self,tmpdir) -> str:
         cmdlist = ['kmc -t'+ str(self.experiment['nthreads']),
         '-ci1 -cs2',f'-k{str(self.kval)}',
         canon_command(canon=self.experiment['canonicalize'], tool="kmc"),
-        '-fm', self._sfp.ffiles[0], self._sfp.full, tmpdir]
+        '-fm', self.sfp.ffiles[0], self.sfp.full, tmpdir]
         cmd = " ".join(cmdlist)
         return cmd
 
-    def union_command(self) -> str:
+    def _union_command(self) -> str:
         complex_input = "INPUT: \n"
         inputn=1
         for sketch in self._presketches:
             complex_input = complex_input + f"input{inputn} = {sketch} -ci1   \n"
             inputn+=1
-        complex_input = complex_input + f"OUTPUT:\n{self._sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
+        complex_input = complex_input + f"OUTPUT:\n{self.sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
         cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-t"+ str(self.experiment['nthreads']), "complex", "/dev/stdin"]
         cmd = " ".join(cmdlist)
         return cmd

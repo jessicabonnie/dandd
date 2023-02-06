@@ -1,62 +1,49 @@
-#import parallel
-#import random
-#from ast import Str
 import sys
 import os
 import pickle
-#import hashlib
-#import warnings
-#import re
-import subprocess
 import csv
-# from multiprocessing import Process, Pool
 from random import sample, shuffle
-# from numpy import unique
-# import pandas as pd
 from species_specifics import SpeciesSpecifics
-from sketch_classes import SketchFilePath
-from sketch_classes import SketchObj, DashSketchObj, KMCSketchObj
-# import tabulate
-from typing import List, Dict, Set, Tuple, NamedTuple
-from string import ascii_uppercase
-#from dandd_cmd import write_listdict_to_csv
+from sketch_classes import *
+from typing import List, Dict, Set, Tuple
 from math import factorial
 from itertools import permutations
 
-##TODO: make fasta the last column when it's in the keys
-def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str=""):
+# Default initial size of sketch array for each node
+RANGEK=100
+
+
+def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str="", last_col: str = None):
+    '''
+    Take a list of dictionaries and write them to a csv files with the keys as headers. If a particular column needs to be last, provide the name.
+    '''
     writer = open(outfile+suffix, "w") if outfile is not None and outfile != '-' else sys.stdout
     fieldnames=set()
     for x in listdict:
         fieldnames.update(x.keys())
-    dict_writer = csv.DictWriter(writer, fieldnames=list(fieldnames))
+    fieldnames=list(fieldnames)
+    # The fastas field should be at the end since it sometimes has commas
+    if "fastas" in fieldnames:
+        last_col="fastas"
+    if "files" in fieldnames:
+        last_col="files"
+    if last_col:
+        i=fieldnames.index(last_col)
+        fieldnames=fieldnames[:i]+fieldnames[i+1:]+ [fieldnames[i]]
+    dict_writer = csv.DictWriter(writer, fieldnames=fieldnames)
     dict_writer.writeheader()
     dict_writer.writerows(listdict)
     writer.close()
 
-#This is assuming that the command for dashing has been aliased
-DASHINGLOC="dashing" #"/scratch16/blangme2/jessica/lib/dashing/dashing"
-#DASHINGLOC="/home/jbonnie1/lib/dashing/dashing"
-RANGEK=100
 
-# def permutations(elements):
-#     '''Generate all permutations of a list of elements or a string'''
-#     if len(elements) <= 1:
-#         yield elements
-#         return
-#     for perm in permutations(elements[1:]):
-#         for i in range(len(elements)):
-#             # nb elements[0:1] works in both string and list contexts
-#             yield perm[:i] + elements[0:1] + perm[i:]
-
-def permute(length, norder, preexist=set())-> Set[Tuple[int]]:
-    '''Create a set of ordering tuples'''
+def permute(length, norder, preexist=set(), exhaust=False)-> Set[Tuple[int]]:
+    '''Create a set of ordering tuples. One approach will be used if the maximum number of possible permutations is low or desired. Another will be used if not.'''
     fact=factorial(length)
     newset=preexist.copy()
     norder = min(norder, fact)
     print(f"{norder} permutations will be produced.")
     # if the number of permutations is low enough, generate all of them
-    if fact < 4000 or norder==fact:
+    if fact < 4000 or norder==fact or exhaust==True:
         print("fact less than 4000")
         # create a randomized list of all permutations
         newpermute=list(permutations(range(length)))
@@ -72,27 +59,6 @@ def permute(length, norder, preexist=set())-> Set[Tuple[int]]:
         newset.update([newpermute[index]])
         index+=1
     return newset
-
-# def random_orderings(length, norder, preexist=set())->Set[Tuple[int]]:
-#     '''create norder NEW unique random orderings of numbers 0 through length in addition to those in provided preexisting set of orderings'''
-#     rlist = list(range(length))
-#     prelen=len(preexist)
-#     newset=preexist.copy()
-#     totalneed = norder + prelen
-#     maxpermute=factorial(length)
-#     if totalneed > maxpermute:
-#         ##TODO: check to see if norder needs to be changed? Maybe do this sooner?
-#         totalneed=maxpermute
-#         print(f"You asked for more permutations than are possible with the set size. Number of permutations is being reset to: {maxpermute}")
-#     while len(newset) < totalneed:
-#         needed=totalneed - len(newset)
-#         #union the pre-existing set of orderings with remaining number of orderings required
-#         newset.update(set([tuple(sample(rlist,length)) for i in range(needed)]))
-#     return newset
-
-# def _update_helper(node, kval):
-#     node.find_delta(kval=kval)
-#     return node.ksketches[kval].sketch
 
 class DeltaTreeNode:
     ''' A node in a Delta tree. 
@@ -220,50 +186,37 @@ class DeltaTreeNode:
             mink=self.mink
         if maxk == 0:
             maxk=self.maxk
-        #labels=[ascii_uppercase[i]+ ascii_uppercase[j] for i in range(26) for j in range(26)]
 
         for kval in range(mink, maxk+1):
             if self.ksketches[kval]:
                 linedict = {"ngen": self.ngen, "kval": kval, "card": self.ksketches[kval].card, "delta_pos": self.ksketches[kval].delta_pos, "title": self.node_title, "command": self.ksketches[kval].cmd}
                 for index, value in enumerate(self.fastas):
                     linedict[f"step{index}"] = value
-                    # linedict[labels[index]] = value
-                
-                # if len(self.fastas) <= 2:
-                #     linedict.update({"A": self.fastas[0]})
-                # if len(self.fastas) == 2:
-                #     linedict.update({"B": self.fastas[1]})
-                
-                # linelist=[self.ngen,kval, self.ksketches[kval].card, self.ksketches[kval].delta_pos, self.node_title]
                 nodevals.append(linedict)
-        # ndf=pd.DataFrame(nodevals,columns=["ngenomes","kval","card","delta_pos", "title"])
-        # return ndf
         return nodevals
 
-    def update_card(self):
-        '''retrieve/calculate cardinality for any sketches in the node that lack it. NOTE: this is not in use. also it is more sketch related. TODO: refactor to use commands from SketchObj classes rather than using dashing '''
-        sketches = [sketch for sketch in self.ksketches if sketch is not None]
-        cardlist = [sketch.sketch for sketch in sketches if sketch.card == 0]
-        if len(cardlist) > 0:
-            cmdlist = [DASHINGLOC,"card --presketched -p10"] +  cardlist
-            cmd = " ".join(cmdlist)
-            print(cmd)
-            card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-            for card in csv.DictReader(card_lines, delimiter='\t'):
-                self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-        for sketch in self.ksketches:
-            if sketch is not None:
-                if sketch.sketch in sketches:
-                    sketch.card=sketch.check_cardinality()
-                    sketch.delta_pos=sketch.card/sketch.kval
+    # def update_card(self):
+    #     '''retrieve/calculate cardinality for any sketches in the node that lack it. NOTE: this is not in use. also it is more sketch related. TODO: refactor to use commands from SketchObj classes rather than using dashing '''
+    #     sketches = [sketch for sketch in self.ksketches if sketch is not None]
+    #     cardlist = [sketch.sketch for sketch in sketches if sketch.card == 0]
+    #     if len(cardlist) > 0:
+    #         cmdlist = [DASHINGLOC,"card --presketched -p10"] +  cardlist
+    #         cmd = " ".join(cmdlist)
+    #         print(cmd)
+    #         card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
+    #         for card in csv.DictReader(card_lines, delimiter='\t'):
+    #             self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+    #     for sketch in self.ksketches:
+    #         if sketch is not None:
+    #             if sketch.sketch in sketches:
+    #                 sketch.card=sketch.check_cardinality()
+    #                 sketch.delta_pos=sketch.card/sketch.kval
 
 class DeltaTree:
     ''' Delta tree data structure. '''
     def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False}, padding=True):
-        # self.fastahex = speciesinfo.fastahex
         self.experiment=experiment
         self._symbols = []
-        #self._code_words = []
         self.mink=0
         self.maxk=0
         
@@ -363,16 +316,14 @@ class DeltaTree:
         #    n.find_delta(speciesinfo, speciesinfo.kstart)
         #inputs = [n.find_delta(speciesinfo, self.registers, speciesinfo.kstart) for n in inputs]
         # 
-        if parallel:
-            # self.parallel_progeny_prep(kval)
-            pass
-            # pool = Pool(processes=4)
-            # results = [pool.apply(_update_helper, args=(dnode, self.speciesinfo,self.speciesinfo.kstart,  )) for dnode in inputs]
-        else:
-            for n in inputs:
-                
-                n.find_delta(self.speciesinfo.kstart)
-        
+        # if parallel:
+        #     # self.parallel_progeny_prep(kval)
+        #     pass
+        #     # pool = Pool(processes=4)
+        #     # results = [pool.apply(_update_helper, args=(dnode, self.speciesinfo,self.speciesinfo.kstart,  )) for dnode in inputs]
+        # else:
+        for n in inputs:
+            n.find_delta(self.speciesinfo.kstart)
         
         self._dt = inputs
         idx_insert = 0
@@ -402,7 +353,6 @@ class DeltaTree:
                 nchildren = len(self._dt) - idx_current
 
         #self.batch_update_card()
-        #self.compute_code()
     
     # def parallel_progeny_prep(self, kval:int):
     #     cmd = parallel_progeny_command(self.speciesinfo.sketchdir, kval, self.experiment)
@@ -415,7 +365,7 @@ class DeltaTree:
             nodes.append(f'\'{node.node_title}\'({node.ngen}\'({" ".join([i.node_title for i in node.progeny])})')
         print(' -> '.join(nodes))
 
-    def fill_tree(self, padding=False):
+    def fill_tree(self, padding=False) -> None:
         '''Starting at the root make sure that all nodes in the tree contain the sketches for the argmax ks for every node as well as 2 less than the minimum and 2 greater than the maximum (IF padding argument is True)'''
         root = self._dt[-1]
         bestks = list(set([n.bestk for n in self._dt]))
@@ -457,11 +407,9 @@ class DeltaTree:
         fileprefix=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] )
         return fileprefix
     def save(self, fileprefix:str, fast=False):
-        '''Save the delta tree for future retrieval
         '''
-        # if not label == "":
-        #     label = "_"+label
-        # fileprefix=self.make_prefix(tag=tag, label=label, outdir=outdir)
+        Save the delta tree for future retrieval
+        '''
         print(fast)
         filepath=fileprefix + '_dtree.pickle'
         if not fast:
@@ -476,13 +424,12 @@ class DeltaTree:
         deltapath=fileprefix + '_deltas.csv'
         write_listdict_to_csv(deltapath,self.report_deltas())
         print("Deltas saved to: " + deltapath)
-        #subset the fastahex map to output a human readable version containing info for the sketches relevant to the tree
         return filepath
 
-    def report_deltas(self):
+    def report_deltas(self) -> List[dict]:
         ''' Traverse the DeltaTree to return a dataframe with the delta values of the nodes in the tree.'''
         root = self._dt[-1]
-        def _delta_recursive(node):
+        def _delta_recursive(node) -> List[Dict]:
             tmplist=[{"delta": node.delta, "k": node.bestk, "title": node.node_title, "ngen": node.ngen, "fastas": "|".join(node.fastas)}]
             if node.children:
                 nchild=len(node.children)
@@ -492,10 +439,9 @@ class DeltaTree:
             return tmplist
         
         dictlist= _delta_recursive(root)
-        #print(dictlist)
         return dictlist
   
-    def summarize(self, mink=0, maxk=0):
+    def summarize(self, mink=0, maxk=0) -> List[dict]:
         ''' Traverse the DeltaTree to return a dataframe with all possible delta values. -- this isn't actually summarizing, so the function should be renamed'''
         root = self._dt[-1]
         if mink == 0:
@@ -507,10 +453,8 @@ class DeltaTree:
             # if self.maxk <= 30:
             #     maxk=self.maxk + 2
         self.ksweep(mink=mink, maxk=maxk)
-        #print(root)
-        def _delta_pos_recursive(node):
+        def _delta_pos_recursive(node) -> List[dict]:
             tmplist=node.summarize()
-            
             if node.children:
                 nchild=len(node.children)
                 for i in range(nchild):
@@ -523,21 +467,21 @@ class DeltaTree:
         return dictlist
 
     def nodes_from_fastas(self, fasta_list):
+        '''
+        Provided a list of fastas retrieve the leaf nodes formed from those fastas
+        '''
         return [node for node in self.leaf_nodes() if node.fastas[0] in fasta_list]
 
     def find_delta_delta(self, fasta_subset: List[str]) -> float:
         '''Provided a list of fastas in a subset, find the delta-delta values between the whole spider and a spider without the provided fastas'''
         # create list of fastas that are in the original spider that are not in the subset provided --> i.e. the complement
         fastas = [f for f in self.fastas if f not in fasta_subset]
-
-        # if len(fastas) == 0:
-        #     fastas = [f for f in self.fastas if os.path.basename(f) not in fasta_subset]
         small_spider = SubSpider(leafnodes=self.nodes_from_fastas(fastas), speciesinfo=self.speciesinfo, experiment=self.experiment)
         print("Full Tree Delta: ", self.delta)
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
    
-    def ksweep(self, mink:int=0, maxk:int=0):
+    def ksweep(self, mink:int=0, maxk:int=0) -> None:
         if mink == 0:
             mink=int(self.mink)
         if maxk == 0:
@@ -579,7 +523,7 @@ class DeltaTree:
             if count <= len(orderings):
                 return fastas, list(orderings)[:count]
 
-        # if there is no ordering file at the location, time to make some    
+        # if there is no ordering file at the location, time to make one    
         else:
             # if count is not provided, how will we know how many to make??
             if count<1:
@@ -596,10 +540,9 @@ class DeltaTree:
 
         return self.progressive_union(flist=fastas, orderings=orderings, step=step)
 
-    def progressive_union(self, flist, orderings, step) -> List[dict]:
-        '''create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
+    def progressive_union(self, flist, orderings, step) -> Tuple[List[dict], List[dict]]:
+        '''Create (or use if provided) a series of random orderings to use when adding the individual fasta sketches to a union. Outputs a table with the delta values and associated ks at each stage'''
 
-        # TODO: Update experiment object if needed
         # create a sketch of the full union of the fastas
         smain = DeltaSpider(fasta_files=flist, speciesinfo=self.speciesinfo, experiment=self.experiment)
         results=[]
@@ -614,7 +557,7 @@ class DeltaTree:
             self.speciesinfo.save_cardkey(tool=self.experiment["tool"],fast=self.experiment['fast'])
         return results, summary
 
-    def sketch_ordering(self, ordering, number, step=1)->List[dict]:
+    def sketch_ordering(self, ordering, number, step=1) -> Tuple[List[dict], List[dict]]:
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas'''
         flen=len(ordering)
         output=[]
@@ -628,8 +571,10 @@ class DeltaTree:
                 summary.extend(ospider.summarize())
 
         return output, summary
-    def pairwise_spiders(self, sublist=[], mink=0, maxk=0, jaccard=True):
-        '''Create values for K-Independent-Jaccard. '''
+
+
+    def pairwise_spiders(self, sublist=[], mink=0, maxk=0, jaccard=True) -> Tuple[List[dict], List[dict]]:
+        '''Create values for K-Independent-Jaccard. (Two Legged Spiders) '''
         # super_spider=self.to_spider()
 
         if len(sublist)==0:
@@ -651,7 +596,10 @@ class DeltaTree:
         # self.speciesinfo.save_cardkey(tool=new_experiment["tool"],fast=new_experiment['fast'])
         return kij_results, j_results
 
-    def prepare_AFproject(self, kijsummary, jsummary):
+    def prepare_AFproject(self, kijsummary, jsummary) -> List[Tuple]:
+        '''
+        Transform the kij and jaccard listdicts into the format expected by scripts in the helper folder.
+        '''
         all_out=set()
         # Records in j_and_kij_summ are of the form (tool, name1, name2, k, j, k1, k2, k12)
         #  - When name1 == name2, the tuple describes a single dataset
@@ -712,7 +660,7 @@ class SubSpider(DeltaTree):
         self.maxk=body_node.maxk
         self._dt = children + [body_node]
 
-    def kij_summarize(self):
+    def kij_summarize(self) -> Dict:
         '''Calculate k independent jaccard for the subspider'''
         ##TODO: Write this to handle more than 2 children?
         if len(self.fastas) != 2:
@@ -733,7 +681,7 @@ class SubSpider(DeltaTree):
         return outdict
 
 
-    def jaccard_summarize(self, mink=0, maxk=0):
+    def jaccard_summarize(self, mink=0, maxk=0) -> List[Dict]:
         '''Calculate jaccard distance for the subspider'''
         ##TODO: Write this to handle more than 2 children?
         if len(self.fastas) != 2:
@@ -758,13 +706,11 @@ class SubSpider(DeltaTree):
 class DeltaSpider(DeltaTree):
     '''Create a structure with all single sketches in terminal nodes tied to a single union node for all of them'''
     def __init__(self, fasta_files, speciesinfo, experiment, padding=False):
-        # print("I made it to spider")
         nchildren=len(fasta_files)
         super().__init__(fasta_files=fasta_files, speciesinfo=speciesinfo, experiment=experiment, nchildren=nchildren, padding=padding)
     def __init2__(self, tree:DeltaTree):
         raise NotImplementedError("initialization of spider by tree not yet implemented")
     #TODO: add a function to the superclass that adds union nodes to the _dt and then create one here that adds just the spider body. That way the function can be passed the list of childnodes and then repurposed to instantiate a spider using only child nodes
-    # def _build_tree(self.leaf_nodes=[DeltaTreeNode]):
 
     ## TODO: init function receives a delta tree and creates a spider out of it's nodes without creating new child nodes
 
@@ -807,21 +753,13 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
         fastas = speciesinfo.retrieve_fasta_files(full=True)
     else:
         ValueError("You must provide either an existing directory of fastas or a file listing the paths of the desired fastas. The directory you provided was {speciesinfo.inputdir}.")
-        #fastas = [f for f in allfastas if f in fastas]
-    # If a fasta file list is provided subset the fastas from the species directory to only use the intersection
-    # if flist_loc:
-    #     with open(flist_loc) as file:
-    #         fsublist = [line.strip() for line in file]
-    #     fastas = [f for f in fastas if f in fsublist]
     fastas.sort()
     if nchildren:
         dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren, experiment=experiment)
     else:
         dtree = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo, experiment=experiment)
+
     # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
-    
-    # cardpath=os.path.join(speciesinfo.sketchdir, f'{tag}_{tool}_cardinalities.pickle')
     speciesinfo.save_cardkey(tool=tool,fast=fast)
     speciesinfo.save_references(fast=fast)
-    #print(dtree)#.print_tree()
     return dtree
