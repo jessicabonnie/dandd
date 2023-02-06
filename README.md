@@ -27,8 +27,8 @@ outputdir/
    * |_ dandd_sketchinfo.pickle  
    * |_ dandd_cardinalities.pickle  
    * |_ ngen1/  
-     - |_ k<num>  
-  * |_ ngen<num>  
+     - |_ k[num]  
+  * |_ ngen[num] 
 
 
 ## Commands
