@@ -94,7 +94,8 @@ def kij_command(args):
         write_listdict_to_csv(outfile=args.outfile+".j.csv", listdict=j_results)
     j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
     #print(j_and_kij_summ)
-    
+    dtree.speciesinfo.save_cardkey(dtree.experiment["tool"])
+    dtree.speciesinfo.save_references(fast=False)
     with open(args.outfile+"_tuples.pickle","wb") as f:
         pickle.dump(obj=j_and_kij_summ, file=f)
 
