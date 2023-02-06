@@ -10,7 +10,7 @@ class SpeciesSpecifics:
         self.tag=tag
         self.sketchdir=sketchdir
         #os.makedirs(self.sketchdir, exist_ok=True)
-        self.species=self._resolve_species()
+        # self.species=self._resolve_species()
         self.fastahex=self._read_fastahex()
         self.cardkey=self._read_cardkey(tool=tool)
         self.inputdir=genomedir
@@ -20,16 +20,16 @@ class SpeciesSpecifics:
         self.flist_loc=flist_loc
         self.sketchinfo=self._read_sketchinfo()
     
-    def read_pickle(self, filepath):
+    def read_pickle(self, filepath) -> Dict:
         if os.path.exists(filepath):
             contents=pickle.load(open(filepath, "rb", -1))
         else:
             contents=dict()
         return contents
 
-    def _fastahex_loc(self):
+    def _fastahex_loc(self)-> str:
         return os.path.join(self.sketchdir,'dandd_fastahex.pickle')
-    def _sketchinfo_loc(self):
+    def _sketchinfo_loc(self)-> str:
         # return os.path.join(self.sketchdir,self.tag+'_sketchinfo.pickle')
         return os.path.join(self.sketchdir,'dandd_sketchinfo.pickle')
     def _read_fastahex(self):
@@ -48,21 +48,21 @@ class SpeciesSpecifics:
         # usual=self._fastahex_loc()
         return self.read_pickle(self._sketchinfo_loc())
 
-    def update(self, tool):
+    def update(self, tool) -> None:
         self.fastahex=self._read_fastahex()
         self.cardkey=self._read_cardkey(tool=tool)
         self.sketchinfo=self._read_sketchinfo()
     ##TODO: Consider creating self.keys dict object to track the keys and writing a single save function
     # def save_key(self,obj,name):
     #     pass
-    def _save_fastahex(self):
+    def _save_fastahex(self) -> None:
         '''Store/Update/Overwrite species specific hashkey to pickle'''
         # usual=os.path.join(self.sketchdir,'dandd_fastahex.pickle')
         # usual=os.path.join(self.sketchdir,self.tag+'_fastahex.pickle')
         with open(self._fastahex_loc(),"wb") as f:
             pickle.dump(file=f, obj=self.fastahex)
     
-    def _save_sketchinfo(self):
+    def _save_sketchinfo(self) -> None:
         '''Store/Update/Overwrite sketchinfo lookup to pickle'''
         with open(self._sketchinfo_loc(),"wb") as f:
             pickle.dump(file=f, obj=self.sketchinfo)
@@ -76,14 +76,14 @@ class SpeciesSpecifics:
     #         dict_writer.writerows(expdict)
         # writer.close()
         
-    def save_references(self, fast=False):
+    def save_references(self, fast=False) -> None:
         if not fast:
             self._save_fastahex()
             self._save_sketchinfo()
         
 
     
-    def _read_cardkey(self, tool):
+    def _read_cardkey(self, tool) -> Dict[str, int]:
         '''Recover key of previously calculated cardinalities from pickle file'''
         cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
         # if os.path.exists(cardpath):
@@ -101,13 +101,13 @@ class SpeciesSpecifics:
             with open(cardpath,"wb") as f:
                 pickle.dump(file=f, obj=self.cardkey)
             
-    def _resolve_species(self):
-        '''Parse the name of the species from the data description tag'''
-        for title in ['HVSVC2','ecoli','salmonella','human']:
-            if title in self.tag:
-                return title
-        # os.warnings("FOR SOME REASON I DON'T RECOGNIZE THAT SPECIES TAG!!!")
-        return self.tag
+    # def _resolve_species(self):
+    #     '''Parse the name of the species from the data description tag'''
+    #     for title in ['HVSVC2','ecoli','salmonella','human']:
+    #         if title in self.tag:
+    #             return title
+    #     # os.warnings("FOR SOME REASON I DON'T RECOGNIZE THAT SPECIES TAG!!!")
+    #     return self.tag
     
         
     # def check_cardinality(self, fullpath):
