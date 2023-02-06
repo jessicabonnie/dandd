@@ -409,19 +409,19 @@ def go():
             summ_to_phylip(summ, seqid_to_treid, fn)
             assert os.path.exists(fn)
 
-        # # write fneighbor tree output for 1-Jaccard / 1-KIJ
-        # j_tree_fn = _customize_fn(args.j_tree)
-        # if args.j_tree:
-        #     assert args.j_tree_compare is not None
-        #     j_stats_fn = _customize_fn(args.j_tree_compare)
-        #     phylip_fn = _customize_fn(args.j_results_phylip)
-        #     stats = run_fneighbor(phylip_fn, j_tree_fn, seqid_to_treid, args.ref_tree,
-        #                           rename_seqs=args.rename_seqs,
-        #                           fneighbor_exe=args.fneighbor,
-        #                           nreplicates=args.fneighbor_replicates)
-        #     with open(j_stats_fn, 'wt') as fh:
-        #         for i, (nrf, rf, max_rf) in enumerate(stats):
-        #             print('\t'.join(map(str, ['j', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
+        # write fneighbor tree output for 1-Jaccard / 1-KIJ
+        j_tree_fn = _customize_fn(args.j_tree)
+        if args.j_tree:
+            assert args.j_tree_compare is not None
+            j_stats_fn = _customize_fn(args.j_tree_compare)
+            phylip_fn = _customize_fn(args.j_results_phylip)
+            stats = run_fneighbor(phylip_fn, j_tree_fn, seqid_to_treid, args.ref_tree,
+                                  rename_seqs=args.rename_seqs,
+                                  fneighbor_exe=args.fneighbor,
+                                  nreplicates=args.fneighbor_replicates)
+            with open(j_stats_fn, 'wt') as fh:
+                for i, (nrf, rf, max_rf) in enumerate(stats):
+                    print('\t'.join(map(str, ['j', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
 
         # write Phylip output for ANI
         if args.ani_results_phylip:
@@ -429,19 +429,20 @@ def go():
             summ_to_phylip(summ, seqid_to_treid, fn, convert_to_ani=True)
             assert os.path.exists(fn)
 
-        # # write fneighbor tree output for ANI
+        # write fneighbor tree output for ANI
         # ani_tree_fn = _customize_fn(args.ani_tree)
-        # if args.ani_tree:
-        #     assert args.ani_tree_compare is not None
-        #     ani_stats_fn = _customize_fn(args.ani_tree_compare)
-        #     phylip_fn = _customize_fn(args.ani_results_phylip)
-        #     stats = run_fneighbor(phylip_fn, ani_tree_fn, seqid_to_treid, args.ref_tree,
-        #                           rename_seqs=args.rename_seqs,
-        #                           fneighbor_exe=args.fneighbor,
-        #                           nreplicates=args.fneighbor_replicates)
-        #     with open(ani_stats_fn, 'wt') as fh:
-        #         for i, (nrf, rf, max_rf) in enumerate(stats):
-        #             print('\t'.join(map(str, ['ani', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
+        if args.ani_tree:
+            ani_tree_fn = _customize_fn(args.ani_tree)
+            assert args.ani_tree_compare is not None
+            ani_stats_fn = _customize_fn(args.ani_tree_compare)
+            phylip_fn = _customize_fn(args.ani_results_phylip)
+            stats = run_fneighbor(phylip_fn, ani_tree_fn, seqid_to_treid, args.ref_tree,
+                                  rename_seqs=args.rename_seqs,
+                                  fneighbor_exe=args.fneighbor,
+                                  nreplicates=args.fneighbor_replicates)
+            with open(ani_stats_fn, 'wt') as fh:
+                for i, (nrf, rf, max_rf) in enumerate(stats):
+                    print('\t'.join(map(str, ['ani', k, k1, k2, k12, nrf, rf, max_rf, i])), file=fh)
 
 
 if __name__ == '__main__':
