@@ -318,16 +318,16 @@ def parse_arguments():
 
 
 
-def main():
-    parser, commands = parse_arguments()
-    args = parser.parse_args(sys.argv[1:])
-    if len(sys.argv) < 2:
-        print('Must specify a command: ' + str(commands), file=sys.stderr)
-        return 1
-    args.func(args)
-    return 0
+# def main():
+#     parser, commands = parse_arguments()
+#     args = parser.parse_args(sys.argv[1:])
+#     if len(sys.argv) < 2:
+#         print('Must specify a command: ' + str(commands), file=sys.stderr)
+#         return 1
+#     args.func(args)
+#     return 0
 
 
 
-if __name__ == '__main__':
-    sys.exit(main())
+# if __name__ == '__main__':
+#     sys.exit(main())
