@@ -79,6 +79,7 @@ def info_command(args):
 
 def kij_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
+    dtree.speciesinfo.update(tool=dtree.experiment["tool"])
     if not args.outfile:
         args.outfile = dtree.make_prefix(tag=dtree.speciesinfo.tag, label=f"abba")
     fastas=[]

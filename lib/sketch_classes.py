@@ -270,7 +270,7 @@ class SketchObj(object):
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. NOTE: delay argument not implemented relates to idea of a way to batch the card command by attatching the sketch to a card0 sketch list attached to the SpeciesSpecifics object'''
         
         if self._sfp.full not in self.speciesinfo.cardkey.keys():
-            print("first criterion")
+            print("Sketch File Path is not in cardkey.")
         # if speciesinfo.cardkey[self._sfp.full] == 0:
             # print("second criterion")
         if self._sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self._sfp.full] == 0:
