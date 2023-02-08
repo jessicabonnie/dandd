@@ -38,8 +38,9 @@ def tree_command(args):
 
 def progressive_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
-    if not args.outfile:
-        args.outfile = dtree.make_prefix(tag=dtree.speciesinfo.tag, label=f"progu{args.norderings}")
+    if not args.tag:
+        args.tag=dtree.speciesinfo.tag
+    args.outfile = dtree.make_prefix(tag=args.tag, label=f"progu{args.norderings}", outdir=args.outdir)
         
     dtree.experiment["debug"] = args.debug
     dtree.experiment["safety"] = args.safety
@@ -64,14 +65,18 @@ def abba_command(args):
 
 def info_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
+    if not args.tag:
+        args.tag=dtree.speciesinfo.tag
+    args.outfile = dtree.make_prefix(tag=args.tag, label=f"info", outdir=args.outdir)
     summary=dtree.summarize(mink=args.mink, maxk=args.maxk)
-    write_listdict_to_csv(outfile=args.outfile, listdict=summary)
+    write_listdict_to_csv(outfile=args.outfile+'_ksweep.csv', listdict=summary)
 
 def kij_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
     dtree.speciesinfo.update(tool=dtree.experiment["tool"])
-    if not args.outfile:
-        args.outfile = dtree.make_prefix(tag=dtree.speciesinfo.tag, label=f"abba")
+    if not args.tag:
+        args.tag=dtree.speciesinfo.tag
+    args.outfile = dtree.make_prefix(tag=args.tag, label='kij', outdir=args.outdir)
     fastas=[]
     if args.flist_loc:
         with open(args.flist_loc) as file:
@@ -112,7 +117,7 @@ def parse_arguments():
     commands.append('tree')
     # tree_parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
 
-    tree_parser.add_argument("-s","-t", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="LABELSTRING", type=str, required=False, default='dandd')
+    tree_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="species/experiment-tag-string", type=str, required=False, default='dandd')
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
     tree_parser.add_argument("-x", "--exact", dest="exact", help="instead of estimating, count kmers using kmc3", default=False, action="store_true", required=False)
 
@@ -147,6 +152,7 @@ def parse_arguments():
     commands.append('progressive')
 
     progressive_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command")
+    progressive_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="species/experiment-tag-string", type=str, required=False)
 
     progressive_parser.add_argument("-r", "--orderings", dest="ordering_file", metavar="ORDERING PICKLE", type=str, default=None, help="filepath to a pickle of orderings if different from default named using tag")
 
@@ -154,7 +160,9 @@ def parse_arguments():
 
     progressive_parser.add_argument("-n", "--norderings", dest="norderings", default=0, type=int, help="number of random orderings to explore. If not provided, the orderings stored in the ordering pickle will be used. If that file does not exist / is not provided, program will terminate.")
 
-    progressive_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path prefix to write the output tables and tree.")
+    progressive_parser.add_argument("-o", "--outdir", dest="outdir", default=os.getcwd(), type=str, help="directory to write the output tables and tree.")
+
+    progressive_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default="", help="NOT IMPLEMENTED label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False)
 
     progressive_parser.add_argument( "--ksweep", dest="ksweep", default=False,
     action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
@@ -172,12 +180,16 @@ def parse_arguments():
     commands.append('info')
     
     info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command. Tree nodes will be updated to hold additional sketches as needed to perform info commands selected.")
+    info_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="species/experiment-tag-string", type=str, required=False)
     
     info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=10, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    info_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, default will use the tag for the provided tree.")
+    # info_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, default will use the tag for the provided tree.")
+    info_parser.add_argument("-o", "--outdir", dest="outdir", default=os.getcwd(), type=str, help="directory to write the output tables.")
+
+    info_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default="", help="NOT IMPLEMENTED Label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False)
 
 
     info_parser.set_defaults(func=info_command)
@@ -199,10 +211,13 @@ def parse_arguments():
     commands.append('kij')
 
     kij_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="TREEPICKLE", required=True, help="filepath to a pickle produced by the tree command")
+    kij_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="species/experiment-tag-string", type=str, required=False)
 
     kij_parser.add_argument("-f", "--fastas", dest="flist_loc", default=None, type=str, metavar="FASTA LIST FILE", help="filepath to a subset of fasta files from the original tree which should be analyzed.")
 
-    kij_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, table will be printed to standard out.")
+    kij_parser.add_argument("-o", "--outdir", dest="outdir", default=os.getcwd(), type=str, help="directory to write the output tables.")
+
+    kij_parser.add_argument("-l", "--label", dest="label", metavar="STRING", default="", help="NOT IMPLEMENTED Label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False)
 
     kij_parser.add_argument("--afproject", dest="afproject", default=False, action="store_true", help="Indicate whether intermediate pickle of tuples should be created for use with helpers/afproject.py.")
 
