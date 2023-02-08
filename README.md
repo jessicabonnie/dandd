@@ -17,18 +17,18 @@ conda install -c bioconda kmc
 ```
 
 ## File Output 
-The tool will write summary files to the current working directory or to the output directory provided. If a sketch directory is not provided it will be sought or created within the output directory. The sketch directory will contain (1) files mapping the sketch/db names to the component inputs (2) subdirectories of sketches/dbs arranged by number of genomes and k-mer length.
+The tool will write summary files to the current working directory or to the output directory provided. If a sketch directory is not provided it will be sought or created within the output directory. The sketch directory will contain (1) files mapping the sketch/database names to the component inputs (2) subdirectories of sketches/dbs arranged by number of genomes and k-mer length.
 
-outputdir/  
-* |_ tree pickle  
-* |_ summary files (named using tag/labels provided)  
-* |_ sketchdb/  
-   * |_ dandd_fastahex.pickle  
-   * |_ dandd_sketchinfo.pickle  
-   * |_ dandd_cardinalities.pickle  
-   * |_ ngen1/  
-     - |_ k[num]  
-  * |_ ngen[num] 
+**outputdir /**  
+* |_ deltatree : pickle to be used internally during later calls to DandD 
+* |_ deltas and summary tables : user readable tables named using tag/labels provided   
+* |_ sketchdb.txt tracking file : user readable table tracking locations and inputs for sketches and database files relevant to particular experiment (prefixed accordingly)  
+* **sketchdb /**  
+   * |_ dandd_fastahex, dandd_sketchinfo, dandd_cardinalities : internal pickles tracking name assignments and cardinalities.  
+   * **ngen[#] /** : one directory for each number of genomes/assemblies/fastas unioned (starting at 1 for single fasta sketches/databases)     
+     - **k[#] /** : one directory for each k explored  
+       * |_ dashing-sketch  
+       * |_ kmc-database files 
 
 
 ## Commands
@@ -39,8 +39,15 @@ There are a couple of commands options that pertain to the program in general. T
 `--fast`: Avoid writing out intermediate copies of the reference files. (Meaning that cardinalities and pathing information will not be saved if DandD is terminated prematurely.)  
 `--safe`: Double check all sketch hashes to make sure they match the sums of the fasta hashes. This is time consuming, but is recommended if you have any suspicion that the fasta files have changed.  
 ### tree
-The `tree` command is the first step in performing any analysis. It creates a pickle with the structure DandD will expect to receive for the other commands in order to answer questions downstream. It requires either a file containing full filepaths to fastas (`--fastas`) or a data directory (`--datadir`) containing all fastas of interest.  
-If the sketches for `tree` already exist in a `sketchdb` directory other than inside `--outdir` (default current working directory), the `--sketchdir` can be provided in order to take maximum advantage of previous work in terms of time/space.  
+The `tree` command is the first step in performing any analysis. It creates a pickle with the structure DandD will expect to receive for the other commands in order to answer questions downstream. It requires either a file containing full filepaths to fastas (`--fastas <path>`, `-f <path>`) or a data directory (`--datadir <path>`) containing all fastas of interest.  
+If the sketches for `tree` already exist in a `sketchdb` directory other than inside `--outdir <path>` (default current working directory), the `--sketchdir <path>` can be provided in order to take maximum advantage of previous work in terms of time/space.  
+In order to name the non-sketch output files for a particular experiment, use `-s <string>` or `--tag <string>` to provide a string that will be used in file name prefixes. If no tag is provided, `dandd` will be used by default.  
+As demonstrated in the DandD paper, the optimal k-mer length for delta changes based on characteristics of the data. Therefore, it is beneficial to adjust the starting value of k based on prior information to avoid searching excessively high or low values. Use the `-k <int>` command to set the starting value.  
+Should you wish to use KMC for k-mer counting (instead of estimation through Dashing sketching) to calculate delta, use the `--exact` flag.   
+By default, DandD will canonicalize the k-mers (i.e. treat reverse complements as equivalent to the original k-mer string). Use the `--non-canon` flag to disable canonicalization.  
+By default, DandD will build trees with a single layer of child nodes and one single union of all inputs(nicknamed 'spiders'). Alternatively, the tree can be built by calculating delta for a series of smaller unions by indicating the maximum number of children for each union by using `--nchildren <int>` or `-n <int>`.  
+During sketching DandD defaults to using 20 registers. To adjust this value, use `--registers <int>`. For information about the implementation and trade-offs of adjusting this value, see Dashing's documentation.  
+
 
 ### progressive
 
