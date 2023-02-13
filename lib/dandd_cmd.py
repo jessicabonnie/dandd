@@ -103,7 +103,7 @@ def kij_command(args):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='program to explore delta values for a set of fasta files')
+    parser = argparse.ArgumentParser(prog="DandD", description='program to explore delta values for a set of fasta files')
     
     # Arguments for top-level
 
@@ -114,6 +114,7 @@ def parse_arguments():
     parser.add_argument( "--fast", action="store_true", default=False, dest="fast",   help="Don't save so much stuff for second usage.")
 
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
+    subparsers.required = True
 
     # Make parser for "dand_cmd.py tree ..."
     tree_parser = subparsers.add_parser("tree", help="Calculate deltas for input fastas and full union. Create DandD tree object for further downstream analysis.")
