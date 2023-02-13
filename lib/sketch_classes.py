@@ -184,15 +184,18 @@ class SketchObj(object):
         ''' If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
         tmpdir=tempfile.mkdtemp()
         cmd = self._leaf_command(tmpdir=tmpdir)
+        stdout=None
+        if self.experiment['verbose']:
+            stdout=subprocess.DEVNULL
         if self.experiment['debug']:
             print(cmd)
         if just_do_it:
             if self.experiment['verbose']:
                 print("Due to issues with leaf sketch/db file, we will Just Do It. (It=Sketch or Build Again)")
-            subprocess.call(cmd, shell=True)
+            subprocess.call(cmd, shell=True, stdout=stdout, stderr=stderr)
             self.cmd=cmd
         elif not self.sketch_check():
-            subprocess.call(cmd, shell=True)
+            subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd=cmd
             
             ##TODO pass back the command so that it can be done in parallel?
@@ -210,12 +213,15 @@ class SketchObj(object):
     def _union_sketch(self, just_do_it=False):
         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmd = self._union_command()
+        stdout=None
+        if self.experiment['verbose']:
+            stdout=subprocess.DEVNULL
         if just_do_it:
-            subprocess.call(cmd, shell=True)
+            subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd = cmd
         elif not self.sketch_check():
             # print(f"The sketch file {self.sfp.full} either doesn't exist or is empty")
-            subprocess.call(cmd, shell=True)
+            subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd = cmd
         
         self.cmd = cmd
