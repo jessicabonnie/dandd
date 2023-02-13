@@ -187,9 +187,9 @@ class SketchObj(object):
         if self.experiment['debug']:
             print(cmd)
         if just_do_it:
-            print("Just Do It.")
+            if self.experiment['verbose']:
+                print("Due to issues with leaf sketch/db file, we will Just Do It. (It=Sketch or Build Again)")
             subprocess.call(cmd, shell=True)
-            print("Just did it.")
             self.cmd=cmd
         elif not self.sketch_check():
             subprocess.call(cmd, shell=True)
@@ -259,7 +259,8 @@ class SketchObj(object):
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. NOTE: delay argument not implemented relates to idea of a way to batch the card command by attatching the sketch to a card0 sketch list attached to the SpeciesSpecifics object'''
         
         if self.sfp.full not in self.speciesinfo.cardkey.keys():
-            print("Sketch File Path is not in cardkey.")
+            if self.experiment['verbose']:
+                print(f"Sketch File Path not in cardkey: {self.sfp.full}")
         if self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0:
             self.individual_card()
         return float(self.speciesinfo.cardkey[self.sketch])
