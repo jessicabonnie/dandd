@@ -33,7 +33,7 @@ def tree_command(args):
         
     os.makedirs(args.outdir, exist_ok=True)
     # os.chdir(args.sketchdir)
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety, fast=args.fast)
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety, fast=args.fast, verbose=args.verbose)
 
     fileprefix = dtree.make_prefix(outdir=args.outdir, tag=args.tag, label=args.label)
     dtree.save(fileprefix=fileprefix, fast=args.fast)
@@ -48,6 +48,7 @@ def progressive_command(args):
     dtree.experiment["debug"] = args.debug
     dtree.experiment["safety"] = args.safety
     dtree.experiment["fast"] = args.fast
+    dtree.experiment["verbose"] = args.verbose
     dtree.speciesinfo.update(tool=dtree.experiment["tool"])
     results, summary=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
     
@@ -106,10 +107,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser(prog="DandD", description='program to explore delta values for a set of fasta files')
     
     # Arguments for top-level
-
     commands = []
-    parser.add_argument("-v", "--verbose", action="count", default=0)
-    parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
+    parser.add_argument('--version', action='version', version='%(prog)s 0.1')
+    parser.add_argument("--verbose", "-v", action="store_true", default=False, help="Print some trees and report steps of actions.")
+    parser.add_argument( "--debug", action="store_true", default=False, dest="debug", help="Share command calls to 3rd party programs.")
     parser.add_argument( "--safe", action="store_true", default=False, dest="safety",   help="Double check all sketch hashes to make sure they match the sums of the fasta hashes.")
     parser.add_argument( "--fast", action="store_true", default=False, dest="fast",   help="Don't save so much stuff for second usage.")
 

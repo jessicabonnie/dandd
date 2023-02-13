@@ -36,15 +36,17 @@ def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str="", last
     writer.close()
 
 
-def permute(length, norder, preexist=set(), exhaust=False)-> Set[Tuple[int]]:
+def permute(length, norder, preexist=set(), exhaust=False, verbose=False)-> Set[Tuple[int]]:
     '''Create a set of ordering tuples. One approach will be used if the maximum number of possible permutations is low or desired. Another will be used if not.'''
     fact=factorial(length)
     newset=preexist.copy()
     norder = min(norder, fact)
-    print(f"{norder} permutations will be produced.")
+    if verbose:
+        print(f"{norder} permutations will be produced.")
     # if the number of permutations is low enough, generate all of them
-    if fact < 4000 or norder==fact or exhaust==True:
-        print("fact less than 4000")
+    if fact < 5041 or norder==fact or exhaust==True:
+        if verbose:
+            print(f"Factorial of {norder} less than 5041 (7! + 1). Randomized list of all permutations will be produced and then subset.")
         # create a randomized list of all permutations
         newpermute=list(permutations(range(length)))
         shuffle(newpermute)
@@ -214,7 +216,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False}, padding=True):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False}, padding=True):
         self.experiment=experiment
         self._symbols = []
         self.mink=0
@@ -410,7 +412,7 @@ class DeltaTree:
         '''
         Save the delta tree for future retrieval
         '''
-        print(fast)
+        
         filepath=fileprefix + '_dtree.pickle'
         if not fast:
             with open(filepath,"wb") as f:
@@ -529,7 +531,7 @@ class DeltaTree:
             if count<1:
                 raise ValueError("You must provide a value for count when there is no default ordering file")
         
-        orderings = permute(length=len(fastas), norder=count, preexist=orderings)
+        orderings = permute(length=len(fastas), norder=count, preexist=orderings, verbose=self.experiment['verbose'])
         # save the orderings for use next run of species 
         with open(ordering_file,"wb") as f:
             pickle.dump(orderings, f)
@@ -724,7 +726,7 @@ class DeltaSpider(DeltaTree):
 #         raise NotImplementedError
 
 
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10, safety=False, fast=False):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10, safety=False, fast=False, verbose=False):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
@@ -737,7 +739,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     tool = string indicating which tool to use for kmer cardinality
     choices=["dashing","kmc"] '''
     # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
-    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set(), 'safety':safety, 'fast':fast}
+    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set(), 'safety':safety, 'fast':fast, 'verbose':verbose}
 
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)
