@@ -45,24 +45,26 @@ There are a couple of commands options that pertain to the program in general. T
 `--debug`: this flag will cause DandD to print the commands for each call to Dashing or KMC so that you can run them directly to see what kind of error they are returning.  
 `--fast`: Avoid writing out intermediate copies of the reference files. (Meaning that cardinalities and pathing information will not be saved if DandD is terminated prematurely.)  
 `--safe`: Double check all sketch hashes to make sure they match the sums of the fasta hashes. This is time consuming, but is recommended if you have any suspicion that the fasta files have changed.  
+`--verbose`: Un-supress messages from DandD about progress. Unfortunately, there is no way currently to supress output from Dashing and KMC regardless of this flag.  
 ### tree
-The `tree` command is the first step in performing any analysis. It creates a pickle with the structure DandD will expect to receive for the other commands in order to answer questions downstream. It requires either a file containing full filepaths to fastas (`--fastas <path>`, `-f <path>`) or a data directory (`--datadir <path>`) containing all fastas of interest.  
-If the sketches for `tree` already exist in a `sketchdb` directory other than inside `--outdir <path>` (default current working directory), the `--sketchdir <path>` can be provided in order to take maximum advantage of previous work in terms of time/space.  
-In order to name the non-sketch output files for a particular experiment, use `-s <string>` or `--tag <string>` to provide a string that will be used in file name prefixes. If no tag is provided, `dandd` will be used by default.  
-As demonstrated in the DandD paper, the optimal k-mer length for delta changes based on characteristics of the data. Therefore, it is beneficial to adjust the starting value of k based on prior information to avoid searching excessively high or low values. Use the `-k <int>` command to set the starting value.  
-Should you wish to use KMC for k-mer counting (instead of estimation through Dashing sketching) to calculate delta, use the `--exact` flag.   
-By default, DandD will canonicalize the k-mers (i.e. treat reverse complements as equivalent to the original k-mer string). Use the `--non-canon` flag to disable canonicalization.  
-By default, DandD will build trees with a single layer of child nodes and one single union of all inputs(nicknamed 'spiders'). Alternatively, the tree can be built by calculating delta for a series of smaller unions by indicating the maximum number of children for each union by using `--nchildren <int>` or `-n <int>`.  
-During sketching DandD defaults to using 20 registers. To adjust this value, use `--registers <int>`. For information about the implementation and trade-offs of adjusting this value, see Dashing's documentation.  
+The `tree` command is the first step in performing any analysis. It creates a pickle with the structure DandD will expect to receive for the other commands in order to answer questions downstream. It **requires** either a file containing full filepaths to fastas (`--fastas <path>`, `-f <path>`) or a data directory (`--datadir <path>`) containing all fastas of interest.  
+`--outdir <path>` or `-o <path>` : output directory (default current working directory)  
+`--sketchdir <sketchdb path>` or `-c <sketchdb path>` : path to sketchdirectory. If the sketches for `tree` already exist in a `sketchdb` directory other than inside `outdir`, the `sketchdir` can be provided in order to take maximum advantage of previous work in terms of time/space.  
+Additionally:  
+`-s <string>` or `--tag <string>` : string used in file name prefixes to name the non-sketch output files for a particular experiment. If no tag is provided, `"dandd"` will be used by default.  
+`-k <int>` : set the starting value in search for optimal `k` for delta. As demonstrated in the DandD paper, the optimal k-mer length for delta changes based on characteristics of the data. Therefore, it is beneficial to adjust the starting value of k based on prior information to avoid searching excessively high or low values.  
+`--exact` : use KMC for k-mer counting (instead of estimation through Dashing sketching) to calculate delta.   
+`--non-canon` : disable canonicalization. By default, DandD will canonicalize the k-mers (i.e. treat reverse complements as equivalent to the original k-mer string).  
+`--nchildren <int>` or `-n <int>` : maximum number of children for each union. By default, DandD will build trees with a single layer of child nodes and one single union of all inputs (nicknamed 'spiders'). With `--nchildren` the tree can be built by calculating delta for a series of smaller unions by indicating the maximum number of children for each union.  
+`--registers <int>` : adjust number of registers used during sketching. For information about the implementation and trade-offs of adjusting this value, see Dashing's documentation.  
 
 
 ### progressive
 
-The `progressive` command performs a series of cumulative (or progressive) unions over a number (`--norder`) of orderings of the input fastas. It takes a `tree.pickle` object output from the `tree` command. If only a subset of the original fastas in the tree are of interest, a subset list can be provided. If orderings have previously been produced for this tree, those orderings will be repurposed, with additional orderings generated if `--norder` is greater than the number of orderings already generated.  
+The `progressive` command performs a series of cumulative (or progressive) unions over a number (`--norder`) of orderings of the input fastas. It **requires** `--dtree / -d <tree.pickle>` where `<tree.pickle` is an output of the `tree` command. If only a subset of the original fastas in the tree are of interest, a subset list can be provided using `--fastas / -f <filepath>`. If orderings have previously been produced for this tree, those orderings will be repurposed, with additional orderings generated if `--norder` is greater than the number of orderings already generated.  If an ordering file is to be shared across experiments/tags, a preexisting ordering file can be used via `--orderings / -r <ordering pickle>`.  
 
 ### kij
-The `kij` command produces pairwise deltas across all of the input fastas in the `tree.pickle` in order to compute K-Independent Jaccards. It also calculates values for pairwise Jaccard within the range provided using `--mink` and `--maxk`.  
-
+The `kij` command produces pairwise deltas across all of the input fastas in the `tree.pickle` in order to compute K-Independent Jaccards. It also calculates values for pairwise Jaccard within the range provided using `--mink` and `--maxk`. To write out those pairwise values use `--jaccard`. It **requires** `--dtree / -d <tree.pickle>` where `<tree.pickle` is an output of the `tree` command.  
 
 ### info
-The `info` command is used to obtain `ksweep` and `summary` information.  
+The `info` command is used to obtain `ksweep` and `summary` information. It **requires** `--dtree / -d <tree.pickle>` where `<tree.pickle` is an output of the `tree` command.  
