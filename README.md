@@ -1,7 +1,14 @@
 # DandD  
 Tool to estimate deltas for sequence sets and answer questions about relative contribution
 
-## Installation
+## Installation  
+```
+git clone https://github.com/jessicabonnie/dandd  
+cd dandd
+chmod +x lib/dandd # make dandd executable
+# NOTE: The following will alias dandd for the session. For this to persist this should be added to .bashrc
+alias dandd=$(pwd)/lib/dandd 
+```
 ### Dependencies
 #### Dashing
 **Note**: The version of *Dashing* currently available on bioconda is **not** recent enough. Please install the latest version from github
