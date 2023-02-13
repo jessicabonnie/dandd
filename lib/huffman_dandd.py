@@ -401,7 +401,7 @@ class DeltaTree:
     
     def make_prefix(self, tag: str, label="", outdir:str=None):
         if not outdir:
-            outdir=os.path.curdir
+            outdir=os.getcwd()
         if not label == "":
             label = "_"+label
         fileprefix=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] )
