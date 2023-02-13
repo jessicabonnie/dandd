@@ -19,6 +19,9 @@ def insert_pre_ext(filename, string):
     return '.'.join(toks[:-1] + [string] + [toks[-1]])
 
 def tree_command(args):
+    if not (args.genomedir or args.flist_loc):
+        print("ERROR: You must provide either a datadirectory or a fasta file list!")
+        sys.exit(1)
     if not args.sketchdir:
         # args.sketchdir=os.path.join(args.outdir,args.tag,"sketchdb")
         args.sketchdir=os.path.join(args.outdir,"sketchdb")
@@ -113,15 +116,15 @@ def parse_arguments():
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
 
     # Make parser for "dand_cmd.py tree ..."
-    tree_parser = subparsers.add_parser("tree")
+    tree_parser = subparsers.add_parser("tree", help="Calculate deltas for input fastas and full union. Create DandD tree object for further downstream analysis.")
     commands.append('tree')
     # tree_parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
 
-    tree_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="species/experiment-tag-string", type=str, required=False, default='dandd')
+    tree_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="LABELING-TAG", type=str, required=False, default='dandd')
     # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
     tree_parser.add_argument("-x", "--exact", dest="exact", help="instead of estimating, count kmers using kmc3", default=False, action="store_true", required=False)
 
-    tree_parser.add_argument("-d", "--datadir", dest="genomedir", default='/scratch16/blangme2/jessica/data', help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="FASTADIR")
+    tree_parser.add_argument("-d", "--datadir", dest="genomedir", default=None, help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="FASTADIR")
 
     tree_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
