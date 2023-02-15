@@ -11,7 +11,7 @@ alias dandd=$(pwd)/lib/dandd
 ```
 ### Dependencies
 #### Dashing
-**Note**: The version of *Dashing* currently available on bioconda is **not** recent enough. Please install the latest version from github
+**Note**: The version of *Dashing* currently available on bioconda is **not** recent enough. Please obtain the latest binary release for your system from [https://github.com/dnbaker/dashing-binaries](https://github.com/dnbaker/dashing-binaries) and move it to somewhere in your `$PATH`. Alternatively, you can install the latest version from source by cloning it from github
 : [https://github.com/dnbaker/dashing](https://github.com/dnbaker/dashing):  
 ```
 git clone --recursive https://github.com/dnbaker/dashing  
