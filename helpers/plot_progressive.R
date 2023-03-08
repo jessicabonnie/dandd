@@ -1,19 +1,18 @@
-
-.libPaths(c(.libPaths(),"~/R/rstudio/4.0"))
-.libPaths(c(.libPaths(),"~/rlibs/4.0.2/","~/rlibs/4.0.2/gcc/9.3.0","~/R/4.0.4","/usr/local/lib/R/site-library","/usr/local/lib/R/library"))
+.libPaths(c("~/rlibs/4.0.2/gcc/9.3.0/","~/R/rstudio/4.0",.libPaths()))
+#.libPaths(c(.libPaths(),"~/rlibs/4.0.2/","~/rlibs/4.0.2/gcc/9.3.0","~/R/4.0.4","/usr/local/lib/R/site-library","/usr/local/lib/R/library"))
 
 require(tidyr)
 require(ggplot2)
 require(data.table)
 require(openssl)
 require(dplyr)
-require(latex2exp)
+
 
 # tag="HVSVC2_2"
 # outdir="/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union"
 # gcount=10
 # load(resultsfile)
-library("optparse")
+#library("optparse")
 
 # option_list = list(
 #   make_option(c("-s", "--species"), type="character", default=NULL, 
@@ -77,9 +76,26 @@ ggplot2::ggsave(filename = file.path(outdir,paste0("plot_",tag,"_",item,"_",nord
 return(tp)
 }
 
-plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0){
+
+plotAbba <- function(progu, step=3){
+  # ordkey <- progu %>%
+  #   select(ordering, step, flist4) %>%
+  #   filter(step %in% c(3,4,5)) %>%
+  #   pivot_wider(names_from=step,values_from=flist4, names_prefix = "step") %>%
+  #   inner_join(progu)
+  ggplot(abba.quad2) + 
+    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=as.factor(fam_step5), group=as.factor(ordering)), size=.5) + 
+    theme(legend.position = "bottom")
+  
+  
+  
+}
+
+plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0, abba=FALSE){
   gcount=max(progu$ngen)
   norder=max(progu$ordering)
+  datasets=unique(progu$dataset)
   
   alphas <- sapply(unique(progu$dataset),function(x){as.numeric(alpha(filter(progu,dataset==x)))}, USE.NAMES = TRUE)
 print(alphas)
@@ -87,6 +103,16 @@ print(alphas)
     mutate(alpha=alphas[dataset]) %>% 
     mutate(legend.name=paste0(dataset," (\u03b1=",round(alpha,3),")"))
 
+  progu$opacity <- 1
+  if (abba){
+    most=max(progu$ngen)
+    tmp <- progu %>% ungroup() %>%
+      select(ordering, delta_pos, ngen) %>%
+      group_by(ngen) %>%
+      mutate(maxpos=max(delta_pos)) %>% ungroup() %>%
+      mutate(lighten=ifelse(ngen< 4, ifelse(delta_pos == maxpos,ordering,NA ),NA))
+    progu$opacity[progu$ordering %in% na.omit(tmp$lighten)] <- .5
+  }
   
   tp <-
     ggplot() 
@@ -97,12 +123,14 @@ print(alphas)
       mutate(Indicator=ordering <= nshow) %>%
       # filter(ordering %in% c(1:20)) %>%
       mutate(ngen=as.integer(ngen),kval=as.factor(kval))
+    print(names(progu))
     tp <- tp +
       geom_line(data=summary, aes(y=mean, x=ngen, linetype=legend.name)) +
     geom_point(data=filter(progu,Indicator),aes(y=delta, x=ngen, shape=kval), size=.5) +
     geom_line(data=filter(progu,Indicator),
               aes(y=delta, x=ngen,# linetype="Individual Ordering",
-                  group=ordering, color=as.factor(ordering)), size=.5) +
+                  group=ordering, color=as.factor(ordering), alpha=opacity), size=.5) +
+      scale_alpha_identity()+
       scale_shape_discrete(name="argmax(k)") +
       guides(color = 'none')
   }
@@ -113,9 +141,13 @@ print(alphas)
       geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.name),linetype=c(1)) +
       scale_color_discrete(name = NULL) 
   }
+  if (length(datasets) > 1){
+    tp <- tp + 
+      scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) 
+  }
   
   tp <- tp + 
-    scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) +
+    #scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) +
     theme_bw() +
     scale_x_continuous(breaks= scales::pretty_breaks(10)) +
     # scale_color_discrete(name = "Random Genome Ordering") +
@@ -253,7 +285,7 @@ clean_abba <- function(df, prefix="allvar_"){
   # rename and add desired columns
   tmp <- tmp %>% rename(step=ngen) %>% 
     group_by(ordering) %>% 
-    mutate(deltadelta=delta-lag(delta,default=delta[2]))
+    mutate(deltadelta=delta-lag(delta,default=delta[2]),previous=lag(last))
   tmp$deltadelta[tmp$step == 1] <- NA
   return(tmp)
 }
