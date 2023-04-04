@@ -281,7 +281,10 @@ class DashSketchObj(SketchObj):
     def card_command(self, sketch_paths=[]) -> str:
         if len(sketch_paths) == 0:
             sketch_paths=[self.sketch]
-        cmdlist = [DASHINGLOC,"card", "--presketched"]+ sketch_paths
+        verbose=[]
+        if not self.experiment['verbose']:
+            verbose=['2>>',os.path.join(self.sfp.dir,"error.txt")]
+        cmdlist = [DASHINGLOC,"card", "--presketched"]+ sketch_paths + verbose
         #, "-p10"
         # , f"-p{self.experiment['nthreads']}"
         cmd = " ".join(cmdlist)

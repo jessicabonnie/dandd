@@ -1,12 +1,17 @@
-.libPaths(c("~/rlibs/4.0.2/gcc/9.3.0/","~/R/rstudio/4.0",.libPaths()))
+#.libPaths(c("~/rlibs/4.0.2/gcc/9.3.0/","~/R/rstudio/4.0",.libPaths()))
+
+#.libPaths(c(.libPaths(),"~/R/rstudio/4.0"))
+# .libPaths(c("~/R/rstudio/4.0", .libPaths()))
+#.libPaths(c(.libPaths(),"~/R/rstudio/4.0","~/rlibs/4.0.2/gcc/9.3.0"))
 #.libPaths(c(.libPaths(),"~/rlibs/4.0.2/","~/rlibs/4.0.2/gcc/9.3.0","~/R/4.0.4","/usr/local/lib/R/site-library","/usr/local/lib/R/library"))
 
 require(tidyr)
 require(ggplot2)
 require(data.table)
-require(openssl)
 require(dplyr)
-
+require(stringr)
+require(stringi)
+#require(latex2exp)
 
 # tag="HVSVC2_2"
 # outdir="/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union"
@@ -51,17 +56,17 @@ tp <-
   mutate(ngenomes=as.integer(ngenomes),kval=as.factor(kval))  %>%
   ggplot(.) +
   geom_smooth(aes(y=delta_pos, x=ngenomes, linetype=method), method=method,formula=y~x) +
-  geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=.5) +
+  #geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=.5) +
   scale_linetype_manual(name=paste0("Fit (",norder," Orderings)"),values=c(2)) +
   geom_line(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes,
                                                      group=ordering, color=as.factor(ordering)), size=.5) +
   theme_bw() +
   scale_x_continuous(breaks= scales::pretty_breaks(10)) +
-  scale_shape_discrete(name="argmax(k)")+
+  #scale_shape_discrete(name="argmax(k)")+
   # scale_color_discrete(name = "Random Genome Ordering") +
   xlab("Number of Genomes in Set") +
   ylab("Value of \u03b4") +
-  ggtitle(label=paste0("Values of \u03b4* over orderings of ",gcount," ",stringr::str_to_title(tag)," Genomes")) +
+  ggtitle(label=paste0("Values of \u03b4* over orderings of ",gcount," ", stringr::str_to_title(tag)," Genomes")) +
   guides(color = 'none') +
   scale_y_continuous(labels = scales::label_number_auto())
 
@@ -101,7 +106,7 @@ plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0, abba=FALS
 print(alphas)
   summary <- summarize(group_by(progu, ngen, dataset), mean=mean(delta)) %>%
     mutate(alpha=alphas[dataset]) %>% 
-    mutate(legend.name=paste0(dataset," (\u03b1=",round(alpha,3),")"))
+    mutate(legend.print=paste0(dataset," (\u03b1=",round(alpha,3),")"))
 
   progu$opacity <- 1
   if (abba){
@@ -125,20 +130,22 @@ print(alphas)
       mutate(ngen=as.integer(ngen),kval=as.factor(kval))
     print(names(progu))
     tp <- tp +
-      geom_line(data=summary, aes(y=mean, x=ngen, linetype=legend.name)) +
-    geom_point(data=filter(progu,Indicator),aes(y=delta, x=ngen, shape=kval), size=.5) +
+      geom_line(data=summary, aes(y=mean, x=ngen, linetype=legend.print)) +
+    #geom_point(data=filter(progu,Indicator),aes(y=delta, x=ngen, shape=kval), size=.5) +
     geom_line(data=filter(progu,Indicator),
-              aes(y=delta, x=ngen,# linetype="Individual Ordering",
-                  group=ordering, color=as.factor(ordering), alpha=opacity), size=.5) +
-      scale_alpha_identity()+
-      scale_shape_discrete(name="argmax(k)") +
+#              aes(y=delta, x=ngen,# linetype="Individual Ordering",
+#                  group=ordering, color=as.factor(ordering), alpha=opacity), size=.5) +
+#      scale_alpha_identity()+
+              aes(y=delta, x=ngen,linetype="Individual Ordering",
+                  group=ordering, color=as.factor(ordering)), size=.5) +
+      #scale_shape_discrete(name="argmax(k)") +
+
       guides(color = 'none')
   }
   else{
     meanlinetype=c(1)
-    print(names(summary))
     tp <- tp +
-      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.name),linetype=c(1)) +
+      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.print),linetype=c(1)) +
       scale_color_discrete(name = NULL) 
   }
   if (length(datasets) > 1){
@@ -147,7 +154,12 @@ print(alphas)
   }
   
   tp <- tp + 
+
     #scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) +
+
+    #guides(linetype=guide_legend(title=paste0("Mean (",norder," Orderings)"))) +
+    # scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) +
+
     theme_bw() +
     scale_x_continuous(breaks= scales::pretty_breaks(10)) +
     # scale_color_discrete(name = "Random Genome Ordering") +

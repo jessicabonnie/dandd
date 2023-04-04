@@ -102,6 +102,9 @@ class DeltaTreeNode:
 
     def find_delta_helper(self, kval: int, direction=1):
         '''determine if there is a local maximum delta relative to the current k'''
+
+        if self.experiment['tool'] == 'dashing' and kval > 32:
+            raise ValueError("Exploratory k value is too high for dashing. Either something is amiss with your data or you need to be using --exact mode")
         # make sure that all necessary ingredient sketches are available for the current k in question
         self.update_node(kval)
         if direction < 0:
