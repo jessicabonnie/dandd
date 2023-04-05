@@ -82,20 +82,56 @@ return(tp)
 }
 
 
-plotAbba <- function(progu, step=3){
-  # ordkey <- progu %>%
-  #   select(ordering, step, flist4) %>%
-  #   filter(step %in% c(3,4,5)) %>%
-  #   pivot_wider(names_from=step,values_from=flist4, names_prefix = "step") %>%
-  #   inner_join(progu)
-  ggplot(abba.quad2) + 
-    geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
-    geom_line(aes(y=delta, x=step, color=as.factor(fam_step5), group=as.factor(ordering)), size=.5) + 
+plotAbba <- function(progu, title="Title Here", step=3, sdmult=1, nshow=NA){
+  subtitletext=paste0("Subsetted deltadelta >/- mean +/- ",sdmult,"SD")
+  
+  sub.orderings <- progu %>% group_by(step)  %>%
+    mutate(sd=sd(deltadelta), mean=mean(deltadelta)) %>%
+    filter(deltadelta < mean-sdmult*sd | deltadelta > mean+sdmult*sd) %>%
+    pull(ordering) %>% unique()
+  if (!is.na(nshow)){
+    sub.orderings <- head(sub.orderings,nshow)
+  }
+  maxorder=max(progu$ordering)
+  average <- progu %>% group_by(step)  %>%
+    summarize(delta=mean(delta))
+  
+  progu2 <- progu %>% inner_join(ordkey) %>% 
+    mutate(orderingf=ifelse(ordering %in% sub.orderings, "outlier", "inside"))
+  mean_text=paste0("Mean Over ",maxorder," Orderings")
+  
+  ggplot(progu2) + 
+    geom_line(aes(y=delta, x=step, color=as.factor(fam_step5), group=as.factor(ordering)),
+              size=.5) + 
     theme(legend.position = "bottom")
   
+  gg <- ggplot(filter(progu2, orderingf=="outlier"))  + 
+    geom_line(data=average,aes(y=delta,x=step,linetype="mean")) +
+  #+ ggtitle(subtitle=titletext)
   
+  #color.var=paste0("fam_step",step)
+  #geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    geom_line(aes(y=delta, x=step, color=as.factor(ordering),#color=as.factor(.data[[color.var]]), 
+                  group=as.factor(ordering), linetype="Individual Ordering"), size=.5) + theme_bw() + 
+    theme(legend.position = "bottom") + 
+    ggtitle(label = title,subtitle=subtitletext) +
+      #paste0("Colored By Number of Related Haplotypes at Step ",step),subtitle=titletext) +
+    guides(color="none") +
+    scale_linetype_manual(values = c("mean" = "solid", "Individual Ordering" = "dotted"),
+                          labels=c("mean"=mean_text, "Individual Ordering" = "Individual Ordering"),
+                          name=NULL)
   
+  #color.var=paste0("parent_step",step)
+  # gg + #geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+  #   geom_line(aes(y=delta, x=step, #color=as.factor(.data[[color.var]]), 
+  #                 group=as.factor(ordering)), size=.5) + theme_bw() + 
+  #   theme(legend.position = "bottom") + ggtitle(paste0("Colored By Number of Parental Haplotypes at Step ",step),subtitle=titletext)
+  # 
+  print(sub.orderings)
+  return(gg)
 }
+
+
 
 plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0, abba=FALSE){
   gcount=max(progu$ngen)
@@ -205,6 +241,7 @@ plot_scatter <- function (item, ytitle, filename, heap, alpha, param, plotlog=T)
 
 
 alphas <- function(progu){
+  print(str(progu))
   output <- sapply(unique(progu$dataset),
                    function(x){as.numeric(alpha(filter(progu,dataset==x)))}, USE.NAMES = TRUE)
 return(output)
@@ -214,7 +251,7 @@ return(output)
 alpha <- function(progu.df){
   avg.progu <- ungroup(progu.df) 
   if (! "mean_delta" %in% colnames(progu.df)){
-    avg.progu <- progu
+    avg.progu <- progu.df
   }
   # progu.df <- group_by (ngenmutate(progu.df, av)
   # if (! dataset %in% colnames(progu.df)){
