@@ -185,14 +185,15 @@ class SketchObj(object):
         tmpdir=tempfile.mkdtemp()
         cmd = self._leaf_command(tmpdir=tmpdir)
         stdout=None
-        if self.experiment['verbose']:
+        if not self.experiment['verbose']:
             stdout=subprocess.DEVNULL
+            #stderr=subprocess.STDOUT
         if self.experiment['debug']:
             print(cmd)
         if just_do_it:
             if self.experiment['verbose']:
                 print("Due to issues with leaf sketch/db file, we will Just Do It. (It=Sketch or Build Again)")
-            subprocess.call(cmd, shell=True, stdout=stdout, stderr=stderr)
+            subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd=cmd
         elif not self.sketch_check():
             subprocess.call(cmd, shell=True, stdout=stdout)
@@ -214,8 +215,9 @@ class SketchObj(object):
         ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
         cmd = self._union_command()
         stdout=None
+        stdout=subprocess.DEVNULL
         if self.experiment['verbose']:
-            stdout=subprocess.DEVNULL
+            stdout=subprocess.PIPE
         if just_do_it:
             subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd = cmd
@@ -248,16 +250,20 @@ class SketchObj(object):
 
     def individual_card(self):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
+        print("indiv card")
         cmd = self.card_command()#[self.sfp.full])
+        stderr=None
+        # if not self.experiment['verbose']:
+        #     stderr=subprocess.DEVNULL
         if self.experiment['debug']:
             print(cmd)
         try:
-            proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, check=True,universal_newlines=True)
+            proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, check=True,universal_newlines=True, stderr=stderr)
         except subprocess.CalledProcessError:
             # warnings.warn(message=f"{self.sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=RuntimeWarning)
             self.create_sketch(just_do_it=True)
             # print("recreated sketch")
-            proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True)
+            proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True, stderr=stderr)
         finally:
             self.parse_card(proc=proc)
         
@@ -281,10 +287,11 @@ class DashSketchObj(SketchObj):
     def card_command(self, sketch_paths=[]) -> str:
         if len(sketch_paths) == 0:
             sketch_paths=[self.sketch]
-        verbose=[]
-        if not self.experiment['verbose']:
-            verbose=['2>>',os.path.join(self.sfp.dir,"error.txt")]
-        cmdlist = [DASHINGLOC,"card", "--presketched"]+ sketch_paths + verbose
+        # print("card commmand")
+        # verbose=[]
+        # if not self.experiment['verbose']:
+        #     verbose=['2>>',os.path.join(self.sfp.dir,"error.txt")]
+        cmdlist = [DASHINGLOC,"card", "--presketched"]+ sketch_paths #+ verbose
         #, "-p10"
         # , f"-p{self.experiment['nthreads']}"
         cmd = " ".join(cmdlist)
@@ -319,8 +326,12 @@ class DashSketchObj(SketchObj):
     
     def _union_command(self) -> str:
         '''Returns bash command to create a union sketch'''
+        # print("union command")
+        # verbose=[]
+        # if not self.experiment['verbose']:
+        #     verbose=['2>>', os.path.join(self.sfp.dir, "error.txt")]
         cmdlist = [DASHINGLOC, "union", #f"-p{self.experiment['nthreads']}",
-        "-z -o", str(self.sfp.full)] + self._presketches
+        "-z -o", str(self.sfp.full)] + self._presketches #+ verbose
         cmd = " ".join(cmdlist)
         return cmd
         
