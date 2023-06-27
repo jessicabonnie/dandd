@@ -1,19 +1,23 @@
+#.libPaths(c("~/rlibs/4.0.2/gcc/9.3.0/","~/R/rstudio/4.0",.libPaths()))
 
-.libPaths(c(.libPaths(),"~/R/rstudio/4.0"))
-.libPaths(c(.libPaths(),"~/rlibs/4.0.2/","~/rlibs/4.0.2/gcc/9.3.0","~/R/4.0.4","/usr/local/lib/R/site-library","/usr/local/lib/R/library"))
+#.libPaths(c(.libPaths(),"~/R/rstudio/4.0"))
+# .libPaths(c("~/R/rstudio/4.0", .libPaths()))
+#.libPaths(c(.libPaths(),"~/R/rstudio/4.0","~/rlibs/4.0.2/gcc/9.3.0"))
+#.libPaths(c(.libPaths(),"~/rlibs/4.0.2/","~/rlibs/4.0.2/gcc/9.3.0","~/R/4.0.4","/usr/local/lib/R/site-library","/usr/local/lib/R/library"))
 
 require(tidyr)
 require(ggplot2)
 require(data.table)
-require(openssl)
 require(dplyr)
-require(latex2exp)
+require(stringr)
+require(stringi)
+#require(latex2exp)
 
 # tag="HVSVC2_2"
 # outdir="/home/jbonnie1/scr16_blangme2/jessica/dandd/progressive_union"
 # gcount=10
 # load(resultsfile)
-library("optparse")
+#library("optparse")
 
 # option_list = list(
 #   make_option(c("-s", "--species"), type="character", default=NULL, 
@@ -52,17 +56,17 @@ tp <-
   mutate(ngenomes=as.integer(ngenomes),kval=as.factor(kval))  %>%
   ggplot(.) +
   geom_smooth(aes(y=delta_pos, x=ngenomes, linetype=method), method=method,formula=y~x) +
-  geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=.5) +
+  #geom_point(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes, shape=kval), size=.5) +
   scale_linetype_manual(name=paste0("Fit (",norder," Orderings)"),values=c(2)) +
   geom_line(data=function(x) subset(x,Indicator),aes(y=delta_pos, x=ngenomes,
                                                      group=ordering, color=as.factor(ordering)), size=.5) +
   theme_bw() +
   scale_x_continuous(breaks= scales::pretty_breaks(10)) +
-  scale_shape_discrete(name="argmax(k)")+
+  #scale_shape_discrete(name="argmax(k)")+
   # scale_color_discrete(name = "Random Genome Ordering") +
   xlab("Number of Genomes in Set") +
   ylab("Value of \u03b4") +
-  ggtitle(label=paste0("Values of \u03b4* over orderings of ",gcount," ",stringr::str_to_title(tag)," Genomes")) +
+  ggtitle(label=paste0("Values of \u03b4* over orderings of ",gcount," ", stringr::str_to_title(tag)," Genomes")) +
   guides(color = 'none') +
   scale_y_continuous(labels = scales::label_number_auto())
 
@@ -77,45 +81,168 @@ ggplot2::ggsave(filename = file.path(outdir,paste0("plot_",tag,"_",item,"_",nord
 return(tp)
 }
 
-plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0){
+fixme <- function(x){ifelse(x==0,1,ifelse(x==-1,0,x))}
+
+plotAbba <- function(progu, title="Title Here", stepnum=3, sdmult=0, nshow=NA, child=NA, relationship="parent"){
+  subtitletext<-NA
+  if (sdmult > 0){
+  subtitletext=paste0("Subsetted deltadelta >/- mean +/- ",sdmult,"SD")
+  sub.orderings <- progu %>% group_by(step)  %>%
+    mutate(sd=sd(deltadelta), mean=mean(deltadelta)) %>%
+    filter(deltadelta < mean-sdmult*sd | deltadelta > mean+sdmult*sd) %>%
+    pull(ordering) %>% unique()
+  } else{
+    subtitletext<-NA
+    sub.orderings <- progu %>% group_by(step)  %>%
+      mutate(sd=sd(deltadelta), mean=mean(deltadelta)) %>%
+      # filter(deltadelta < mean-sdmult*sd | deltadelta > mean+sdmult*sd) %>%
+      pull(ordering) %>% unique()
+  }
+  
+  if (!is.na(nshow)){
+    sub.orderings <- head(sub.orderings,nshow)
+  }
+  maxorder=max(progu$ordering)
+  average <- progu %>% group_by(step)  %>%
+    summarize(delta=mean(delta))
+  
+  if (! is.na(child)){
+    childsplit<-strsplit(child, "(?=[A-Za-z])(?<=[0-9])|(?=[0-9])(?<=[A-Za-z])", perl=TRUE)[[1]]
+    childpre=paste0(childsplit[1:length(childsplit)-1])
+    childend=childsplit[length(childsplit)]
+    padding=nchar(childend)
+    parent2 <- paste0(childpre, str_pad(str=as.numeric(childend)-1,pad="0",width=padding, side="left"))
+    mom <- paste0(childpre, str_pad(str=as.numeric(childend)-2,pad="0",width=padding, side="left"))
+    matchparent<-matchstring<-paste0(child,"*|",mom,"*")
+    matchstring<-paste0(child,"*|",mom,"*|",parent2,"*")
+    haplomom <- paste0(mom,c("_1","_2"))
+    haplomom <- haplomom[haplomom %in% names(progu)]
+    haplodad <- paste0(parent2,c("_1","_2"))
+    haplodad <- haplodad[haplodad %in% names(progu)]
+    haploparents=c(haplomom,haplodad)
+    print(mom)
+    ordkey <- progu %>%
+      select(ordering, step, flist4, matches(matchstring)) %>%
+      filter(step == stepnum) %>%
+      rowwise() %>%
+      mutate(across(matches(matchstring),.fns=~fixme(.x))) %>%
+      mutate(flist4=stringr::str_flatten(flist4)) %>% 
+      mutate(fam=rowSums(across(matches(matchstring)))) %>% 
+    mutate(mom=rowSums(across(contains(mom)))) %>% 
+      mutate(parent=rowSums(across(matches(matchparent)))) %>%
+      select(-matches(matchstring)) %>% 
+      pivot_wider(names_from=step,values_from=c(flist4,fam,mom,parent), values_fn = as.factor, names_prefix = "step")
+    progu <- inner_join(progu,ordkey)
+  }
+  
+  progu2 <- progu %>% #inner_join(ordkey) %>% 
+    mutate(orderingf=ifelse(ordering %in% sub.orderings, "outlier", "inside"))
+  mean_text=paste0("Mean Over ",maxorder," Orderings")
+  
+  # ggplot(progu2) + 
+  #   geom_line(aes(y=delta, x=step, color=as.factor(fam_step5), group=as.factor(ordering)),
+  #             size=.5) + 
+  #   theme(legend.position = "bottom")
+  
+  gg <- ggplot(filter(progu2, orderingf=="outlier"))  + 
+    geom_line(data=average,aes(y=delta,x=step,linetype="mean"))
+  
+  if (!is.na(child)){
+    color.var=paste0(relationship,"_step",stepnum)
+    gg <- gg + geom_line(aes(y=delta, x=step, color=as.factor(.data[[color.var]]), 
+                  group=as.factor(ordering), linetype="Individual Ordering"), size=.5)
+  }
+  else{
+    gg <- gg + geom_line(aes(y=delta, x=step, color=as.factor(ordering),#color=as.factor(.data[[color.var]]), 
+                             group=as.factor(ordering), linetype="Individual Ordering"), size=.5)
+  }
+  #+ ggtitle(subtitle=titletext)
+  
+  #color.var=paste0("fam_step",step)
+  #geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+    gg <- gg + theme_bw() + 
+    theme(legend.position = "bottom") + 
+    ggtitle(label = title,subtitle=subtitletext) +
+      #paste0("Colored By Number of Related Haplotypes at Step ",step),subtitle=titletext) +
+    #guides(color="none") +
+    scale_linetype_manual(values = c("mean" = "solid", "Individual Ordering" = "dotted"),
+                          labels=c("mean"=mean_text, "Individual Ordering" = "Individual Ordering"),
+                          name=NULL)
+  
+  #color.var=paste0("parent_step",step)
+  # gg + #geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
+  #   geom_line(aes(y=delta, x=step, #color=as.factor(.data[[color.var]]), 
+  #                 group=as.factor(ordering)), size=.5) + theme_bw() + 
+  #   theme(legend.position = "bottom") + ggtitle(paste0("Colored By Number of Parental Haplotypes at Step ",step),subtitle=titletext)
+  # 
+  print(sub.orderings)
+  return(gg)
+}
+
+
+
+plotCumulativeUnion <- function(progu, title, summarize=TRUE, nshow=0, abba=FALSE){
   gcount=max(progu$ngen)
   norder=max(progu$ordering)
+  datasets=unique(progu$dataset)
   
   alphas <- sapply(unique(progu$dataset),function(x){as.numeric(alpha(filter(progu,dataset==x)))}, USE.NAMES = TRUE)
 print(alphas)
   summary <- summarize(group_by(progu, ngen, dataset), mean=mean(delta)) %>%
     mutate(alpha=alphas[dataset]) %>% 
-    mutate(legend.name=paste0(dataset," (\u03b1=",round(alpha,3),")"))
+    mutate(legend.print=paste0(dataset," (\u03b1=",round(alpha,3),")"))
 
+  progu$opacity <- 1
+  # if (abba){
+  #   most=max(progu$ngen)
+  #   tmp <- progu %>% ungroup() %>%
+  #     select(ordering, delta_pos, ngen) %>%
+  #     group_by(ngen) %>%
+  #     mutate(maxpos=max(delta_pos)) %>% ungroup() %>%
+  #     mutate(lighten=ifelse(ngen< 4, ifelse(delta_pos == maxpos,ordering,NA ),NA))
+  #   progu$opacity[progu$ordering %in% na.omit(tmp$lighten)] <- .5
+  # }
   
   tp <-
     ggplot() 
   
   if (nshow > 0){
-    meanlinetype=c(2,3)
+    meanlinetype=c(2,3,4,5)[1:length(datasets)]
     progu <- progu %>%
       mutate(Indicator=ordering <= nshow) %>%
       # filter(ordering %in% c(1:20)) %>%
       mutate(ngen=as.integer(ngen),kval=as.factor(kval))
+    print(names(progu))
     tp <- tp +
-      geom_line(data=summary, aes(y=mean, x=ngen, linetype=legend.name)) +
-    geom_point(data=filter(progu,Indicator),aes(y=delta, x=ngen, shape=kval), size=.5) +
+      geom_line(data=summary, aes(y=mean, x=ngen, linetype=legend.print)) +
+    #geom_point(data=filter(progu,Indicator),aes(y=delta, x=ngen, shape=kval), size=.5) +
     geom_line(data=filter(progu,Indicator),
-              aes(y=delta, x=ngen,# linetype="Individual Ordering",
+#              aes(y=delta, x=ngen,# linetype="Individual Ordering",
+#                  group=ordering, color=as.factor(ordering), alpha=opacity), size=.5) +
+#      scale_alpha_identity()+
+              aes(y=delta, x=ngen,linetype="Individual Ordering",
                   group=ordering, color=as.factor(ordering)), size=.5) +
-      scale_shape_discrete(name="argmax(k)") +
+      #scale_shape_discrete(name="argmax(k)") +
+
       guides(color = 'none')
   }
   else{
-    meanlinetype=c(1)
-    print(names(summary))
     tp <- tp +
-      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.name),linetype=c(1)) +
+      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.print),linetype="mean") +
       scale_color_discrete(name = NULL) 
   }
+  # if (length(datasets) > 1){
+  #   tp <- tp + 
+  #     scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) 
+  # }
   
   tp <- tp + 
-    scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) +
+
+    #scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) +
+
+    #guides(linetype=guide_legend(title=paste0("Mean (",norder," Orderings)"))) +
+    # scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) +
+
     theme_bw() +
     scale_x_continuous(breaks= scales::pretty_breaks(10)) +
     # scale_color_discrete(name = "Random Genome Ordering") +
@@ -161,6 +288,7 @@ plot_scatter <- function (item, ytitle, filename, heap, alpha, param, plotlog=T)
 
 
 alphas <- function(progu){
+  print(str(progu))
   output <- sapply(unique(progu$dataset),
                    function(x){as.numeric(alpha(filter(progu,dataset==x)))}, USE.NAMES = TRUE)
 return(output)
@@ -170,7 +298,7 @@ return(output)
 alpha <- function(progu.df){
   avg.progu <- ungroup(progu.df) 
   if (! "mean_delta" %in% colnames(progu.df)){
-    avg.progu <- progu
+    avg.progu <- progu.df
   }
   # progu.df <- group_by (ngenmutate(progu.df, av)
   # if (! dataset %in% colnames(progu.df)){
@@ -253,7 +381,7 @@ clean_abba <- function(df, prefix="allvar_"){
   # rename and add desired columns
   tmp <- tmp %>% rename(step=ngen) %>% 
     group_by(ordering) %>% 
-    mutate(deltadelta=delta-lag(delta,default=delta[2]))
+    mutate(deltadelta=delta-lag(delta,default=delta[2]),previous=lag(last))
   tmp$deltadelta[tmp$step == 1] <- NA
   return(tmp)
 }
