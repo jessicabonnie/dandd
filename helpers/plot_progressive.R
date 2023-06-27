@@ -84,29 +84,13 @@ return(tp)
 fixme <- function(x){ifelse(x==0,1,ifelse(x==-1,0,x))}
 
 plotAbba <- function(progu, title="Title Here", stepnum=3, sdmult=0, nshow=NA, child=NA, relationship="parent"){
-  subtitletext<-NA
-  if (sdmult > 0){
-  subtitletext=paste0("Subsetted deltadelta >/- mean +/- ",sdmult,"SD")
-  sub.orderings <- progu %>% group_by(step)  %>%
-    mutate(sd=sd(deltadelta), mean=mean(deltadelta)) %>%
-    filter(deltadelta < mean-sdmult*sd | deltadelta > mean+sdmult*sd) %>%
-    pull(ordering) %>% unique()
-  } else{
-    subtitletext<-NA
-    sub.orderings <- progu %>% group_by(step)  %>%
-      mutate(sd=sd(deltadelta), mean=mean(deltadelta)) %>%
-      # filter(deltadelta < mean-sdmult*sd | deltadelta > mean+sdmult*sd) %>%
-      pull(ordering) %>% unique()
-  }
   
-  if (!is.na(nshow)){
-    sub.orderings <- head(sub.orderings,nshow)
-  }
   maxorder=max(progu$ordering)
   average <- progu %>% group_by(step)  %>%
     summarize(delta=mean(delta))
   
   if (! is.na(child)){
+    #ordkey <- bind_rows(lapply(children, function(child){
     childsplit<-strsplit(child, "(?=[A-Za-z])(?<=[0-9])|(?=[0-9])(?<=[A-Za-z])", perl=TRUE)[[1]]
     childpre=paste0(childsplit[1:length(childsplit)-1])
     childend=childsplit[length(childsplit)]
@@ -128,11 +112,30 @@ plotAbba <- function(progu, title="Title Here", stepnum=3, sdmult=0, nshow=NA, c
       mutate(across(matches(matchstring),.fns=~fixme(.x))) %>%
       mutate(flist4=stringr::str_flatten(flist4)) %>% 
       mutate(fam=rowSums(across(matches(matchstring)))) %>% 
-    mutate(mom=rowSums(across(contains(mom)))) %>% 
+      mutate(mom=rowSums(across(contains(mom)))) %>% 
       mutate(parent=rowSums(across(matches(matchparent)))) %>%
       select(-matches(matchstring)) %>% 
       pivot_wider(names_from=step,values_from=c(flist4,fam,mom,parent), values_fn = as.factor, names_prefix = "step")
+    #return( ordkey))})
     progu <- inner_join(progu,ordkey)
+    
+  }
+  subtitletext<-NA
+  if (sdmult > 0){
+    subtitletext=paste0("Subsetted deltadelta >/- mean +/- ",sdmult,"SD")
+    sub.orderings <- progu %>% group_by(step)  %>%
+      mutate(sd=sd(deltadelta), mean=mean(deltadelta)) %>%
+      filter(deltadelta < mean-sdmult*sd | deltadelta > mean+sdmult*sd) %>%
+      pull(ordering) %>% unique()
+  } else{
+    subtitletext<-"Not Subset based on SD"
+    sub.orderings <- progu %>% group_by(step)  %>%
+      mutate(sd=sd(deltadelta), mean=mean(deltadelta)) %>%
+      # filter(deltadelta < mean-sdmult*sd | deltadelta > mean+sdmult*sd) %>%
+      pull(ordering) %>% unique()
+  }
+  if (!is.na(nshow)){
+    sub.orderings <- head(sub.orderings,nshow)
   }
   
   progu2 <- progu %>% #inner_join(ordkey) %>% 
@@ -145,26 +148,28 @@ plotAbba <- function(progu, title="Title Here", stepnum=3, sdmult=0, nshow=NA, c
   #   theme(legend.position = "bottom")
   
   gg <- ggplot(filter(progu2, orderingf=="outlier"))  + 
-    geom_line(data=average,aes(y=delta,x=step,linetype="mean"))
+    geom_line(data=average,aes(y=delta,x=step,linetype="mean"),size=1)
   
   if (!is.na(child)){
     color.var=paste0(relationship,"_step",stepnum)
     gg <- gg + geom_line(aes(y=delta, x=step, color=as.factor(.data[[color.var]]), 
-                  group=as.factor(ordering), linetype="Individual Ordering"), size=.5)
+                  group=as.factor(ordering), linetype="Individual Ordering"), size=.5) +
+      ggtitle(label =title,subtitle = paste0(subtitletext,"\nColored By Number of ",relationship, " Related Haplotypes at Step ",stepnum)) 
   }
   else{
     gg <- gg + geom_line(aes(y=delta, x=step, color=as.factor(ordering),#color=as.factor(.data[[color.var]]), 
-                             group=as.factor(ordering), linetype="Individual Ordering"), size=.5)
+                             group=as.factor(ordering), linetype="Individual Ordering"), size=1) +
+      guides(color="none") +
+      ggtitle(label = title,subtitle=subtitletext) 
   }
   #+ ggtitle(subtitle=titletext)
   
   #color.var=paste0("fam_step",step)
   #geom_point(aes(y=delta, x=step, shape=as.factor(kval)), size=.5) +
     gg <- gg + theme_bw() + 
-    theme(legend.position = "bottom") + 
-    ggtitle(label = title,subtitle=subtitletext) +
+    theme(legend.position = c(.75,.25)) + 
+    # ggtitle(label = title,subtitle=subtitletext) +
       #paste0("Colored By Number of Related Haplotypes at Step ",step),subtitle=titletext) +
-    #guides(color="none") +
     scale_linetype_manual(values = c("mean" = "solid", "Individual Ordering" = "dotted"),
                           labels=c("mean"=mean_text, "Individual Ordering" = "Individual Ordering"),
                           name=NULL)
@@ -191,7 +196,7 @@ print(alphas)
   summary <- summarize(group_by(progu, ngen, dataset), mean=mean(delta)) %>%
     mutate(alpha=alphas[dataset]) %>% 
     mutate(legend.print=paste0(dataset," (\u03b1=",round(alpha,3),")"))
-
+print(head(summary))
   progu$opacity <- 1
   # if (abba){
   #   most=max(progu$ngen)
@@ -207,7 +212,7 @@ print(alphas)
     ggplot() 
   
   if (nshow > 0){
-    meanlinetype=c(2,3,4,5)[1:length(datasets)]
+    # meanlinetype=c(2,3,4,5)[1:length(datasets)]
     progu <- progu %>%
       mutate(Indicator=ordering <= nshow) %>%
       # filter(ordering %in% c(1:20)) %>%
@@ -228,14 +233,14 @@ print(alphas)
   }
   else{
     tp <- tp +
-      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.print),linetype="mean") +
+      geom_line(data=ungroup(summary), aes(y=mean, x=ngen, color=legend.print)) +
       scale_color_discrete(name = NULL) 
   }
   # if (length(datasets) > 1){
-  #   tp <- tp + 
-  #     scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) 
+  #   tp <- tp +
+  #     scale_color_manual(name=paste0("Mean (",norder," Orderings)"))
   # }
-  
+  print("made it out")
   tp <- tp + 
 
     #scale_linetype_manual(name=paste0("Mean (",norder," Orderings)")) +
