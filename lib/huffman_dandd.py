@@ -131,6 +131,51 @@ class DeltaTreeNode:
         self.find_delta_helper(kval=kval, direction=-1)
         self.card=self.ksketches[self.bestk].card
         return
+    
+    def ksweep_update_node(self, mink=2, maxk=32):
+        tmpdir=tempfile.mkdtemp()
+        stdout=None
+        krange=[int(mink),int(maxk)]
+        if len(self.experiment["ksweep"]) > 1:
+            print("inside ksweep experiment if")
+            krange=self.experiment["ksweep"]
+            print(krange)
+        empty_ks = [str(i) for i in range(int(krange[0]),int(krange[1])+1) if not self.ksketches[i] ]
+        if len(empty_ks) == 0:
+            return []
+        # This should return an sfp that can be used to fill a parallel command
+        sfp=SketchFilePath(filenames=self.fastas, kval=0, speciesinfo=self.speciesinfo, experiment=self.experiment)
+        sketchlist=[]
+        for i in range(krange[0],krange[1]+1):
+            os.makedirs(sfp.dir.replace("{}",str(i)), exist_ok=True)
+            sketchlist.append(sfp.full.replace("{}",str(i)))
+
+        presketches=[]
+        if self.ngen > 1:
+            #TODO: Fiddling was happening here
+            for i in range(len(self.children)):
+                sketchlist = sketchlist + self.children[i].ksweep_update_node()
+                presketches= presketches + [self.children[i].ksketches[0].sfp.full]
+                presketches= presketches + [self.children[i].ksketches[0].sfp.full]
+            
+        if self.experiment["tool"] == "dashing":
+            self.ksketches[0] = DashSketchObj(kval = 0, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
+        elif self.experiment["tool"] == "kmc":
+            # TODO: create tmp directory for this obj to use here?
+            self.ksketches[0] = KMCSketchObj(kval = 0, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
+            tmpdir=tempfile.mkdtemp()
+        if self.ngen < 2:
+            sub_cmd = self.ksketches[0]._leaf_command(tmpdir=tmpdir)
+        else:
+            sub_cmd = self.ksketches[0]._union_command()
+        cmdlist = ["parallel '",sub_cmd,"' :::", "{"+ ",".join(empty_ks)+"}"]
+        print(cmdlist)
+        cmd = " ".join(cmdlist)
+        print(cmd)
+        subprocess.call(cmd, shell=True, stdout=stdout)
+        return sketchlist
+
+
 
     def update_node(self, kval, parallel=False):
         '''Populate the sketch object for the given k at the self node as well as all children of the node'''
@@ -170,15 +215,17 @@ class DeltaTreeNode:
         #self.update_card()
         return
 
-    def node_ksweep(self, mink: int, maxk: int):
+    def node_ksweep(self):
         '''Sketch all of the ks for the node (and its decendent nodes)between mink and maxk (even when they weren't needed to calculate delta'''
-        
-        maxk=int(maxk)
-        mink=int(mink)
-        if maxk > len(self.ksketches):
-            self.ksketches = self.ksketches + [None]* (maxk-len(self.ksketches))
+        sketchlist=self.ksweep_update_node()
+        multicard=self.ksketches[0].card_command(sketchlist)
+        self.ksketches[0].individual_card(cmd=multicard)
+        maxk=self.experiment["ksweep"][1]
+        mink=self.experiment["ksweep"][0]
+        # if maxk > len(self.ksketches):
+        #     self.ksketches = self.ksketches + [None]* (maxk-len(self.ksketches))
             #self.ksketches.extend([None]* (maxk-len(self.ksketches)))
-        for kval in range(mink, maxk+1):
+        for kval in range(mink, maxk):
             if not self.ksketches[kval]:
                 self.update_node(kval) 
         self.mink=mink
@@ -219,7 +266,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False}, padding=True):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False, 'ksweep':False}, padding=True):
         self.experiment=experiment
         self._symbols = []
         self.mink=0
@@ -383,6 +430,8 @@ class DeltaTree:
         # print("Best ks after padding:", bestks)
         for k in bestks:
             root.update_node(k)
+        if len(self.experiment["ksweep"]) > 1:
+            root.node_ksweep()
     
     def leaf_nodes(self) -> List[DeltaTreeNode]:
         return [child for child in self._dt if child.ngen==1]
@@ -457,7 +506,7 @@ class DeltaTree:
             maxk = self.maxk
             # if self.maxk <= 30:
             #     maxk=self.maxk + 2
-        self.ksweep(mink=mink, maxk=maxk)
+        self.ksweep()
         def _delta_pos_recursive(node) -> List[dict]:
             tmplist=node.summarize()
             if node.children:
@@ -486,12 +535,12 @@ class DeltaTree:
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
    
-    def ksweep(self, mink:int=0, maxk:int=0) -> None:
-        if mink == 0:
-            mink=int(self.mink)
-        if maxk == 0:
-            maxk = int(self.maxk)
-        self.root.node_ksweep( mink=mink, maxk=maxk)
+    def ksweep(self): #, mink:int=0, maxk:int=0) -> None:
+        # if mink == 0:
+        #     mink=int(self.mink)
+        # if maxk == 0:
+        #     maxk = int(self.maxk)
+        self.root.node_ksweep()
         self.speciesinfo.save_references()
         self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
 
@@ -594,7 +643,7 @@ class DeltaTree:
             
             kij_results.append(pspider.kij_summarize())
             if jaccard:
-                pspider.ksweep(mink=mink, maxk=maxk)
+                pspider.ksweep() #(mink=mink, maxk=maxk)
                 j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))  
               
         # self.speciesinfo.save_references(fast=self.experiment['fast'])
@@ -729,7 +778,7 @@ class DeltaSpider(DeltaTree):
 #         raise NotImplementedError
 
 
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10, safety=False, fast=False, verbose=False):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10, safety=False, fast=False, verbose=False, ksweep=None):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
@@ -742,7 +791,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     tool = string indicating which tool to use for kmer cardinality
     choices=["dashing","kmc"] '''
     # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
-    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set(), 'safety':safety, 'fast':fast, 'verbose':verbose}
+    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set(), 'safety':safety, 'fast':fast, 'verbose':verbose, 'ksweep':ksweep}
 
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)

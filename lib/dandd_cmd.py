@@ -30,10 +30,12 @@ def tree_command(args):
     if args.exact:
         tool='kmc'
         args.registers=20
+    if args.ksweep:
+        args.ksweep=(int(args.mink), int(args.maxk))
         
     os.makedirs(args.outdir, exist_ok=True)
     # os.chdir(args.sketchdir)
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety, fast=args.fast, verbose=args.verbose)
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety, fast=args.fast, verbose=args.verbose, ksweep=args.ksweep)
 
     fileprefix = dtree.make_prefix(outdir=args.outdir, tag=args.tag, label=args.label)
     dtree.save(fileprefix=fileprefix, fast=args.fast)
@@ -49,6 +51,9 @@ def progressive_command(args):
     dtree.experiment["safety"] = args.safety
     dtree.experiment["fast"] = args.fast
     dtree.experiment["verbose"] = args.verbose
+    dtree.experiment["ksweep"] = None
+    if args.ksweep:
+        dtree.experiment["ksweep"]=(int(args.mink), int(args.maxk))
     dtree.speciesinfo.update(tool=dtree.experiment["tool"])
     results, summary=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
     
@@ -71,6 +76,8 @@ def info_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
     if not args.tag:
         args.tag=dtree.speciesinfo.tag
+    if args.ksweep:
+        dtree.experiment["ksweep"]=(int(args.mink), int(args.maxk))
     args.outfile = dtree.make_prefix(tag=args.tag, label=f"info", outdir=args.outdir)
     summary=dtree.summarize(mink=args.mink, maxk=args.maxk)
     write_listdict_to_csv(outfile=args.outfile+'_ksweep.csv', listdict=summary)
@@ -86,7 +93,7 @@ def kij_command(args):
         with open(args.flist_loc) as file:
             fastas = [line.strip() for line in file]
 
-    dtree.ksweep(mink=args.mink,maxk=args.maxk)
+    dtree.ksweep(mink=int(args.mink),maxk=int(args.maxk))
     kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk, jaccard=args.jaccard)
     write_listdict_to_csv(outfile=args.outfile+".kij.csv", listdict=kij_results)
     if args.jaccard:
@@ -149,6 +156,12 @@ def parse_arguments():
 
     tree_parser.add_argument("-C", "--no-canon", action="store_false", default=True,  dest="canonicalize", help="instruct dashing to use non-canonicalized kmers")
 
+    tree_parser.add_argument( "--ksweep", dest="ksweep", default=None,
+    action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
+    tree_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+
+    tree_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+
     tree_parser.set_defaults(func=tree_command)
 
 
@@ -169,8 +182,12 @@ def parse_arguments():
 
     progressive_parser.add_argument("-l", "--label", dest="label", metavar="SUFFIX TAG", default="", help="NOT IMPLEMENTED label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False)
 
-    progressive_parser.add_argument( "--ksweep", dest="ksweep", default=False,
+    progressive_parser.add_argument( "--ksweep", dest="ksweep", default=None,
     action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
+
+    progressive_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int,help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+
+    progressive_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     # progressive_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
@@ -187,14 +204,17 @@ def parse_arguments():
     info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command. Tree nodes will be updated to hold additional sketches as needed to perform info commands selected.")
     info_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="PREFIX TAG", type=str, required=False)
     
-    info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=10, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     # info_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, default will use the tag for the provided tree.")
     info_parser.add_argument("-o", "--outdir", dest="outdir", default=os.getcwd(), type=str, help="directory to write the output tables.", metavar="OUTPUT DIR")
 
     info_parser.add_argument("-l", "--label", dest="label", default="", help="NOT IMPLEMENTED Label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False, metavar="SUFFIX TAG")
+
+    info_parser.add_argument( "--ksweep", dest="ksweep", default=None,
+    action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
 
 
     info_parser.set_defaults(func=info_command)
