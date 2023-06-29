@@ -181,7 +181,7 @@ class SketchObj(object):
     def __repr__(self):
         return f"['sketch loc: {self.sketch}', k: {self.kval}, pos delta: {self.delta_pos}, cardinality: {self.card}, command: {self.cmd}  ]"
     
-    def sketch_check(self)->bool:
+    def sketch_check(self, path)->bool:
         raise NotImplementedError("Subclass needs to define this.")
         
     def _leaf_command(self, tmpdir) -> str:
@@ -317,10 +317,11 @@ class DashSketchObj(SketchObj):
         for card in csv.DictReader(proc.stdout.splitlines(),delimiter='\t'):
                 self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
 
-    def sketch_check(self) -> bool:
+    def sketch_check(self, path=None) -> bool:
         '''Check that sketch at full path exists and is not empty'''
-        
-        if os.path.exists(self.sfp.full) and os.stat(self.sfp.full).st_size != 0:
+        if not path:
+            path=self.sfp.full
+        if os.path.exists(path) and os.stat(path).st_size != 0:
             return True
         else:
             return False
@@ -375,21 +376,31 @@ class KMCSketchObj(SketchObj):
 
     def card_command(self, sketch_paths:list=[]) -> str:
         if len(sketch_paths) == 0:
+            if self.kval == 0:
+                return
             sketch_paths=[self.sketch]
         cmdlist = ["kmc_tools","info"] + sketch_paths
         cmd = " ".join(cmdlist)
         return cmd
-    def sketch_check(self) -> bool:
-        if (os.path.exists(self.sfp.full +".kmc_pre")) and (os.path.exists(self.sfp.full +".kmc_suf")) and os.stat(self.sfp.full +".kmc_suf").st_size != 0:
+    
+    def sketch_check(self, path=None) -> bool:
+        if not path:
+            path=self.sfp.full
+        if (os.path.exists(path +".kmc_pre")) and (os.path.exists(path +".kmc_suf")) and os.stat(path +".kmc_suf").st_size != 0:
             return True
         else:
             return False
 
     def _leaf_command(self,tmpdir) -> str:
+        kval_str=str(self.kval)
+        if self.kval == 0:
+            kval_str="{}"
+        tmpkdir=os.path.join(tmpdir,"k"+kval_str)
+        os.makedirs(tmpkdir, exist_ok=True)
         cmdlist = ['kmc -t'+ str(self.experiment['nthreads']),
-        '-ci1 -cs2',f'-k{str(self.kval)}',
+        '-ci1 -cs2','-k' + kval_str,
         canon_command(canon=self.experiment['canonicalize'], tool="kmc"),
-        '-fm', self.sfp.ffiles[0], self.sfp.full, tmpdir]
+        '-fm', self.sfp.ffiles[0], self.sfp.full, tmpkdir]
         cmd = " ".join(cmdlist)
         return cmd
 

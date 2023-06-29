@@ -133,28 +133,31 @@ class DeltaTreeNode:
         return
     
     def ksweep_update_node(self, mink=2, maxk=32):
-        tmpdir=tempfile.mkdtemp()
-        stdout=None
-        krange=[int(mink),int(maxk)]
-        if len(self.experiment["ksweep"]) > 1:
-            print("inside ksweep experiment if")
-            krange=self.experiment["ksweep"]
-            print(krange)
-        empty_ks = [str(i) for i in range(int(krange[0]),int(krange[1])+1) if not self.ksketches[i] ]
-        if len(empty_ks) == 0:
-            return []
         # This should return an sfp that can be used to fill a parallel command
         sfp=SketchFilePath(filenames=self.fastas, kval=0, speciesinfo=self.speciesinfo, experiment=self.experiment)
+        # this paths list will be appended and passed during SketchObj creation
+        presketches=[] 
+        # this sketchlist will be used for a bath cardinality check
         sketchlist=[]
+        # kmc sketches will need a parent tmp directory
+        tmpdir=tempfile.mkdtemp()
+        # use mink/maxk provided unless ksweep in experiment object is different
+        krange=[int(mink),int(maxk)]
+        if len(self.experiment["ksweep"]) > 1:
+            krange=self.experiment["ksweep"]
+        # check the ks already in the node sketches, don't do them if they are already there. If none are empty return nothing
+        empty_ks = [str(i) for i in range(int(krange[0]),int(krange[1])+1) if not self.ksketches[i]]
+        if len(empty_ks) == 0:
+            return []
+        # create output directories for all the ks we are about to batch
         for i in range(krange[0],krange[1]+1):
             os.makedirs(sfp.dir.replace("{}",str(i)), exist_ok=True)
             sketchlist.append(sfp.full.replace("{}",str(i)))
-
-        presketches=[]
+            
         if self.ngen > 1:
             #TODO: Fiddling was happening here
             for i in range(len(self.children)):
-                sketchlist = sketchlist + self.children[i].ksweep_update_node()
+                sketchlist = sketchlist + self.children[i].ksweep_update_node(mink=mink, maxk=maxk)
                 presketches= presketches + [self.children[i].ksketches[0].sfp.full]
                 presketches= presketches + [self.children[i].ksketches[0].sfp.full]
             
@@ -164,15 +167,25 @@ class DeltaTreeNode:
             # TODO: create tmp directory for this obj to use here?
             self.ksketches[0] = KMCSketchObj(kval = 0, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
             tmpdir=tempfile.mkdtemp()
+            for k in empty_ks:
+                os.mkdir(os.path.join(tmpdir,"k"+str(k)))
+        for k in empty_ks.copy():
+            sketch_loc=self.ksketches[0].sfp.full.replace("{}",str(k))
+            print(sketch_loc)
+            print(os.path.exists(sketch_loc+".kmc_pre"))
+            if self.ksketches[0].sketch_check(path=sketch_loc):
+                empty_ks.remove(k)
+        if len(empty_ks) == 0:
+            return []
         if self.ngen < 2:
             sub_cmd = self.ksketches[0]._leaf_command(tmpdir=tmpdir)
         else:
             sub_cmd = self.ksketches[0]._union_command()
-        cmdlist = ["parallel '",sub_cmd,"' :::", "{"+ ",".join(empty_ks)+"}"]
-        print(cmdlist)
+        cmdlist = ["parallel -j 95% '",sub_cmd,"' :::", "{"+ ",".join(empty_ks)+"}"]
         cmd = " ".join(cmdlist)
         print(cmd)
-        subprocess.call(cmd, shell=True, stdout=stdout)
+        subprocess.call(cmd, shell=True, stdout=None)
+        shutil.rmtree(tmpdir)
         return sketchlist
 
 
@@ -215,21 +228,22 @@ class DeltaTreeNode:
         #self.update_card()
         return
 
-    def node_ksweep(self):
+    def node_ksweep(self, mink=2, maxk=32):
         '''Sketch all of the ks for the node (and its decendent nodes)between mink and maxk (even when they weren't needed to calculate delta'''
-        sketchlist=self.ksweep_update_node()
+        sketchlist=self.ksweep_update_node(mink=mink, maxk=maxk)
         multicard=self.ksketches[0].card_command(sketchlist)
         self.ksketches[0].individual_card(cmd=multicard)
-        maxk=self.experiment["ksweep"][1]
-        mink=self.experiment["ksweep"][0]
+        # maxk=self.experiment["ksweep"][1]
+        # mink=self.experiment["ksweep"][0]
         # if maxk > len(self.ksketches):
         #     self.ksketches = self.ksketches + [None]* (maxk-len(self.ksketches))
             #self.ksketches.extend([None]* (maxk-len(self.ksketches)))
-        for kval in range(mink, maxk):
+        for kval in range(mink, maxk+1):
             if not self.ksketches[kval]:
                 self.update_node(kval) 
         self.mink=mink
-        self.maxk=maxk    
+        self.maxk=maxk
+        return 
 
     def summarize(self, mink:int=0, maxk:int=0):
         '''create a dataframe of all "possible" delta values that were examined during creation of the node for use in plotting -- this isn't actually summarizing, so the function should be renamed'''
@@ -286,7 +300,7 @@ class DeltaTree:
         # sub = subtraction
         print("Larger Tree Delta: ", self.delta)
         print("Subtree Delta: ", other.delta)
-        print("subtraction result: ", self.delta - other.delta)
+        print("Subtraction Result: ", self.delta - other.delta)
         return self.delta - other.delta
     def __repr__(self):
        """Return a string which when eval'ed will rebuild tree"""
@@ -431,7 +445,7 @@ class DeltaTree:
         for k in bestks:
             root.update_node(k)
         if len(self.experiment["ksweep"]) > 1:
-            root.node_ksweep()
+            root.node_ksweep(mink=self.experiment["ksweep"][0], maxk=self.experiment["ksweep"][1])
     
     def leaf_nodes(self) -> List[DeltaTreeNode]:
         return [child for child in self._dt if child.ngen==1]
@@ -506,7 +520,7 @@ class DeltaTree:
             maxk = self.maxk
             # if self.maxk <= 30:
             #     maxk=self.maxk + 2
-        self.ksweep()
+        self.ksweep(mink=mink, maxk=maxk)
         def _delta_pos_recursive(node) -> List[dict]:
             tmplist=node.summarize()
             if node.children:
@@ -535,12 +549,12 @@ class DeltaTree:
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
    
-    def ksweep(self): #, mink:int=0, maxk:int=0) -> None:
+    def ksweep(self, mink:int=2, maxk:int=32) -> None:
         # if mink == 0:
         #     mink=int(self.mink)
         # if maxk == 0:
         #     maxk = int(self.maxk)
-        self.root.node_ksweep()
+        self.root.node_ksweep(mink=mink, maxk=maxk)
         self.speciesinfo.save_references()
         self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
 
@@ -643,7 +657,7 @@ class DeltaTree:
             
             kij_results.append(pspider.kij_summarize())
             if jaccard:
-                pspider.ksweep() #(mink=mink, maxk=maxk)
+                pspider.ksweep(mink=mink, maxk=maxk)
                 j_results.extend(pspider.jaccard_summarize(mink=mink, maxk=maxk))  
               
         # self.speciesinfo.save_references(fast=self.experiment['fast'])
@@ -735,7 +749,7 @@ class SubSpider(DeltaTree):
         return outdict
 
 
-    def jaccard_summarize(self, mink=0, maxk=0) -> List[Dict]:
+    def jaccard_summarize(self, mink=2, maxk=32) -> List[Dict]:
         '''Calculate jaccard distance for the subspider'''
         ##TODO: Write this to handle more than 2 children?
         if len(self.fastas) != 2:
@@ -748,7 +762,7 @@ class SubSpider(DeltaTree):
             childB = self._dt[0]
         outdict={"A":childA.fastas[0], "B":childB.fastas[0],
         "Atitle": childA.node_title, "Btitle": childB.node_title}
-        # self.ksweep(mink=mink,maxk=maxk)
+        self.ksweep(mink=mink,maxk=maxk)
         for k in range(mink,maxk+1):
             odict = outdict.copy()
             odict.update({"kval":k , "Acard": childA.ksketches[k].card, "Bcard": childB.ksketches[k].card, "ABcard":self.root.ksketches[k].card})

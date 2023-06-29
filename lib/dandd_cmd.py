@@ -93,7 +93,9 @@ def kij_command(args):
         with open(args.flist_loc) as file:
             fastas = [line.strip() for line in file]
 
+    dtree.experiment["ksweep"] = (args.mink, args.maxk)
     dtree.ksweep(mink=int(args.mink),maxk=int(args.maxk))
+    print(dtree)
     kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk, jaccard=args.jaccard)
     write_listdict_to_csv(outfile=args.outfile+".kij.csv", listdict=kij_results)
     if args.jaccard:
@@ -252,9 +254,9 @@ def parse_arguments():
 
     # kij_parser.add_argument("--mash", dest="mash", default=False, action="store_true", help="Indicate whether to include output for mash difference for indicated ks")
 
-    kij_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, type=int, default=10, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    kij_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, type=int, default=2, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    kij_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, type=int, default=20, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    kij_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, type=int, default=32, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     kij_parser.set_defaults(func=kij_command)
 
