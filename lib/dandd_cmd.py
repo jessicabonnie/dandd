@@ -35,7 +35,7 @@ def tree_command(args):
         
     os.makedirs(args.outdir, exist_ok=True)
     # os.chdir(args.sketchdir)
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety, fast=args.fast, verbose=args.verbose, ksweep=args.ksweep)
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety, fast=args.fast, verbose=args.verbose, ksweep=args.ksweep, lowmem=args.lowmem)
 
     fileprefix = dtree.make_prefix(outdir=args.outdir, tag=args.tag, label=args.label)
     dtree.save(fileprefix=fileprefix, fast=args.fast)
@@ -95,7 +95,7 @@ def kij_command(args):
 
     dtree.experiment["ksweep"] = (args.mink, args.maxk)
     dtree.ksweep(mink=int(args.mink),maxk=int(args.maxk))
-    print(dtree)
+    
     kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk, jaccard=args.jaccard)
     write_listdict_to_csv(outfile=args.outfile+".kij.csv", listdict=kij_results)
     if args.jaccard:
@@ -120,6 +120,7 @@ def parse_arguments():
     parser.add_argument('--version', action='version', version='%(prog)s 0.1')
     parser.add_argument("--verbose", "-v", action="store_true", default=False, help="Print some trees and report steps of actions.")
     parser.add_argument( "--debug", action="store_true", default=False, dest="debug", help="Share command calls to 3rd party programs.")
+    parser.add_argument( "--lowmem", action="store_true", default=False, dest="lowmem", help="Delete all multi-fasta sketches, while keeping cardinality stored in dictionary for later runs. Do not recommend using with --safe")
     parser.add_argument( "--safe", action="store_true", default=False, dest="safety",   help="Double check all sketch hashes to make sure they match the sums of the fasta hashes.")
     parser.add_argument( "--fast", action="store_true", default=False, dest="fast",   help="Don't save so much stuff for second usage.")
 
