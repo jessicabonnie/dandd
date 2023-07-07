@@ -147,6 +147,7 @@ class DeltaTreeNode:
             krange=self.experiment["ksweep"]
         # check the ks already in the node sketches, don't do them if they are already there. If none are empty return nothing
         empty_ks = [str(i) for i in range(int(krange[0]),int(krange[1])+1) if not self.ksketches[i]]
+        static_empty_ks = empty_ks.copy()
         if len(empty_ks) == 0:
             return []
         # create output directories for all the ks we are about to batch
@@ -169,10 +170,10 @@ class DeltaTreeNode:
             tmpdir=tempfile.mkdtemp()
             for k in empty_ks:
                 os.mkdir(os.path.join(tmpdir,"k"+str(k)))
-        for k in empty_ks.copy():
+        for k in static_empty_ks:
             sketch_loc=self.ksketches[0].sfp.full.replace("{}",str(k))
-            print(sketch_loc)
-            print(os.path.exists(sketch_loc+".kmc_pre"))
+            
+            # print(os.path.exists(sketch_loc+".kmc_pre"))
             if self.ksketches[0].sketch_check(path=sketch_loc):
                 empty_ks.remove(k)
         if len(empty_ks) == 0:
