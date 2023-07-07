@@ -84,6 +84,7 @@ class DeltaTreeNode:
         self.assign_progeny()
         self.fastas = [f.fastas[0] for f in self.progeny]
         self.ngen = len(self.progeny)
+        
 
     def __repr__(self):
         return f"{self.__class__.__name__}['{self.node_title}', k: {self.bestk}, delta: {self.delta}, ngen: {self.ngen}, children: {repr(self.children)} ]"
@@ -98,6 +99,7 @@ class DeltaTreeNode:
             self.progeny=[self]
             self.fastas=[self.node_title]
             self.node_title=os.path.splitext(os.path.basename(self.node_title))[0]
+            
     
 
     def find_delta_helper(self, kval: int, direction=1):
@@ -184,9 +186,12 @@ class DeltaTreeNode:
             sub_cmd = self.ksketches[0]._union_command()
         cmdlist = ["parallel -j 95% '",sub_cmd,"' :::", "{"+ ",".join(empty_ks)+"}"]
         cmd = " ".join(cmdlist)
-        print(cmd)
+        if self.experiment["debug"]:
+            print(cmd)
         subprocess.call(cmd, shell=True, stdout=None)
         shutil.rmtree(tmpdir)
+        for k in empty_ks:
+            self.update_node(kval=k)
         return sketchlist
 
 
@@ -281,7 +286,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False, 'ksweep':False}, padding=True):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False, 'ksweep': False, 'lowmem': False}, padding=True):
         self.experiment=experiment
         self._symbols = []
         self.mink=0
@@ -510,15 +515,16 @@ class DeltaTree:
         dictlist= _delta_recursive(root)
         return dictlist
   
-    def summarize(self, mink=0, maxk=0) -> List[dict]:
+    def summarize_tree(self, mink=0, maxk=0) -> List[dict]:
         ''' Traverse the DeltaTree to return a dataframe with all possible delta values. -- this isn't actually summarizing, so the function should be renamed'''
         root = self._dt[-1]
-        if mink == 0:
-            mink=self.mink
+        if mink == 0 or maxk == 0:
+            mink, maxk = self.experiment["ksweep"]
+            # mink=self.mink
             # if self.mink > 4:
             #     mink=self.mink - 2
-        if maxk == 0:
-            maxk = self.maxk
+        # if maxk == 0:
+        #     maxk = self.maxk
             # if self.maxk <= 30:
             #     maxk=self.maxk + 2
         self.ksweep(mink=mink, maxk=maxk)
@@ -637,7 +643,7 @@ class DeltaTree:
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
                 output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": number, "fastas": sublist})
                 # , "cmd": ospider.root.ksketches[ospider.root.root_k()].cmd})
-                summary.extend(ospider.summarize())
+                summary.extend(ospider.summarize_tree())
 
         return output, summary
 
@@ -793,7 +799,7 @@ class DeltaSpider(DeltaTree):
 #         raise NotImplementedError
 
 
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10, safety=False, fast=False, verbose=False, ksweep=None):
+def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=10, safety=False, fast=False, verbose=False, ksweep=None, lowmem=False):
     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
     tag = species tag
     genomedir = parent directory of species subdirectory
@@ -806,7 +812,7 @@ def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nch
     tool = string indicating which tool to use for kmer cardinality
     choices=["dashing","kmc"] '''
     # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
-    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set(), 'safety':safety, 'fast':fast, 'verbose':verbose, 'ksweep':ksweep}
+    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':nthreads, 'debug':debug, 'baseset':set(), 'safety':safety, 'fast':fast, 'verbose':verbose, 'ksweep':ksweep, 'lowmem': lowmem}
 
     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)
