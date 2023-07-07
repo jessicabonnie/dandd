@@ -2,6 +2,7 @@ import pickle
 import os
 import re
 from typing import Dict
+import shutil
 
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
@@ -45,14 +46,18 @@ class SpeciesSpecifics:
 
     def _save_fastahex(self) -> None:
         '''Store/Update/Overwrite species specific hashkey to pickle'''
-        with open(self._fastahex_loc(),"wb") as f:
+        fasta_hex_loc=self._fastahex_loc()
+        with open(fasta_hex_loc+'.bkp',"wb") as f:
             pickle.dump(file=f, obj=self.fastahex)
+        shutil.copy(fasta_hex_loc+'.bkp',fasta_hex_loc)
     
     def _save_sketchinfo(self) -> None:
         '''Store/Update/Overwrite sketchinfo lookup to pickle'''
-        with open(self._sketchinfo_loc(),"wb") as f:
+        sketchinfo_loc=self._sketchinfo_loc()
+        with open(sketchinfo_loc+'.bkp',"wb") as f:
             pickle.dump(file=f, obj=self.sketchinfo)
-        
+        shutil.copy(sketchinfo_loc+'.bkp', sketchinfo_loc)
+
     def save_references(self, fast=False) -> None:
         '''Save the fastahex and the sketchinfo objects to their default locations, overwriting what was there.'''
         if not fast:
@@ -69,8 +74,9 @@ class SpeciesSpecifics:
         '''Store cardinalities in species specific pickle'''
         if not fast:
             cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
-            with open(cardpath,"wb") as f:
+            with open(cardpath+'.bkp',"wb") as f:
                 pickle.dump(file=f, obj=self.cardkey)
+            shutil.copyfile( cardpath+'.bkp', cardpath)
 
     def retrieve_fasta_files(self, full=True)->list:
         '''return a list of all fasta files in a directory accounting for all the possible extensions'''
