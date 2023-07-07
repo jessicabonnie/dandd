@@ -158,12 +158,13 @@ class SketchObj(object):
             delta_pos = possible delta value (to be compared to other ks of the same group of files)
     '''
     
-    def __init__(self, kval: int, sfp: SketchFilePath, speciesinfo: SpeciesSpecifics, experiment: dict, presketches=[], fill=True):
+    def __init__(self, kval: int, sfp: SketchFilePath, speciesinfo: SpeciesSpecifics, experiment: dict, presketches=[]):
         self.kval = kval
         self.sketch = None
         self.cmd = None
         self.sfp = sfp
         self.speciesinfo=speciesinfo
+        #add this base to the experiment's tracking
         experiment['baseset'].add(sfp.base)
         self.experiment=experiment
         self._presketches = presketches
@@ -186,8 +187,10 @@ class SketchObj(object):
         
     def _leaf_command(self, tmpdir) -> str:
         raise NotImplementedError("Subclass needs to define this.")
-    def command_check(self):
-        pass
+    # def command_check(self):
+    #     pass
+    def remove_sketch(self):
+        raise NotImplementedError("Subclass must define this.")
     
 
     def _leaf_sketch(self, just_do_it=False):
@@ -261,7 +264,7 @@ class SketchObj(object):
     def individual_card(self, cmd=None):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
         if not cmd:
-            print("indiv card")
+           # print("indiv card")
             cmd = self.card_command()#[self.sfp.full])
             if not cmd:
                 return
@@ -288,7 +291,10 @@ class SketchObj(object):
                 print(f"Sketch File Path not in cardkey: {self.sfp.full}")
         if self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0:
             self.individual_card()
-        return float(self.speciesinfo.cardkey[self.sketch])
+        card_val = self.speciesinfo.cardkey[self.sketch]
+        if self.experiment["lowmem"] and self.sfp.ngen > 1:
+            self.remove_sketch()
+        return float(card_val)
     
     # def summarize(self):
     #     outdict = {"kval":self.kval, "card":self.card, "delta_pos":self.delta_pos}
@@ -326,10 +332,15 @@ class DashSketchObj(SketchObj):
         else:
             return False
     
+    def remove_sketch(self):
+        sketchname= self.sfp.full
+        if self.kval == 0:
+            sketchname = self.sfp.full.replace("{}","*")
+        os.remove(sketchname)
     
     def _leaf_command(self, tmpdir) -> str:
         '''Command string to produce the sketch from a fasta based on the information used to initiate the sketch obj'''
-        print(self.experiment)
+        #print(self.experiment)
         str_kval=str(self.kval)
         file_source= [self.sfp.ffiles[0]]
         if self.kval == 0:
@@ -349,7 +360,7 @@ class DashSketchObj(SketchObj):
         return cmd
     
     def _union_command(self) -> str:
-        print(self.sfp.full)
+        #print(self.sfp.full)
         '''Returns bash command to create a union sketch'''
         # print("union command")
         # verbose=[]
@@ -390,6 +401,12 @@ class KMCSketchObj(SketchObj):
             return True
         else:
             return False
+        
+    def remove_sketch(self):
+        sketchname= self.sfp.full
+        if self.kval == 0:
+            sketchname = self.sfp.full.replace("{}","*")
+        os.remove(sketchname + '.kmc_*')
 
     def _leaf_command(self,tmpdir) -> str:
         kval_str=str(self.kval)
