@@ -162,8 +162,6 @@ class DeltaTreeNode:
             for i in range(len(self.children)):
                 sketchlist = sketchlist + self.children[i].ksweep_update_node(mink=mink, maxk=maxk)
                 presketches= presketches + [self.children[i].ksketches[0].sfp.full]
-                presketches= presketches + [self.children[i].ksketches[0].sfp.full]
-            
         if self.experiment["tool"] == "dashing":
             self.ksketches[0] = DashSketchObj(kval = 0, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
         elif self.experiment["tool"] == "kmc":
@@ -216,6 +214,7 @@ class DeltaTreeNode:
                     for i in range(len(self.children)):
                         self.children[i].update_node(kval)
                         presketches= presketches + [self.children[i].ksketches[kval].sketch]
+                        
 
             if self.experiment["tool"] == "dashing":
                 self.ksketches[kval] = DashSketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
@@ -258,9 +257,14 @@ class DeltaTreeNode:
             mink=self.mink
         if maxk == 0:
             maxk=self.maxk
+        # if len(self.experiment["ksweep"] > 1):
+        #     mink, maxk = self.experiment["ksweep"]
 
         for kval in range(mink, maxk+1):
-            if self.ksketches[kval]:
+            if not self.ksketches[kval]:
+                self.ksweep_update_node(mink=mink, maxk=maxk)
+            else:
+            # if self.ksketches[kval]:
                 linedict = {"ngen": self.ngen, "kval": kval, "card": self.ksketches[kval].card, "delta_pos": self.ksketches[kval].delta_pos, "title": self.node_title, "command": self.ksketches[kval].cmd}
                 for index, value in enumerate(self.fastas):
                     linedict[f"step{index}"] = value
@@ -291,6 +295,7 @@ class DeltaTree:
         self._symbols = []
         self.mink=0
         self.maxk=0
+        
         
         self.kstart=speciesinfo.kstart
         self.speciesinfo=speciesinfo
@@ -637,6 +642,7 @@ class DeltaTree:
         flen=len(ordering)
         output=[]
         summary=[]
+        
         for i in range(1,flen+1):
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
