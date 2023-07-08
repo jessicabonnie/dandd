@@ -3,6 +3,7 @@ import os
 import re
 from typing import Dict
 import shutil
+from subprocess import CalledProcessError
 
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
@@ -22,7 +23,13 @@ class SpeciesSpecifics:
     def read_pickle(self, filepath) -> Dict:
         '''Read a pickle into a dictionary if the filepath exists, otherwise return an empty dictionary'''
         if os.path.exists(filepath):
-            contents=pickle.load(open(filepath, "rb", -1))
+            try:
+                contents=pickle.load(open(filepath, "rb", -1))
+            except CalledProcessError:
+                contents=pickle.load(open(filepath+'.bkp', "rb", -1))
+            # finally:
+            #     print(f"{filepath} and {filepath}.bkp are both corrupted. They will be overwritten.")
+            #     contents=dict()
         else:
             contents=dict()
         return contents
