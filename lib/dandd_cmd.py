@@ -52,6 +52,8 @@ def progressive_command(args):
     dtree.experiment["fast"] = args.fast
     dtree.experiment["verbose"] = args.verbose
     dtree.experiment["ksweep"] = None
+    dtree.experiment["lowmem"] = args.lowmem
+    dtree.experiment["baseset"] = set()
     if args.ksweep:
         dtree.experiment["ksweep"]=(int(args.mink), int(args.maxk))
     dtree.speciesinfo.update(tool=dtree.experiment["tool"])
@@ -79,7 +81,7 @@ def info_command(args):
     if args.ksweep:
         dtree.experiment["ksweep"]=(int(args.mink), int(args.maxk))
     args.outfile = dtree.make_prefix(tag=args.tag, label=f"info", outdir=args.outdir)
-    summary=dtree.summarize(mink=args.mink, maxk=args.maxk)
+    summary=dtree.summarize_tree(mink=args.mink, maxk=args.maxk)
     write_listdict_to_csv(outfile=args.outfile+'_ksweep.csv', listdict=summary)
 
 def kij_command(args):
