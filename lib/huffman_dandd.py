@@ -169,7 +169,7 @@ class DeltaTreeNode:
             # TODO: create tmp directory for this obj to use here?
             self.ksketches[0] = KMCSketchObj(kval = 0, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
             tmpdir=tempfile.mkdtemp()
-            for k in static_empty_ks:
+            for k in empty_ks:
                 os.mkdir(os.path.join(tmpdir,"k"+str(k)))
         # make a list of ks that don't have cardinalities/etc. stored in the tree and then figure out what the paths to those sketches would be
         for k in static_empty_ks:
