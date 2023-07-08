@@ -153,7 +153,7 @@ class DeltaTreeNode:
         if len(empty_ks) == 0:
             return []
         # create output directories for all the ks we are about to batch
-        for i in range(krange[0],krange[1]+1):
+        for i in range(int(krange[0]),int(krange[1])+1):
             os.makedirs(sfp.dir.replace("{}",str(i)), exist_ok=True)
             sketchlist.append(sfp.full.replace("{}",str(i)))
             
@@ -162,18 +162,21 @@ class DeltaTreeNode:
             for i in range(len(self.children)):
                 sketchlist = sketchlist + self.children[i].ksweep_update_node(mink=mink, maxk=maxk)
                 presketches= presketches + [self.children[i].ksketches[0].sfp.full]
+        # store a "sketchobj" at k=0 that holds the parallel command 
         if self.experiment["tool"] == "dashing":
             self.ksketches[0] = DashSketchObj(kval = 0, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
         elif self.experiment["tool"] == "kmc":
             # TODO: create tmp directory for this obj to use here?
             self.ksketches[0] = KMCSketchObj(kval = 0, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
             tmpdir=tempfile.mkdtemp()
-            for k in empty_ks:
+            for k in static_empty_ks:
                 os.mkdir(os.path.join(tmpdir,"k"+str(k)))
+        # make a list of ks that don't have cardinalities/etc. stored in the tree and then figure out what the paths to those sketches would be
         for k in static_empty_ks:
             sketch_loc=self.ksketches[0].sfp.full.replace("{}",str(k))
             
-            # print(os.path.exists(sketch_loc+".kmc_pre"))
+            # now check if those sketches exist
+            # NOTE THIS IS A PROBLEM FOR LOW MEM
             if self.ksketches[0].sketch_check(path=sketch_loc):
                 empty_ks.remove(k)
         if len(empty_ks) == 0:
@@ -188,8 +191,8 @@ class DeltaTreeNode:
             print(cmd)
         subprocess.call(cmd, shell=True, stdout=None)
         shutil.rmtree(tmpdir)
-        for k in empty_ks:
-            self.update_node(kval=k)
+        # for k in static_empty_ks:
+        #     self.update_node(kval=int(k))
         return sketchlist
 
 
@@ -214,8 +217,7 @@ class DeltaTreeNode:
                     for i in range(len(self.children)):
                         self.children[i].update_node(kval)
                         presketches= presketches + [self.children[i].ksketches[kval].sketch]
-                        
-
+            # create a sketch object dependent on whether the tool is dashing or kmc
             if self.experiment["tool"] == "dashing":
                 self.ksketches[kval] = DashSketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
             elif self.experiment["tool"] == "kmc":
@@ -246,8 +248,8 @@ class DeltaTreeNode:
         for kval in range(mink, maxk+1):
             if not self.ksketches[kval]:
                 self.update_node(kval) 
-        self.mink=mink
-        self.maxk=maxk
+        # self.mink=mink
+        # self.maxk=maxk
         return 
 
     def summarize(self, mink:int=0, maxk:int=0):
@@ -257,6 +259,10 @@ class DeltaTreeNode:
             mink=self.mink
         if maxk == 0:
             maxk=self.maxk
+        krange=self.experiment["ksweep"]
+        if len(krange) > 0:
+            mink = int(krange[0])
+            maxk = int(krange[1])
         # if len(self.experiment["ksweep"] > 1):
         #     mink, maxk = self.experiment["ksweep"]
 
@@ -567,6 +573,7 @@ class DeltaTree:
         # if maxk == 0:
         #     maxk = int(self.maxk)
         self.root.node_ksweep(mink=mink, maxk=maxk)
+        # print(self.root.ksketches[mink])
         self.speciesinfo.save_references()
         self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
 
@@ -628,7 +635,7 @@ class DeltaTree:
         results=[]
         summary=[]
         for i in range(0,len(orderings)):
-            oresults, osummary =smain.sketch_ordering(orderings[i], number=i+1, step=step)
+            oresults, osummary = smain.sketch_ordering(orderings[i], number=i+1, step=step)
             for o in osummary:
                 o["ordering"] = i+1
             results.extend(oresults)
@@ -642,14 +649,17 @@ class DeltaTree:
         flen=len(ordering)
         output=[]
         summary=[]
+        krange = self.experiment["ksweep"]
         
         for i in range(1,flen+1):
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
+                if len(krange) > 0:
+                    ospider.ksweep(mink=int(krange[0]), maxk=int(krange[1]))
                 output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": number, "fastas": sublist})
                 # , "cmd": ospider.root.ksketches[ospider.root.root_k()].cmd})
-                summary.extend(ospider.summarize_tree())
+                summary.extend(ospider.summarize_tree(mink=int(krange[0]), maxk=int(krange[1])))
 
         return output, summary
 
