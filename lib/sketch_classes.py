@@ -163,6 +163,8 @@ class SketchObj(object):
         self.sketch = None
         self.cmd = None
         self.sfp = sfp
+        self.delta_pos=0
+        self.card = 0
         self.speciesinfo=speciesinfo
         #add this base to the experiment's tracking
         experiment['baseset'].add(sfp.base)
@@ -289,7 +291,9 @@ class SketchObj(object):
         if self.sfp.full not in self.speciesinfo.cardkey.keys():
             if self.experiment['verbose']:
                 print(f"Sketch File Path not in cardkey: {self.sfp.full}")
-        if self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0:
+        if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0):
+            if not os.path.exists(self.sfp.full):
+                return 0
             self.individual_card()
         card_val = self.speciesinfo.cardkey[self.sketch]
         if self.experiment["lowmem"] and self.sfp.ngen > 1:
@@ -327,6 +331,9 @@ class DashSketchObj(SketchObj):
         '''Check that sketch at full path exists and is not empty'''
         if not path:
             path=self.sfp.full
+        if self.experiment["lowmem"]:
+            if self.check_cardinality() > 0:
+                return True
         if os.path.exists(path) and os.stat(path).st_size != 0:
             return True
         else:
