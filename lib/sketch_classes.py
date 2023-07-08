@@ -265,6 +265,8 @@ class SketchObj(object):
 
     def individual_card(self, cmd=None):
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
+        if self.kval == 0:
+            return
         if not cmd:
            # print("indiv card")
             cmd = self.card_command()#[self.sfp.full])
@@ -277,8 +279,9 @@ class SketchObj(object):
             print(cmd)
         try:
             proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, check=True,universal_newlines=True, stderr=stderr)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError or RuntimeError:
             # warnings.warn(message=f"{self.sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=RuntimeWarning)
+            print(f"Recreating sketch {self.sfp.full}")
             self.create_sketch(just_do_it=True)
             # print("recreated sketch")
             proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True, stderr=stderr)
@@ -295,7 +298,7 @@ class SketchObj(object):
             if not os.path.exists(self.sfp.full):
                 return 0
             self.individual_card()
-        card_val = self.speciesinfo.cardkey[self.sketch]
+        card_val = self.speciesinfo.cardkey[self.sfp.full]
         if self.experiment["lowmem"] and self.sfp.ngen > 1:
             self.remove_sketch()
         return float(card_val)
@@ -332,6 +335,7 @@ class DashSketchObj(SketchObj):
         if not path:
             path=self.sfp.full
         if self.experiment["lowmem"]:
+            # print(self.check_cardinality())
             if self.check_cardinality() > 0:
                 return True
         if os.path.exists(path) and os.stat(path).st_size != 0:
@@ -343,7 +347,11 @@ class DashSketchObj(SketchObj):
         sketchname= self.sfp.full
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
-        os.remove(sketchname)
+        try:
+            os.remove(sketchname)
+        except FileNotFoundError:
+            # print(f"{sketchname} has already been removed.")
+            pass
     
     def _leaf_command(self, tmpdir) -> str:
         '''Command string to produce the sketch from a fasta based on the information used to initiate the sketch obj'''
