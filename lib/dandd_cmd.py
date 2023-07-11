@@ -10,7 +10,7 @@ import os
 from typing import List, Dict, Set, Tuple, NamedTuple
 # from allpairs import summ_to_phylip, rename_seqids_in_tree
 # from allpairs import run_fneighbor
-import json
+# import json
 
 
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
@@ -86,13 +86,13 @@ def progressive_command(args):
     dtree.save(fileprefix=args.outfile)
     # dtree.save(outdir=os.path.split(args.outfile)[0], tag=dtree.speciesinfo.tag, label=f"progu{args.norderings}")
 
-def abba_command(args):
-    dtree = pickle.load(open(args.delta_tree, "rb"))
-    # results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
-    # if args.outfile:
-    #     results.to_csv(args.outfile)
-    # else:
-    #     print(tabulate(results, headers=list(results.columns)))
+# def abba_command(args):
+#     dtree = pickle.load(open(args.delta_tree, "rb"))
+#     # results=dtree.progressive_wrapper(flist_loc=args.flist_loc, count=args.norderings, ordering_file=args.ordering_file, step=args.step)
+#     # if args.outfile:
+#     #     results.to_csv(args.outfile)
+#     # else:
+#     #     print(tabulate(results, headers=list(results.columns)))
 
 def info_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -140,13 +140,6 @@ def parse_arguments():
     # Arguments for top-level
     commands = []
     parser=add_ubiquitous_commands(parser)
-    # parser.add_argument('--version', action='version', version='%(prog)s 0.1')
-    # parser.add_argument("--verbose", "-v", action="store_true", default=False, help="Print some trees and report steps of actions.")
-    # parser.add_argument( "--debug", action="store_true", default=False, dest="debug", help="Share command calls to 3rd party programs.")
-    # parser.add_argument( "--lowmem", action="store_true", default=False, dest="lowmem", help="Delete all multi-fasta sketches, while keeping cardinality stored in dictionary for later runs. Do not recommend using with --safe")
-    # parser.add_argument( "--safe", action="store_true", default=False, dest="safety",   help="Double check all sketch hashes to make sure they match the sums of the fasta hashes.")
-    # parser.add_argument( "--fast", action="store_true", default=False, dest="fast",   help="Don't save so much stuff for second usage.")
-
     # parser.set_defaults(func=main_parser_command)
 
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
@@ -155,11 +148,10 @@ def parse_arguments():
     # Make parser for "dand_cmd.py tree ..."
     tree_parser = subparsers.add_parser("tree", help="Calculate deltas for input fastas and full union. Create DandD tree object for further downstream analysis.")
     commands.append('tree')
-    # tree_parser.add_argument( "--debug", action="store_true", default=False, dest="debug")
     tree_parser=add_ubiquitous_commands(tree_parser)
 
     tree_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="PREFIX TAG", type=str, required=False, default='dandd')
-    # choices=['ecoli', 'salmonella', 'human', 'HVSVC2','HVSVC2_snv', 'HVSVC2_snv_indel','HVSVC2_snv_sv', 'bds']
+ 
     tree_parser.add_argument("-x", "--exact", dest="exact", help="instead of estimating, count kmers using kmc3", default=False, action="store_true", required=False)
 
     tree_parser.add_argument("-d", "--datadir", dest="genomedir", default=None, help="data directory containing the fasta files -- all will be included if --fastas is not used", type=str, metavar="FASTADIR")
@@ -220,8 +212,6 @@ def parse_arguments():
 
     progressive_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    # progressive_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
-
     progressive_parser.add_argument("--step", dest="step", default=1, type=int, help="Number of sketches to include in each progression. Mostly used for a single ordered progression.", metavar="INTEGER")
 
     # progressive_parser.add_argument("-e", "--exhaustive", action="store_true", dest="exhaustive", default=False, help="instead of a randome ordering, all possible permutations of the indicated fastas will be run. Warning, this should be restricted to a small subset unless space and time considerations are managed.")
@@ -241,7 +231,6 @@ def parse_arguments():
 
     info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    # info_parser.add_argument("-o", "--outfile", dest="outfile", default=None, type=str, help="path to write the output table. If path not provided, default will use the tag for the provided tree.")
     info_parser.add_argument("-o", "--outdir", dest="outdir", default=os.getcwd(), type=str, help="directory to write the output tables.", metavar="OUTPUT DIR")
 
     info_parser.add_argument("-l", "--label", dest="label", default="", help="NOT IMPLEMENTED Label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False, metavar="SUFFIX TAG")
@@ -252,17 +241,17 @@ def parse_arguments():
 
     info_parser.set_defaults(func=info_command)
     
-    # Make parser for "dand_cmd.py abba ..."
-    abba_parser = subparsers.add_parser("abba", help='NOT IMPLEMENTED. "A before B, B before A" runs runs all permutations of orderings of subsets where both fasta A and fasta B are present -- with analysis comparing those where (1) fasta A preceeds B in the ordering; (2) fasta B preceeds A in the ordering. NOTE: A and B should both be present in the provided tree.')
-    commands.append('abba')
+    # # Make parser for "dand_cmd.py abba ..."
+    # abba_parser = subparsers.add_parser("abba", help='NOT IMPLEMENTED. "A before B, B before A" runs runs all permutations of orderings of subsets where both fasta A and fasta B are present -- with analysis comparing those where (1) fasta A preceeds B in the ordering; (2) fasta B preceeds A in the ordering. NOTE: A and B should both be present in the provided tree.')
+    # commands.append('abba')
 
-    abba_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command")
+    # abba_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command")
 
-    abba_parser.add_argument("-A", "--fastaA", dest="fastaA", metavar="FASTA_A_PATH", type=str, default=None, help="filepath of fasta A")
+    # abba_parser.add_argument("-A", "--fastaA", dest="fastaA", metavar="FASTA_A_PATH", type=str, default=None, help="filepath of fasta A")
 
-    abba_parser.add_argument("-B", "--fastaB", dest="fastaB", metavar="FASTA_B_PATH", type=str, default=None, help="filepath of fasta B")
+    # abba_parser.add_argument("-B", "--fastaB", dest="fastaB", metavar="FASTA_B_PATH", type=str, default=None, help="filepath of fasta B")
 
-    abba_parser.set_defaults(func=abba_command)
+    # abba_parser.set_defaults(func=abba_command)
 
    # Make parser for "dand_cmd.py kij ..."
     kij_parser = subparsers.add_parser("kij", help="K Independent Jaccard. If a subset of fastas is not provided, matrix will include all inputs used to generate the delta tree using the `tree` command. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)")
@@ -279,8 +268,6 @@ def parse_arguments():
     kij_parser.add_argument("-l", "--label", dest="label", metavar="SUFFIX TAG", default="", help="NOT IMPLEMENTED Label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False)
 
     kij_parser.add_argument("--afproject", dest="afproject", default=False, action="store_true", help="Indicate whether intermediate pickle of tuples should be created for use with helpers/afproject.py.")
-
-    # kij_parser.add_argument("-o", "--out", dest="outdir", default=os.getcwd(), help="top level output directory that will contain the output files after running", type=str, metavar="OUTDIRPATH")
 
     kij_parser.add_argument("--jaccard", dest="jaccard", default=False, action="store_true", help="Indicate whether to include output for standard jaccard difference for indicated ks")
 
