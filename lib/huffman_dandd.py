@@ -272,8 +272,8 @@ class DeltaTreeNode:
             else:
             # if self.ksketches[kval]:
                 linedict = {"ngen": self.ngen, "kval": kval, "card": self.ksketches[kval].card, "delta_pos": self.ksketches[kval].delta_pos, "title": self.node_title, "command": self.ksketches[kval].cmd}
-                for index, value in enumerate(self.fastas):
-                    linedict[f"step{index}"] = value
+                # for index, value in enumerate(self.fastas):
+                #     linedict[f"step{index}"] = value
                 nodevals.append(linedict)
         return nodevals
 
