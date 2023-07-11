@@ -156,6 +156,7 @@ class DeltaTreeNode:
         for i in range(int(krange[0]),int(krange[1])+1):
             os.makedirs(sfp.dir.replace("{}",str(i)), exist_ok=True)
             sketchlist.append(sfp.full.replace("{}",str(i)))
+            self.experiment["baseset"].add(sfp.base.replace("{}",str(i)))
             
         if self.ngen > 1:
             #TODO: Fiddling was happening here
