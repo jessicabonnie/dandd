@@ -145,7 +145,7 @@ class DeltaTreeNode:
         tmpdir=tempfile.mkdtemp()
         # use mink/maxk provided unless ksweep in experiment object is different
         krange=[int(mink),int(maxk)]
-        if len(self.experiment["ksweep"]) > 1:
+        if self.experiment["ksweep"] is not None:
             krange=self.experiment["ksweep"]
         # check the ks already in the node sketches, don't do them if they are already there. If none are empty return nothing
         empty_ks = [str(i) for i in range(int(krange[0]),int(krange[1])+1) if not self.ksketches[i]]
@@ -462,7 +462,7 @@ class DeltaTree:
         # print("Best ks after padding:", bestks)
         for k in bestks:
             root.update_node(k)
-        if len(self.experiment["ksweep"]) > 1:
+        if self.experiment["ksweep"] is not None:
             root.node_ksweep(mink=self.experiment["ksweep"][0], maxk=self.experiment["ksweep"][1])
     
     def leaf_nodes(self) -> List[DeltaTreeNode]:
@@ -656,7 +656,7 @@ class DeltaTree:
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
-                if len(krange) > 0:
+                if krange is not None:
                     ospider.ksweep(mink=int(krange[0]), maxk=int(krange[1]))
                 output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": number, "fastas": sublist})
                 # , "cmd": ospider.root.ksketches[ospider.root.root_k()].cmd})
