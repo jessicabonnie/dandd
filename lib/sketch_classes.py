@@ -292,6 +292,9 @@ class SketchObj(object):
         if self.sfp.full not in self.speciesinfo.cardkey.keys():
             if self.experiment['verbose']:
                 print(f"Sketch File Path not in cardkey: {self.sfp.full}")
+            if self.experiment["lowmem"]:
+                return 0
+        # If the full path is not in the list of keys in the cardinality dictionary or the stored cardinality is 0, we will need to check if there is a sketch
         if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0):
             if not self.sketch_check():
                 return 0
