@@ -295,7 +295,7 @@ class SketchObj(object):
             if self.experiment['verbose']:
                 print(f"Sketch File Path not in cardkey: {self.sfp.full}")
         if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0):
-            if not os.path.exists(self.sfp.full):
+            if not self.sketch_check():
                 return 0
             self.individual_card()
         card_val = self.speciesinfo.cardkey[self.sfp.full]
@@ -409,10 +409,18 @@ class KMCSketchObj(SketchObj):
         cmd = " ".join(cmdlist)
         return cmd
     
+
     def sketch_check(self, path=None) -> bool:
+        '''Check that kmc databases associated with full path exist and are not empty'''
+        # If path is unknown take it from the sfp
         if not path:
             path=self.sfp.full
-        if (os.path.exists(path +".kmc_pre")) and (os.path.exists(path +".kmc_suf")) and os.stat(path +".kmc_suf").st_size != 0:
+        # if we are trying to save space by deleting sketches it doesn't matter whether the sketch exists as long as the cardinality is stored
+        if self.experiment["lowmem"]:
+            # print(self.check_cardinality())
+            if self.check_cardinality() > 0:
+                return True
+        if (os.path.exists(path +".kmc_pre")) and (os.path.exists(path +".kmc_suf")) and os.stat(path +".kmc_suf").st_size != 0 and os.stat(path +".kmc_pre").st_size != 0:
             return True
         else:
             return False
