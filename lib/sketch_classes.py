@@ -424,7 +424,10 @@ class KMCSketchObj(SketchObj):
         sketchname= self.sfp.full
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
-        os.remove(sketchname + '.kmc_*')
+        try:
+            os.remove(sketchname + '.kmc_*')
+        except FileNotFoundError:
+            pass
 
     def _leaf_command(self,tmpdir) -> str:
         '''Command string to produce the kmc database files from a fasta based on the information used to initiate the sketch obj'''
