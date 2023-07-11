@@ -263,12 +263,11 @@ class SketchObj(object):
     def parse_card(self, proc):
         raise NotImplementedError("Subclass must define this.")
 
-    def individual_card(self, cmd=None):
+    def individual_card(self, cmd=None) -> None:
         '''Run cardinality for an individual sketch or database. Add it to a dictionary {path:value}'''
         if self.kval == 0:
             return
         if not cmd:
-           # print("indiv card")
             cmd = self.card_command()#[self.sfp.full])
             if not cmd:
                 return
@@ -288,9 +287,8 @@ class SketchObj(object):
         finally:
             self.parse_card(proc=proc)
         
-    def check_cardinality(self, delay=False):
-        '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. NOTE: delay argument not implemented relates to idea of a way to batch the card command by attatching the sketch to a card0 sketch list attached to the SpeciesSpecifics object'''
-        
+    def check_cardinality(self) -> bool:
+        '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. '''
         if self.sfp.full not in self.speciesinfo.cardkey.keys():
             if self.experiment['verbose']:
                 print(f"Sketch File Path not in cardkey: {self.sfp.full}")
@@ -311,14 +309,11 @@ class DashSketchObj(SketchObj):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
     
     def card_command(self, sketch_paths=[]) -> str:
+        '''Return the cardinality command for the provided dashing sketch paths'''
         if len(sketch_paths) == 0:
             if self.kval == 0:
                 return
             sketch_paths=[self.sketch]
-        # print("card commmand")
-        # verbose=[]
-        # if not self.experiment['verbose']:
-        #     verbose=['2>>',os.path.join(self.sfp.dir,"error.txt")]
         cmdlist = [DASHINGLOC,"card", "--presketched"]+ sketch_paths #+ verbose
         #, "-p10"
         # , f"-p{self.experiment['nthreads']}"
@@ -326,12 +321,12 @@ class DashSketchObj(SketchObj):
         return cmd
 
     def parse_card(self, proc):
-        '''Parse the cardinality streaming from standard out for the card command'''
+        '''Parse the cardinality streaming from standard out for the dashing card command'''
         for card in csv.DictReader(proc.stdout.splitlines(),delimiter='\t'):
                 self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
 
     def sketch_check(self, path=None) -> bool:
-        '''Check that sketch at full path exists and is not empty'''
+        '''Check that dashing sketch at full path exists and is not empty'''
         if not path:
             path=self.sfp.full
         if self.experiment["lowmem"]:
@@ -344,6 +339,7 @@ class DashSketchObj(SketchObj):
             return False
     
     def remove_sketch(self):
+        '''Delete intermediate sketches in batches'''
         sketchname= self.sfp.full
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
@@ -354,8 +350,7 @@ class DashSketchObj(SketchObj):
             pass
     
     def _leaf_command(self, tmpdir) -> str:
-        '''Command string to produce the sketch from a fasta based on the information used to initiate the sketch obj'''
-        #print(self.experiment)
+        '''Command string to produce the sketch from a fasta based on the information used to initiate the dashing sketch obj'''
         str_kval=str(self.kval)
         file_source= [self.sfp.ffiles[0]]
         if self.kval == 0:
@@ -375,12 +370,7 @@ class DashSketchObj(SketchObj):
         return cmd
     
     def _union_command(self) -> str:
-        #print(self.sfp.full)
         '''Returns bash command to create a union sketch'''
-        # print("union command")
-        # verbose=[]
-        # if not self.experiment['verbose']:
-        #     verbose=['2>>', os.path.join(self.sfp.dir, "error.txt")]
         cmdlist = [DASHINGLOC, "union", #f"-p{self.experiment['nthreads']}",
         "-z -o", str(self.sfp.full)] + self._presketches #+ verbose
         cmd = " ".join(cmdlist)
@@ -391,9 +381,9 @@ class DashSketchObj(SketchObj):
 class KMCSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
-
     
     def parse_card(self, proc):
+        '''Parse the cardinality streaming from standard out for the kmc cardinality command (kmctools info)'''
         for line in proc.stdout.splitlines():
             key, value = line.strip().split(':')
             # print (f"{key},{value}")
@@ -401,6 +391,7 @@ class KMCSketchObj(SketchObj):
                 self.speciesinfo.cardkey[self.sketch] = value.strip()
 
     def card_command(self, sketch_paths:list=[]) -> str:
+        '''Create the bash command to capture the cardinality of the databases'''
         if len(sketch_paths) == 0:
             if self.kval == 0:
                 return
@@ -426,12 +417,14 @@ class KMCSketchObj(SketchObj):
             return False
         
     def remove_sketch(self):
+        '''Delete kmc database files for the associated sketch object'''
         sketchname= self.sfp.full
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         os.remove(sketchname + '.kmc_*')
 
     def _leaf_command(self,tmpdir) -> str:
+        '''Command string to produce the kmc database files from a fasta based on the information used to initiate the sketch obj'''
         kval_str=str(self.kval)
         if self.kval == 0:
             kval_str="{}"
@@ -445,6 +438,7 @@ class KMCSketchObj(SketchObj):
         return cmd
 
     def _union_command(self) -> str:
+        '''Command string to produce unions of the kmc database files based on the information used to initiate the sketch obj'''
         complex_input = "INPUT: \n"
         inputn=1
         for sketch in self._presketches:
