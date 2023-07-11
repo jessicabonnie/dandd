@@ -19,7 +19,7 @@ def insert_pre_ext(filename, string):
     toks = filename.split('.')
     return '.'.join(toks[:-1] + [string] + [toks[-1]])
 
-def add_ubiquitous_commands(subparser:argparse.ArgumentParser):
+def add_universal_cmds(subparser:argparse.ArgumentParser):
     subparser.add_argument('--version', action='version', version='%(prog)s 0.1')
     subparser.add_argument("--verbose", "-v", action="store_true", default=False, help="Print some trees and report steps of actions.")
     subparser.add_argument( "--debug", action="store_true", default=False, dest="debug", help="Share command calls to 3rd party programs.")
@@ -135,20 +135,24 @@ def kij_command(args):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(prog="DandD", description='program to explore delta values for a set of fasta files')
-    
-    # Arguments for top-level
-    commands = []
-    parser=add_ubiquitous_commands(parser)
-    # parser.set_defaults(func=main_parser_command)
 
+     # Arguments shared across all commands
+    parent_parser=argparse.ArgumentParser(add_help=False)
+    parent_parser=add_universal_cmds(parent_parser)
+
+    # Top level parser
+    parser = argparse.ArgumentParser(prog="DandD", 
+    description='program to explore delta values for a set of fasta files',parents=[parent_parser])
+    
+    # Keep track of subcommands 
+    commands = []
+    # Create subcommand parser
     subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help')
     subparsers.required = True
 
     # Make parser for "dand_cmd.py tree ..."
-    tree_parser = subparsers.add_parser("tree", help="Calculate deltas for input fastas and full union. Create DandD tree object for further downstream analysis.")
+    tree_parser = subparsers.add_parser("tree", help="Calculate deltas for input fastas and full union. Create DandD tree object for further downstream analysis.", parents=[parent_parser])
     commands.append('tree')
-    tree_parser=add_ubiquitous_commands(tree_parser)
 
     tree_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="PREFIX TAG", type=str, required=False, default='dandd')
  
@@ -187,10 +191,8 @@ def parse_arguments():
 
 
     # Make parser for "dand_cmd.py progressive ..."
-    progressive_parser = subparsers.add_parser("progressive", help="Measure Delta as each individual fasta is added to the set. If a specific ordering is not provided, a set of random orderings can be generated. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)")
+    progressive_parser = subparsers.add_parser("progressive", help="Measure Delta as each individual fasta is added to the set. If a specific ordering is not provided, a set of random orderings can be generated. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)", parents=[parent_parser])
     commands.append('progressive')
-
-    progressive_parser=add_ubiquitous_commands(progressive_parser)
 
     progressive_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command")
     progressive_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="species/experiment-tag-string", type=str, required=False)
@@ -219,12 +221,11 @@ def parse_arguments():
     progressive_parser.set_defaults(func=progressive_command)
 
     # Make parser for "dand_cmd.py info ..."
-    info_parser = subparsers.add_parser("info")
+    info_parser = subparsers.add_parser("info", parents=[parent_parser])
     commands.append('info')
-
-    info_parser=add_ubiquitous_commands(info_parser)
     
     info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command. Tree nodes will be updated to hold additional sketches as needed to perform info commands selected.")
+
     info_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="PREFIX TAG", type=str, required=False)
     
     info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
@@ -254,9 +255,9 @@ def parse_arguments():
     # abba_parser.set_defaults(func=abba_command)
 
    # Make parser for "dand_cmd.py kij ..."
-    kij_parser = subparsers.add_parser("kij", help="K Independent Jaccard. If a subset of fastas is not provided, matrix will include all inputs used to generate the delta tree using the `tree` command. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)")
+    kij_parser = subparsers.add_parser("kij", help="K Independent Jaccard. If a subset of fastas is not provided, matrix will include all inputs used to generate the delta tree using the `tree` command. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)", parents=[parent_parser])
+    
     commands.append('kij')
-    kij_parser=add_ubiquitous_commands(kij_parser)
 
     kij_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command")
     kij_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="PREFIX TAG", type=str, required=False)
