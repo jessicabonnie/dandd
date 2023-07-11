@@ -25,8 +25,11 @@ class SpeciesSpecifics:
         if os.path.exists(filepath):
             try:
                 contents=pickle.load(open(filepath, "rb", -1))
-            except CalledProcessError:
-                contents=pickle.load(open(filepath+'.bkp', "rb", -1))
+            except pickle.UnpicklingError:
+                try:
+                    contents=pickle.load(open(filepath+'.bkp', "rb", -1))
+                except FileExistsError:
+                    contents=dict()
             # finally:
             #     print(f"{filepath} and {filepath}.bkp are both corrupted. They will be overwritten.")
             #     contents=dict()
