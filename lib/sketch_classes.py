@@ -390,8 +390,8 @@ class KMCSketchObj(SketchObj):
         for line in proc.stdout.splitlines():
             key, value = line.strip().split(':')
             # print (f"{key},{value}")
-            if key.strip() == 'total k-mers':
-                self.speciesinfo.cardkey[self.sketch] = value.strip()
+            # if key.strip() == 'total k-mers':
+            self.speciesinfo.cardkey[key] = value
 
     def card_command(self, sketch_paths:list=[]) -> str:
         '''Create the bash command to capture the cardinality of the databases'''
@@ -399,8 +399,10 @@ class KMCSketchObj(SketchObj):
             if self.kval == 0:
                 return
             sketch_paths=[self.sketch]
-        cmdlist = ["kmc_tools","info"] + sketch_paths
-        cmd = " ".join(cmdlist)
+        cmd= "for db in "+ " ".join(sketch_paths) + "; do value=$(kmc_tools -hp info $db | grep 'total k-mers' | sed 's/ //g' | sed 's/totalk-mers://g'); echo $db,$value; done"
+        #kmc_tools info $sketchdir/ngen1/k10/allvar_HG00171_1.fasta.gz_k10 | grep 'total k-mers' | sed 's/ //g' | sed "s/totalk-mers://
+        # cmdlist = ["kmc_tools","info"] + sketch_paths
+        # cmd = " ".join(cmdlist)
         return cmd
     
 
@@ -436,7 +438,7 @@ class KMCSketchObj(SketchObj):
             kval_str="{}"
         tmpkdir=os.path.join(tmpdir,"k"+kval_str)
         os.makedirs(tmpkdir, exist_ok=True)
-        cmdlist = ['kmc -t'+ str(self.experiment['nthreads']),
+        cmdlist = ['kmc -hp -t'+ str(self.experiment['nthreads']),
         '-ci1 -cs2','-k' + kval_str,
         canon_command(canon=self.experiment['canonicalize'], tool="kmc"),
         '-fm', self.sfp.ffiles[0], self.sfp.full, tmpkdir]
@@ -451,6 +453,6 @@ class KMCSketchObj(SketchObj):
             complex_input = complex_input + f"input{inputn} = {sketch} -ci1   \n"
             inputn+=1
         complex_input = complex_input + f"OUTPUT:\n{self.sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
-        cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-t"+ str(self.experiment['nthreads']), "complex", "/dev/stdin"]
+        cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-hp","-t"+ str(self.experiment['nthreads']), "complex", "/dev/stdin"]
         cmd = " ".join(cmdlist)
         return cmd
