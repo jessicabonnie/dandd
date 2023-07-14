@@ -193,7 +193,7 @@ class DeltaTreeNode:
         subprocess.call(cmd, shell=True, stdout=None)
         shutil.rmtree(tmpdir)
         self.speciesinfo.save_cardkey(self.experiment["tool"])
-        self.speciesinfo.save_references()
+        #self.speciesinfo.save_references()
         # for k in static_empty_ks:
         #     self.update_node(kval=int(k))
         return sketchlist
@@ -470,8 +470,8 @@ class DeltaTree:
             root.update_node(k)
         if self.experiment["ksweep"] is not None:
             root.node_ksweep(mink=self.experiment["ksweep"][0], maxk=self.experiment["ksweep"][1])
-        self.speciesinfo.save_references()
-        self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
+        #self.speciesinfo.save_references()
+        #self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
     
     def leaf_nodes(self) -> List[DeltaTreeNode]:
         return [child for child in self._dt if child.ngen==1]
@@ -744,7 +744,7 @@ class SubSpider(DeltaTree):
         self.fastas=self.root.fastas
         self.ngen = len(self.fastas)
         self.delta = self.root_delta()
-        self.speciesinfo.save_references(fast=self.experiment['fast'])
+        #self.speciesinfo.save_references(fast=self.experiment['fast'])
         #super().__new__(self)
 
     def _build_tree(self, leafnodes):
