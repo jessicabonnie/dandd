@@ -192,6 +192,8 @@ class DeltaTreeNode:
             print(cmd)
         subprocess.call(cmd, shell=True, stdout=None)
         shutil.rmtree(tmpdir)
+        self.speciesinfo.save_cardkey(self.experiment["tool"])
+        self.speciesinfo.save_references()
         # for k in static_empty_ks:
         #     self.update_node(kval=int(k))
         return sketchlist
@@ -253,29 +255,32 @@ class DeltaTreeNode:
         # self.maxk=maxk
         return 
 
-    def summarize(self, mink:int=0, maxk:int=0):
+    def summarize(self, mink:int=0, maxk:int=0, ordering_number=0):
         '''create a dataframe of all "possible" delta values that were examined during creation of the node for use in plotting -- this isn't actually summarizing, so the function should be renamed'''
         nodevals=[]
         if mink == 0:
             mink=self.mink
         if maxk == 0:
             maxk=self.maxk
-        krange=self.experiment["ksweep"]
-        if len(krange) > 0:
-            mink = int(krange[0])
-            maxk = int(krange[1])
+        # krange=self.experiment["ksweep"]
+        
+        # if len(krange) > 0:
+        #     mink = int(krange[0])
+        #     maxk = int(krange[1])
         # if len(self.experiment["ksweep"] > 1):
         #     mink, maxk = self.experiment["ksweep"]
 
         for kval in range(mink, maxk+1):
             if not self.ksketches[kval]:
                 self.ksweep_update_node(mink=mink, maxk=maxk)
-            else:
+            #else:
             # if self.ksketches[kval]:
-                linedict = {"ngen": self.ngen, "kval": kval, "card": self.ksketches[kval].card, "delta_pos": self.ksketches[kval].delta_pos, "title": self.node_title, "command": self.ksketches[kval].cmd}
-                # for index, value in enumerate(self.fastas):
-                #     linedict[f"step{index}"] = value
-                nodevals.append(linedict)
+            linedict = {"ngen": self.ngen, "kval": kval, "card": self.ksketches[kval].card, "delta_pos": self.ksketches[kval].delta_pos, "title": self.node_title, "command": self.ksketches[kval].cmd, "ordering":ordering_number}
+            # for index, value in enumerate(self.fastas):
+            #     linedict[f"step{index}"] = value
+            # test=[lined for lined in nodevals if linedict["command"] == lined["command"] and linedict["kval"] == lined["kval"] and linedict["ngen"] == lined["ngen"]]
+            # if len(test) == 0:
+            nodevals.append(linedict)
         return nodevals
 
     # def update_card(self):
@@ -297,7 +302,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False, 'ksweep': False, 'lowmem': False}, padding=True):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False, 'ksweep': None, 'lowmem': False}, padding=True):
         self.experiment=experiment
         self._symbols = []
         self.mink=0
@@ -461,9 +466,12 @@ class DeltaTree:
             bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2] + [bestks[-1]+3]
         # print("Best ks after padding:", bestks)
         for k in bestks:
+            # if k <= self.experiment["ksweep"][1]:
             root.update_node(k)
         if self.experiment["ksweep"] is not None:
             root.node_ksweep(mink=self.experiment["ksweep"][0], maxk=self.experiment["ksweep"][1])
+        self.speciesinfo.save_references()
+        self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
     
     def leaf_nodes(self) -> List[DeltaTreeNode]:
         return [child for child in self._dt if child.ngen==1]
@@ -531,7 +539,7 @@ class DeltaTree:
         ''' Traverse the DeltaTree to return a dataframe with all possible delta values. -- this isn't actually summarizing, so the function should be renamed'''
         root = self._dt[-1]
         if mink == 0 or maxk == 0:
-            mink, maxk = self.experiment["ksweep"]
+            mink, maxk = self.mink, self.maxk #experiment["ksweep"]
             # mink=self.mink
             # if self.mink > 4:
             #     mink=self.mink - 2
@@ -540,15 +548,16 @@ class DeltaTree:
             # if self.maxk <= 30:
             #     maxk=self.maxk + 2
         self.ksweep(mink=mink, maxk=maxk)
+        sum_listdict=[]
+        sum_listdict.extend(root.summarize(mink=mink, maxk=maxk))
         def _delta_pos_recursive(node) -> List[dict]:
-            tmplist=node.summarize()
+            tmplist=node.summarize(mink=mink, maxk=maxk)
             if node.children:
                 nchild=len(node.children)
-                for i in range(nchild):
-                    #print(i)
-                    n=node.children[i]
+                if nchild == self.ngen and self.ngen > 1:
+                    n=node.children[self.ngen-1]
                     tmplist.extend(_delta_pos_recursive(n))
-            return tmplist
+            return sum_listdict
         
         dictlist= _delta_pos_recursive(root)
         return dictlist
@@ -568,15 +577,15 @@ class DeltaTree:
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
    
-    def ksweep(self, mink:int=2, maxk:int=32) -> None:
-        # if mink == 0:
-        #     mink=int(self.mink)
-        # if maxk == 0:
-        #     maxk = int(self.maxk)
+    def ksweep(self, mink:int=0, maxk:int=0) -> None:
+        if mink == 0:
+            mink=int(self.mink)
+        if maxk == 0:
+            maxk = int(self.maxk)
         self.root.node_ksweep(mink=mink, maxk=maxk)
         # print(self.root.ksketches[mink])
-        self.speciesinfo.save_references()
-        self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
+        # self.speciesinfo.save_references()
+        # self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
 
     def orderings_list(self, ordering_file=None, flist_loc=None, count=0)-> Tuple[List[str], List[Tuple[int]]]:
         '''create or retrieve a series of random orderings of fasta sketches. return also the expected "sorted" array of the files. A subset of the fastas in the tree can be provided by name (in a file). The ordering of this file will be used when count=1 and the list is provided.'''
@@ -636,16 +645,17 @@ class DeltaTree:
         results=[]
         summary=[]
         for i in range(0,len(orderings)):
-            oresults, osummary = smain.sketch_ordering(orderings[i], number=i+1, step=step)
-            for o in osummary:
-                o["ordering"] = i+1
+            oresults, osummary = [], []
+            oresults, osummary = smain.sketch_ordering(orderings[i], ordering_number=i+1, step=step)
+            # for o in osummary:
+            #     o["ordering"] = i+1
             results.extend(oresults)
             summary.extend(osummary)
             self.speciesinfo.save_references(fast=self.experiment['fast'])
             self.speciesinfo.save_cardkey(tool=self.experiment["tool"],fast=self.experiment['fast'])
         return results, summary
 
-    def sketch_ordering(self, ordering, number, step=1) -> Tuple[List[dict], List[dict]]:
+    def sketch_ordering(self, ordering, ordering_number, step=1) -> Tuple[List[dict], List[dict]]:
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas'''
         flen=len(ordering)
         output=[]
@@ -658,9 +668,11 @@ class DeltaTree:
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
                 if krange is not None:
                     ospider.ksweep(mink=int(krange[0]), maxk=int(krange[1]))
-                output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": number, "fastas": sublist})
+                output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": ordering_number, "fastas": sublist})
                 # , "cmd": ospider.root.ksketches[ospider.root.root_k()].cmd})
-                summary.extend(ospider.summarize_tree(mink=int(krange[0]), maxk=int(krange[1])))
+                newsum = ospider.root.summarize(mink=int(krange[0]), maxk=int(krange[1]), ordering_number=ordering_number)
+                summary.extend(newsum)
+                #ospider.summarize_tree(mink=int(krange[0]), maxk=int(krange[1])))
 
         return output, summary
 

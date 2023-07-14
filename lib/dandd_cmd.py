@@ -115,7 +115,8 @@ def kij_command(args):
         with open(args.flist_loc) as file:
             fastas = [line.strip() for line in file]
 
-    dtree.experiment["ksweep"] = (args.mink, args.maxk)
+    if args.ksweep:
+        dtree.experiment["ksweep"]=(int(args.mink), int(args.maxk))
     dtree.ksweep(mink=int(args.mink),maxk=int(args.maxk))
     
     kij_results, j_results = dtree.pairwise_spiders(sublist=fastas, mink=args.mink, maxk=args.maxk, jaccard=args.jaccard)
@@ -140,6 +141,14 @@ def parse_arguments():
     parent_parser=argparse.ArgumentParser(add_help=False)
     parent_parser=add_universal_cmds(parent_parser)
 
+    # ksweep argument parser
+    ksweep_parser=argparse.ArgumentParser(add_help=False)
+    ksweep_parser.add_argument( "--ksweep", dest="ksweep", default=None,
+    action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
+    ksweep_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    ksweep_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+
+
     # Top level parser
     parser = argparse.ArgumentParser(prog="DandD", 
     description='program to explore delta values for a set of fasta files',parents=[parent_parser])
@@ -151,7 +160,7 @@ def parse_arguments():
     subparsers.required = True
 
     # Make parser for "dand_cmd.py tree ..."
-    tree_parser = subparsers.add_parser("tree", help="Calculate deltas for input fastas and full union. Create DandD tree object for further downstream analysis.", parents=[parent_parser])
+    tree_parser = subparsers.add_parser("tree", help="Calculate deltas for input fastas and full union. Create DandD tree object for further downstream analysis.", parents=[parent_parser, ksweep_parser])
     commands.append('tree')
 
     tree_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles; if datadir contains subdirectory by the same name fastas will be sourced from there",  metavar="PREFIX TAG", type=str, required=False, default='dandd')
@@ -181,17 +190,18 @@ def parse_arguments():
 
     tree_parser.add_argument("-C", "--no-canon", action="store_false", default=True,  dest="canonicalize", help="instruct dashing to use non-canonicalized kmers")
 
-    tree_parser.add_argument( "--ksweep", dest="ksweep", default=None,
-    action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
-    tree_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    # tree_parser.add_argument( "--ksweep", dest="ksweep", default=None,
+    # action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
+    # tree_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    tree_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    # tree_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     tree_parser.set_defaults(func=tree_command)
 
 
     # Make parser for "dand_cmd.py progressive ..."
-    progressive_parser = subparsers.add_parser("progressive", help="Measure Delta as each individual fasta is added to the set. If a specific ordering is not provided, a set of random orderings can be generated. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)", parents=[parent_parser])
+    progressive_parser = subparsers.add_parser("progressive", help="Measure Delta as each individual fasta is added to the set. If a specific ordering is not provided, a set of random orderings can be generated. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)", 
+    parents=[parent_parser, ksweep_parser])
     commands.append('progressive')
 
     progressive_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command")
@@ -207,12 +217,12 @@ def parse_arguments():
 
     progressive_parser.add_argument("-l", "--label", dest="label", metavar="SUFFIX TAG", default="", help="NOT IMPLEMENTED label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False)
 
-    progressive_parser.add_argument( "--ksweep", dest="ksweep", default=None,
-    action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
+    # progressive_parser.add_argument( "--ksweep", dest="ksweep", default=None,
+    # action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
 
-    progressive_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int,help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    # progressive_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int,help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    progressive_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    # progressive_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     progressive_parser.add_argument("--step", dest="step", default=1, type=int, help="Number of sketches to include in each progression. Mostly used for a single ordered progression.", metavar="INTEGER")
 
@@ -221,23 +231,23 @@ def parse_arguments():
     progressive_parser.set_defaults(func=progressive_command)
 
     # Make parser for "dand_cmd.py info ..."
-    info_parser = subparsers.add_parser("info", parents=[parent_parser])
+    info_parser = subparsers.add_parser("info", parents=[parent_parser, ksweep_parser])
     commands.append('info')
     
     info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command. Tree nodes will be updated to hold additional sketches as needed to perform info commands selected.")
 
     info_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="PREFIX TAG", type=str, required=False)
     
-    info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    # info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    # info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     info_parser.add_argument("-o", "--outdir", dest="outdir", default=os.getcwd(), type=str, help="directory to write the output tables.", metavar="OUTPUT DIR")
 
     info_parser.add_argument("-l", "--label", dest="label", default="", help="NOT IMPLEMENTED Label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False, metavar="SUFFIX TAG")
 
-    info_parser.add_argument( "--ksweep", dest="ksweep", default=None,
-    action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
+    # info_parser.add_argument( "--ksweep", dest="ksweep", default=None,
+    # action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
 
 
     info_parser.set_defaults(func=info_command)
