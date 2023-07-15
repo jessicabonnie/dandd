@@ -386,9 +386,9 @@ class KMCSketchObj(SketchObj):
         super().__init__(kval=kval, sfp=sfp, speciesinfo=speciesinfo, experiment=experiment, presketches=presketches)
     
     def parse_card(self, proc):
-        '''Parse the cardinality streaming from standard out for the kmc cardinality command (kmctools info)'''
+        '''Parse the cardinality streaming from standard out for the kmc cardinality command (kmc_tools info)'''
         for line in proc.stdout.splitlines():
-            key, value = line.strip().split(':')
+            key, value = line.strip().split(',')
             # print (f"{key},{value}")
             # if key.strip() == 'total k-mers':
             self.speciesinfo.cardkey[key] = value
