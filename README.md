@@ -22,6 +22,11 @@ If you wish to use the `--exact` command to retrieve the *actual* k-mer counts r
 ```
 conda install -c bioconda kmc
 ```
+#### Parallel
+This version of DandD uses `parallel` to simultaneously create sketches across different values of `k`. You will need to make sure that your system has this by loading the module on your server or installing it on your computer.  
+```
+conda install -c bioconda parallel
+```
 
 ## File Output 
 The tool will write summary files to the current working directory or to the output directory provided. If a sketch directory is not provided it will be sought or created within the output directory. The sketch directory will contain (1) files mapping the sketch/database names to the component inputs (2) subdirectories of sketches/dbs arranged by number of genomes and k-mer length.
@@ -57,11 +62,12 @@ Additionally:
 `--non-canon` : disable canonicalization. By default, DandD will canonicalize the k-mers (i.e. treat reverse complements as equivalent to the original k-mer string).  
 `--nchildren <int>` or `-n <int>` : maximum number of children for each union. By default, DandD will build trees with a single layer of child nodes and one single union of all inputs (nicknamed 'spiders'). With `--nchildren` the tree can be built by calculating delta for a series of smaller unions by indicating the maximum number of children for each union.  
 `--registers <int>` : adjust number of registers used during sketching. For information about the implementation and trade-offs of adjusting this value, see Dashing's documentation.  
-
+`--lowmem` : delete union sketches/databases after storing their cardinalities and use stored values even when the sketch is missing. The path information etc. for the sketch will remain stored in the internal files such as dandd_fastahex and dandd_sketchinfo as well as the sketchdb.txt for the experiment.  **Note:** It is not recommended to use this command the first time the databases are initialized.
 
 ### progressive
 
-The `progressive` command performs a series of cumulative (or progressive) unions over a number (`--norder`) of orderings of the input fastas. It **requires** `--dtree / -d <tree.pickle>` where `<tree.pickle` is an output of the `tree` command. If only a subset of the original fastas in the tree are of interest, a subset list can be provided using `--fastas / -f <filepath>`. If orderings have previously been produced for this tree, those orderings will be repurposed, with additional orderings generated if `--norder` is greater than the number of orderings already generated.  If an ordering file is to be shared across experiments/tags, a preexisting ordering file can be used via `--orderings / -r <ordering pickle>`.  
+The `progressive` command performs a series of cumulative (or progressive) unions over a number (`--norder`) of orderings of the input fastas. It **requires** `--dtree / -d <tree.pickle>` where `<tree.pickle` is an output of the `tree` command. If only a subset of the original fastas in the tree are of interest, a subset list can be provided using `--fastas / -f <filepath>`. If orderings have previously been produced for this tree, those orderings will be repurposed, with additional orderings generated if `--norder` is greater than the number of orderings already generated.  If an ordering file is to be shared across experiments/tags, a preexisting ordering file can be used via `--orderings / -r <ordering pickle>`.  If only one deterministic ordering is desired provide it via the fasta file and use `--norder 1`.
+`--ksweep`: populate all of the possible delta values across a range of `k` values for each sketch/database combination in the progressive union. `--mink <int>` and `--maxk <int>` are used to bound that range, default is [2,32]. **Note** For reasons internal to Dashing it must be the case that maxk<= 32. If you want to sweep higher `k`s, you must use KMC via the `--exact` flag.
 
 ### kij
 The `kij` command produces pairwise deltas across all of the input fastas in the `tree.pickle` in order to compute K-Independent Jaccards. It also calculates values for pairwise Jaccard within the range provided using `--mink` and `--maxk`. To write out those pairwise values use `--jaccard`. It **requires** `--dtree / -d <tree.pickle>` where `<tree.pickle` is an output of the `tree` command.  
