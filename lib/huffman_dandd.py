@@ -186,7 +186,7 @@ class DeltaTreeNode:
             sub_cmd = self.ksketches[0]._leaf_command(tmpdir=tmpdir)
         else:
             sub_cmd = self.ksketches[0]._union_command()
-        cmdlist = ["parallel -j 95% '",sub_cmd,"' :::", "{"+ ",".join(empty_ks)+"}"]
+        cmdlist = ["parallel -j 95% '",sub_cmd,"' :::",  " ".join(empty_ks)]
         cmd = " ".join(cmdlist)
         if self.experiment["debug"]:
             print(cmd)
