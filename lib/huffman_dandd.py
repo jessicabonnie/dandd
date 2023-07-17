@@ -196,7 +196,6 @@ class DeltaTreeNode:
             print(cmd)
         subprocess.call(cmd, shell=True, stdout=None)
         shutil.rmtree(tmpdir)
-        self.speciesinfo.save_cardkey(self.experiment["tool"])
         #self.speciesinfo.save_references()
         # for k in static_empty_ks:
         #     self.update_node(kval=int(k))
@@ -286,6 +285,8 @@ class DeltaTreeNode:
         for kval in range(mink, maxk+1):
             if not self.ksketches[kval]:
                 self.ksweep_update_node(mink=mink, maxk=maxk)
+                if self.experiment["verbose"]:
+                    print(f"Now sweeping {kval} for ordering {ordering_number}")
             #else:
             # if self.ksketches[kval]:
             linedict = {"ngen": self.ngen, "kval": kval, "card": self.ksketches[kval].card, "delta_pos": self.ksketches[kval].delta_pos, "title": self.node_title, "command": self.ksketches[kval].cmd, "ordering":ordering_number}
@@ -296,22 +297,6 @@ class DeltaTreeNode:
             nodevals.append(linedict)
         return nodevals
 
-    # def update_card(self):
-    #     '''retrieve/calculate cardinality for any sketches in the node that lack it. NOTE: this is not in use. also it is more sketch related. TODO: refactor to use commands from SketchObj classes rather than using dashing '''
-    #     sketches = [sketch for sketch in self.ksketches if sketch is not None]
-    #     cardlist = [sketch.sketch for sketch in sketches if sketch.card == 0]
-    #     if len(cardlist) > 0:
-    #         cmdlist = [DASHINGLOC,"card --presketched -p10"] +  cardlist
-    #         cmd = " ".join(cmdlist)
-    #         print(cmd)
-    #         card_lines=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,text=True).stdout.readlines()
-    #         for card in csv.DictReader(card_lines, delimiter='\t'):
-    #             self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
-    #     for sketch in self.ksketches:
-    #         if sketch is not None:
-    #             if sketch.sketch in sketches:
-    #                 sketch.card=sketch.check_cardinality()
-    #                 sketch.delta_pos=sketch.card/sketch.kval
 
 class DeltaTree:
     ''' Delta tree data structure. '''
@@ -324,6 +309,8 @@ class DeltaTree:
         
         self.kstart=speciesinfo.kstart
         self.speciesinfo=speciesinfo
+        if self.experiment["verbose"]:
+            print("Now making tree for fastas: " + ", ".join(fasta_files))
         self._build_tree(fasta_files, nchildren)
         self.fill_tree(padding=padding)
         self.ngen = len(fasta_files)

@@ -211,6 +211,8 @@ class SketchObj(object):
             subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd=cmd
         elif not self.sketch_check():
+            if self.experiment["verbose"]:
+                print("Running Leaf Command: " + cmd)
             subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd=cmd
             
@@ -238,6 +240,8 @@ class SketchObj(object):
             self.cmd = cmd
         elif not self.sketch_check():
             # print(f"The sketch file {self.sfp.full} either doesn't exist or is empty")
+            if self.experiment["verbose"]:
+                print("Running Leaf Command: " + cmd)
             subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd = cmd
         
@@ -294,8 +298,6 @@ class SketchObj(object):
                 return 0
             if self.experiment['verbose']:
                 print(f"Sketch File Path not in cardkey: {self.sfp.full}")
-            if self.experiment["lowmem"]:
-                return 0
         # If the full path is not in the list of keys in the cardinality dictionary or the stored cardinality is 0, we will need to check if there is a sketch
         if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0):
             if not self.sketch_check():
@@ -349,6 +351,8 @@ class DashSketchObj(SketchObj):
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         try:
+            if self.experiment["verbose"]:
+                print("Now deleting: "+ sketchname)
             os.remove(sketchname)
         except FileNotFoundError:
             # print(f"{sketchname} has already been removed.")
@@ -426,6 +430,8 @@ class KMCSketchObj(SketchObj):
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         try:
+            if self.experiment["verbose"]:
+                print("Now deleting: "+ sketchname)
             os.remove(sketchname + '.kmc_*')
         except FileNotFoundError:
             pass
