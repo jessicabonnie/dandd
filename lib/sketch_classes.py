@@ -170,7 +170,7 @@ class SketchObj(object):
         experiment['baseset'].add(sfp.base)
         self.experiment=experiment
         self._presketches = presketches
-        if kval > 0:
+        if self.kval > 0:
             self.create_sketch()
             self.card = self.check_cardinality()
             self.delta_pos = self.card/self.kval
@@ -290,14 +290,16 @@ class SketchObj(object):
             proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True, stderr=stderr)
         finally:
             self.parse_card(proc=proc)
+            # NOTE: THIS IS NEW ... MAYBE IT BREAKS EVERYTHING SOON?
+            self.check_cardinality()
         
-    def check_cardinality(self) -> bool:
+    def check_cardinality(self) -> float:
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. '''
         if self.sfp.full not in self.speciesinfo.cardkey.keys():
             if self.experiment["lowmem"]:
                 return 0
-            if self.experiment['verbose']:
-                print(f"Sketch File Path not in cardkey: {self.sfp.full}")
+            # if self.experiment['verbose']:
+            #     print(f"Sketch File Path not in cardkey: {self.sfp.full}")
         # If the full path is not in the list of keys in the cardinality dictionary or the stored cardinality is 0, we will need to check if there is a sketch
         if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0):
             if not self.sketch_check():
@@ -330,7 +332,7 @@ class DashSketchObj(SketchObj):
     def parse_card(self, proc):
         '''Parse the cardinality streaming from standard out for the dashing card command'''
         for card in csv.DictReader(proc.stdout.splitlines(),delimiter='\t'):
-                self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+            self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
 
     def sketch_check(self, path=None) -> bool:
         '''Check that dashing sketch at full path exists and is not empty'''
@@ -394,7 +396,7 @@ class KMCSketchObj(SketchObj):
             key, value = line.strip().split(',')
             # print (f"{key},{value}")
             # if key.strip() == 'total k-mers':
-            self.speciesinfo.cardkey[key] = value
+            self.speciesinfo.cardkey[key] = float(value)
 
     def card_command(self, sketch_paths:list=[]) -> str:
         '''Create the bash command to capture the cardinality of the databases'''

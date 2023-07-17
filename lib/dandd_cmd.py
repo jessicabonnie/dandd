@@ -55,7 +55,7 @@ def tree_command(args):
         
     os.makedirs(args.outdir, exist_ok=True)
     # os.chdir(args.sketchdir)
-    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=args.nthreads, safety=args.safety, fast=args.fast, verbose=args.verbose, ksweep=args.ksweep, lowmem=args.lowmem)
+    dtree = huffman_dandd.create_delta_tree(tag=args.tag, genomedir=args.genomedir, sketchdir=args.sketchdir, kstart=args.kstart, nchildren=args.nchildren, registers=args.registers, flist_loc=args.flist_loc, canonicalize=args.canonicalize, tool=tool, debug=args.debug, nthreads=int(args.nthreads), safety=args.safety, fast=args.fast, verbose=args.verbose, ksweep=args.ksweep, lowmem=args.lowmem)
 
     fileprefix = dtree.make_prefix(outdir=args.outdir, tag=args.tag, label=args.label)
     dtree.save(fileprefix=fileprefix, fast=args.fast)
@@ -185,7 +185,7 @@ def parse_arguments():
 
     tree_parser.add_argument("-r", "--registers", dest="registers", metavar="INTEGER", default=20, help="number of registers to use during sketching")
 
-    tree_parser.add_argument("-e", "--nthreads", dest="nthreads", metavar="INTEGER", type=int, default=10, help="number of threads to use in calls to KMC ONLY. Dashing is not currently set to use threads.")
+    tree_parser.add_argument("-e", "--nthreads", dest="nthreads", metavar="INTEGER", type=int, default=0, help="number of threads to use in calls to KMC ONLY. Dashing is not currently set to use threads. Default uses max available cores.")
 
 
     tree_parser.add_argument("-C", "--no-canon", action="store_false", default=True,  dest="canonicalize", help="instruct dashing to use non-canonicalized kmers")
