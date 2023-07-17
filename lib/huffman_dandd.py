@@ -108,7 +108,10 @@ class DeltaTreeNode:
         if self.experiment['tool'] == 'dashing' and kval > 32:
             raise ValueError("Exploratory k value is too high for dashing. Either something is amiss with your data or you need to be using --exact mode")
         # make sure that all necessary ingredient sketches are available for the current k in question
+        # NOTE make sure the double check which of these is necessary
+        self.node_ksweep(mink=min(kval-direction,kval,kval+direction), maxk=max(kval-direction,kval,kval+direction))
         self.update_node(kval)
+        
         if direction < 0:
             self.mink = kval
         else:
@@ -196,6 +199,7 @@ class DeltaTreeNode:
             print(cmd)
         subprocess.call(cmd, shell=True, stdout=None)
         shutil.rmtree(tmpdir)
+        
         #self.speciesinfo.save_references()
         # for k in static_empty_ks:
         #     self.update_node(kval=int(k))
@@ -285,7 +289,7 @@ class DeltaTreeNode:
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':10, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False, 'ksweep': None, 'lowmem': False}, padding=True):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':0, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False, 'ksweep': None, 'lowmem': False}, padding=True):
         self.experiment=experiment
         self._symbols = []
         self.mink=0
@@ -304,8 +308,10 @@ class DeltaTree:
         self.root=self._dt[-1]
         self.delta = self.root_delta()
         self.fastas = fasta_files
-        speciesinfo.kstart = self.root_k()
+        if self.experiment["ksweep"] is None:
+            speciesinfo.kstart = self.root_k()
         self.speciesinfo.save_references(fast=experiment['fast'])
+        self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
     def __sub__(self, other):
         # sub = subtraction
         print("Larger Tree Delta: ", self.delta)
@@ -391,8 +397,12 @@ class DeltaTree:
                 progeny=progeny,
                 experiment=self.experiment
             )
-            new_node.find_delta(kval=self.speciesinfo.kstart)
-            
+            # NOTE check to make sure these are necessary here
+            if self.experiment["ksweep"] is None:
+                new_node.find_delta(self.speciesinfo.kstart)
+            else:
+                new_node.node_ksweep(mink=self.mink, maxk=self.maxk)
+
             while idx_insert < len(self._dt)-increment and self._dt[idx_insert+increment].ngen <= new_node.ngen:
                 idx_insert += increment
             
@@ -401,7 +411,7 @@ class DeltaTree:
             idx_current += nchildren
             if idx_insert + increment > len(self._dt)-1:
                 nchildren = len(self._dt) - idx_current
-    
+
 
     def print_list(self) -> None:
         nodes = []
@@ -716,8 +726,11 @@ class SubSpider(DeltaTree):
             progeny=progeny,
             experiment=self.experiment
             )
-        if not self.experiment["ksweep"]:
+        # NOTE: Make sure this is necessary ... maybe should be done with fill_tree
+        if self.experiment["ksweep"] is None:
             body_node.find_delta(kval=self.speciesinfo.kstart)
+        else:
+            body_node.node_ksweep(mink=self.mink, maxk=self.maxk)
         self.mink=body_node.mink
         self.maxk=body_node.maxk
         self._dt = children + [body_node]

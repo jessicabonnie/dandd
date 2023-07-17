@@ -305,10 +305,12 @@ class SketchObj(object):
             if not self.sketch_check():
                 return 0
             self.individual_card()
-        card_val = self.speciesinfo.cardkey[self.sfp.full]
+        # Major error previously due to indentation
+        self.card = float(self.speciesinfo.cardkey[self.sfp.full])
+        self.delta_pos = self.card/int(self.kval)
         if self.experiment["lowmem"] and self.sfp.ngen > 1:
             self.remove_sketch()
-        return float(card_val)
+        return float(self.card)
     
     # def summarize(self):
     #     outdict = {"kval":self.kval, "card":self.card, "delta_pos":self.delta_pos}
@@ -445,8 +447,11 @@ class KMCSketchObj(SketchObj):
             kval_str="{}"
         tmpkdir=os.path.join(tmpdir,"k"+kval_str)
         os.makedirs(tmpkdir, exist_ok=True)
-        cmdlist = ['kmc -hp -t'+ str(self.experiment['nthreads']),
-        '-ci1 -cs2','-k' + kval_str,
+        tstring = ''
+        if self.experiment["nthreads"] > 0:
+            tstring = ' -t'+ str(self.experiment['nthreads'])
+        cmdlist = ['kmc -hp' + tstring,
+        ' -ci1 -cs2','-k' + kval_str,
         canon_command(canon=self.experiment['canonicalize'], tool="kmc"),
         '-fm', self.sfp.ffiles[0], self.sfp.full, tmpkdir]
         cmd = " ".join(cmdlist)
@@ -456,10 +461,14 @@ class KMCSketchObj(SketchObj):
         '''Command string to produce unions of the kmc database files based on the information used to initiate the sketch obj'''
         complex_input = "INPUT: \n"
         inputn=1
+        tstring = ''
+        if self.experiment["nthreads"] > 0:
+            tstring = ' -t'+ str(self.experiment['nthreads'])
+
         for sketch in self._presketches:
             complex_input = complex_input + f"input{inputn} = {sketch} -ci1   \n"
             inputn+=1
         complex_input = complex_input + f"OUTPUT:\n{self.sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
-        cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-hp","-t"+ str(self.experiment['nthreads']), "complex", "/dev/stdin"]
+        cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-hp ",tstring, "complex", "/dev/stdin"]
         cmd = " ".join(cmdlist)
         return cmd
