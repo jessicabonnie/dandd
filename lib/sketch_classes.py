@@ -29,25 +29,25 @@ def canon_command(canon:bool, tool='dashing'):
     return outstr
 
 
-def parallel_progeny_command(sketchdir, kval:int, experiment) -> str:
-    '''Produce the necessary leaf sketches for a node further up the tree in a single batch command to dashing/kmc
-    NOTE: NOT CURRENTLY USED'''
-        # fasta_list="\n".join(self.sfp.ffiles)
-    if experiment["tool"] == "dashing":
-        progeny_dir=os.path.join(sketchdir, "ngen" + str(1),"k"+ str(kval))
-        cmdlist = [ DASHINGLOC, "sketch", 
-    canon_command(experiment['canonicalize'], "dashing"),
-    "-k" + str(kval), 
-    "-S",str(experiment['registers']),
-        #f"-p{experiment['nthreads']}",
-        "--prefix", progeny_dir, "--paths", "/dev/stdin"]
-            #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
-    else:
-        cmdlist=[]
-        raise NotImplementedError("tools other than dashing not yet implemented with parallel argument")
-    cmd = " ".join(cmdlist)
+# def parallel_progeny_command(sketchdir, kval:int, experiment) -> str:
+#     '''Produce the necessary leaf sketches for a node further up the tree in a single batch command to dashing/kmc
+#     NOTE: NOT CURRENTLY USED'''
+#         # fasta_list="\n".join(self.sfp.ffiles)
+#     if experiment["tool"] == "dashing":
+#         progeny_dir=os.path.join(sketchdir, "ngen" + str(1),"k"+ str(kval))
+#         cmdlist = [ DASHINGLOC, "sketch", 
+#     canon_command(experiment['canonicalize'], "dashing"),
+#     "-k" + str(kval), 
+#     "-S",str(experiment['registers']),
+#         #f"-p{experiment['nthreads']}",
+#         "--prefix", progeny_dir, "--paths", "/dev/stdin"]
+#             #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
+#     else:
+#         cmdlist=[]
+#         raise NotImplementedError("tools other than dashing not yet implemented with parallel argument")
+#     cmd = " ".join(cmdlist)
     
-    return cmd
+#     return cmd
 
 class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location
@@ -290,6 +290,8 @@ class SketchObj(object):
     def check_cardinality(self) -> bool:
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. '''
         if self.sfp.full not in self.speciesinfo.cardkey.keys():
+            if self.experiment["lowmem"]:
+                return 0
             if self.experiment['verbose']:
                 print(f"Sketch File Path not in cardkey: {self.sfp.full}")
             if self.experiment["lowmem"]:
@@ -366,9 +368,6 @@ class DashSketchObj(SketchObj):
         #  f"-p{self.experiment['nthreads']}",
          "--prefix", str(self.sfp.dir)]
         
-        # if len(self.experiment["ksweep"])>0:
-        #     file_source=["-F", self.speciesinfo.flist_loc]
-                #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
         cmd = " ".join(cmdlist+file_source)
         return cmd
     

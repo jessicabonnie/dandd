@@ -113,6 +113,9 @@ class DeltaTreeNode:
             self.mink = kval
         else:
             self.maxk = kval
+        if self.delta == 0:
+            # print("HERE 10: ", self.ngen)
+            self.update_node(kval)
         old_d = self.delta
         new_d = self.ksketches[kval].delta_pos
         
@@ -145,8 +148,9 @@ class DeltaTreeNode:
         tmpdir=tempfile.mkdtemp()
         # use mink/maxk provided unless ksweep in experiment object is different
         krange=[int(mink),int(maxk)]
-        if self.experiment["ksweep"] is not None:
-            krange=self.experiment["ksweep"]
+        
+        # if self.experiment["ksweep"] is not None:
+        #     krange=self.experiment["ksweep"]
         # check the ks already in the node sketches, don't do them if they are already there. If none are empty return nothing
         empty_ks = [str(i) for i in range(int(krange[0]),int(krange[1])+1) if not self.ksketches[i]]
         static_empty_ks = empty_ks.copy()
@@ -250,7 +254,10 @@ class DeltaTreeNode:
             #self.ksketches.extend([None]* (maxk-len(self.ksketches)))
         for kval in range(mink, maxk+1):
             if not self.ksketches[kval]:
-                self.update_node(kval) 
+                # print("NOT THERE")
+                self.update_node(kval)
+                if not self.ksketches[kval]:
+                    exit(f"Something is wrong with this node's k={kval} sketch. Recommend deleting the input sketches: ", self.node_title)
         # self.mink=mink
         # self.maxk=maxk
         return 
@@ -258,10 +265,10 @@ class DeltaTreeNode:
     def summarize(self, mink:int=0, maxk:int=0, ordering_number=0):
         '''create a dataframe of all "possible" delta values that were examined during creation of the node for use in plotting -- this isn't actually summarizing, so the function should be renamed'''
         nodevals=[]
-        if mink == 0:
-            mink=self.mink
-        if maxk == 0:
-            maxk=self.maxk
+        # if mink == 0:
+        #     mink=self.mink
+        # if maxk == 0:
+        #     maxk=self.maxk
         # krange=self.experiment["ksweep"]
         
         # if len(krange) > 0:
@@ -462,36 +469,38 @@ class DeltaTree:
         #print(bestks)
         bestks.sort()
         # print("Best ks before padding:", bestks)
-        if padding:
-            bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2] + [bestks[-1]+3]
+        # if padding:
+        #     bestks = bestks + [bestks[0]-1] + [bestks[0]-2] + [bestks[-1]+1] + [bestks[-1]+2] + [bestks[-1]+3]
         # print("Best ks after padding:", bestks)
         for k in bestks:
             # if k <= self.experiment["ksweep"][1]:
+            
             root.update_node(k)
         if self.experiment["ksweep"] is not None:
             root.node_ksweep(mink=self.experiment["ksweep"][0], maxk=self.experiment["ksweep"][1])
+        return
         #self.speciesinfo.save_references()
         #self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
     
     def leaf_nodes(self) -> List[DeltaTreeNode]:
         return [child for child in self._dt if child.ngen==1]
 
-    def to_spider(self):
-        '''Transform tree into a spider if it isn't'''
+    # def to_spider(self):
+    #     '''Transform tree into a spider if it isn't'''
 
-        children=self.leaf_nodes()
-        progeny=[p.progeny for p in children]
-        #flatten the progeny list
-        progeny=[item for sublist in progeny for item in sublist]
-        child_titles=[c.node_title for c in children]
-        body_node = DeltaTreeNode(
-            node_title="_".join(child_titles), speciesinfo=self.speciesinfo,
-            children = children,
-            progeny=progeny,
-            experiment=self.experiment
-            )
-        body_node.find_delta(kval=self.speciesinfo.kstart)
-        self._dt = children + [body_node]
+    #     children=self.leaf_nodes()
+    #     progeny=[p.progeny for p in children]
+    #     #flatten the progeny list
+    #     progeny=[item for sublist in progeny for item in sublist]
+    #     child_titles=[c.node_title for c in children]
+    #     body_node = DeltaTreeNode(
+    #         node_title="_".join(child_titles), speciesinfo=self.speciesinfo,
+    #         children = children,
+    #         progeny=progeny,
+    #         experiment=self.experiment
+    #         )
+    #     body_node.find_delta(kval=self.speciesinfo.kstart)
+    #     self._dt = children + [body_node]
     
     def make_prefix(self, tag: str, label="", outdir:str=None):
         if not outdir:
@@ -535,32 +544,32 @@ class DeltaTree:
         dictlist= _delta_recursive(root)
         return dictlist
   
-    def summarize_tree(self, mink=0, maxk=0) -> List[dict]:
-        ''' Traverse the DeltaTree to return a dataframe with all possible delta values. -- this isn't actually summarizing, so the function should be renamed'''
-        root = self._dt[-1]
-        if mink == 0 or maxk == 0:
-            mink, maxk = self.mink, self.maxk #experiment["ksweep"]
-            # mink=self.mink
-            # if self.mink > 4:
-            #     mink=self.mink - 2
-        # if maxk == 0:
-        #     maxk = self.maxk
-            # if self.maxk <= 30:
-            #     maxk=self.maxk + 2
-        self.ksweep(mink=mink, maxk=maxk)
-        sum_listdict=[]
-        sum_listdict.extend(root.summarize(mink=mink, maxk=maxk))
-        def _delta_pos_recursive(node) -> List[dict]:
-            tmplist=node.summarize(mink=mink, maxk=maxk)
-            if node.children:
-                nchild=len(node.children)
-                if nchild == self.ngen and self.ngen > 1:
-                    n=node.children[self.ngen-1]
-                    tmplist.extend(_delta_pos_recursive(n))
-            return sum_listdict
+    # def summarize_tree(self, mink=0, maxk=0) -> List[dict]:
+    #     ''' Traverse the DeltaTree to return a dataframe with all possible delta values. -- this isn't actually summarizing, so the function should be renamed'''
+    #     root = self._dt[-1]
+    #     if mink == 0 or maxk == 0:
+    #         mink, maxk = self.mink, self.maxk #experiment["ksweep"]
+    #         # mink=self.mink
+    #         # if self.mink > 4:
+    #         #     mink=self.mink - 2
+    #     # if maxk == 0:
+    #     #     maxk = self.maxk
+    #         # if self.maxk <= 30:
+    #         #     maxk=self.maxk + 2
+    #     self.ksweep(mink=mink, maxk=maxk)
+    #     sum_listdict=[]
+    #     sum_listdict.extend(root.summarize(mink=mink, maxk=maxk))
+    #     def _delta_pos_recursive(node) -> List[dict]:
+    #         tmplist=node.summarize(mink=mink, maxk=maxk)
+    #         if node.children:
+    #             nchild=len(node.children)
+    #             if nchild == self.ngen and self.ngen > 1:
+    #                 n=node.children[self.ngen-1]
+    #                 tmplist.extend(_delta_pos_recursive(n))
+    #         return sum_listdict
         
-        dictlist= _delta_pos_recursive(root)
-        return dictlist
+    #     dictlist= _delta_pos_recursive(root)
+    #     return dictlist
 
     def nodes_from_fastas(self, fasta_list):
         '''
@@ -661,13 +670,14 @@ class DeltaTree:
         output=[]
         summary=[]
         krange = self.experiment["ksweep"]
+        if krange is None:
+            krange=(self.mink, self.maxk)
         
         for i in range(1,flen+1):
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
-                if krange is not None:
-                    ospider.ksweep(mink=int(krange[0]), maxk=int(krange[1]))
+                ospider.ksweep(mink=int(krange[0]), maxk=int(krange[1]))
                 output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": ordering_number, "fastas": sublist})
                 # , "cmd": ospider.root.ksketches[ospider.root.root_k()].cmd})
                 newsum = ospider.root.summarize(mink=int(krange[0]), maxk=int(krange[1]), ordering_number=ordering_number)
@@ -688,9 +698,11 @@ class DeltaTree:
         j_results=[]
         new_experiment = self.experiment.copy()
         new_experiment.update({'fast': False , 'safe': False})
+        (mink, maxk) = new_experiment["ksweep"]
         for pair in pairings:
             pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=new_experiment)
-            
+            pspider.root.find_delta(self.root_k())
+            pspider.ksweep(mink=mink, maxk=maxk)
             kij_results.append(pspider.kij_summarize())
             if jaccard:
                 pspider.ksweep(mink=mink, maxk=maxk)
@@ -735,9 +747,11 @@ class SubSpider(DeltaTree):
         self.fastahex = speciesinfo.fastahex
         self.experiment=experiment
         self._symbols = []
-        # self.mink=0
-        # self.maxk=0
         self.kstart=speciesinfo.kstart
+        if self.experiment["ksweep"] is not None:
+            self.mink, self.maxk = self.experiment["ksweep"]
+        # else:
+        #     self.mink, self.maxk = self.speciesinfo.kstart, self.speciesinfo.kstart
         self.speciesinfo=speciesinfo
         self._build_tree(leafnodes)
         self.root=self._dt[-1]
@@ -759,7 +773,8 @@ class SubSpider(DeltaTree):
             progeny=progeny,
             experiment=self.experiment
             )
-        body_node.find_delta(kval=self.speciesinfo.kstart)
+        if not self.experiment["ksweep"]:
+            body_node.find_delta(kval=self.speciesinfo.kstart)
         self.mink=body_node.mink
         self.maxk=body_node.maxk
         self._dt = children + [body_node]
@@ -769,8 +784,12 @@ class SubSpider(DeltaTree):
         ##TODO: Write this to handle more than 2 children?
         if len(self.fastas) != 2:
             raise ValueError("KIJ can only be calculated on spider/trees with 2 children")
+        self.root.update_node(self.root.bestk)
         childA=self._dt[0]
         childB=self._dt[1]
+        childA.update_node(childA.bestk)
+        childB.update_node(childB.bestk)
+        print(childB)
         # sort in lexigraphical order so duplicates
         names = [childA.node_title,childB.node_title]
         if names != sorted(names):
@@ -779,7 +798,7 @@ class SubSpider(DeltaTree):
         outdict={"A":childA.fastas[0], "B":childB.fastas[0],
             "Adelta":childA.delta, "Bdelta":childB.delta,
             "Ak":childA.bestk, "Bk":childB.bestk,
-            "ABdelta":self.delta, "ABk":self.root.bestk, "Atitle": childA.node_title, "Btitle": childB.node_title}
+            "ABdelta":self.root.delta, "ABk":self.root.bestk, "Atitle": childA.node_title, "Btitle": childB.node_title}
         outdict["KIJ"]=(outdict["Adelta"] + outdict["Bdelta"]-outdict["ABdelta"])/outdict["ABdelta"]
         
         return outdict

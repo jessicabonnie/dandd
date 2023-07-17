@@ -265,7 +265,7 @@ def parse_arguments():
     # abba_parser.set_defaults(func=abba_command)
 
    # Make parser for "dand_cmd.py kij ..."
-    kij_parser = subparsers.add_parser("kij", help="K Independent Jaccard. If a subset of fastas is not provided, matrix will include all inputs used to generate the delta tree using the `tree` command. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)", parents=[parent_parser])
+    kij_parser = subparsers.add_parser("kij", help="K Independent Jaccard. If a subset of fastas is not provided, matrix will include all inputs used to generate the delta tree using the `tree` command. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)", parents=[parent_parser, ksweep_parser])
     
     commands.append('kij')
 
@@ -284,9 +284,11 @@ def parse_arguments():
 
     # kij_parser.add_argument("--mash", dest="mash", default=False, action="store_true", help="Indicate whether to include output for mash difference for indicated ks")
 
-    kij_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, type=int, default=2, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    # kij_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, type=int, default=2, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
-    kij_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, type=int, default=32, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
+    # kij_parser.add_argument("--ksweep", dest="ksweep", required=False, type=bool, default=False, help="Sweep ks.", action="store_true")
+
+    # kij_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, type=int, default=32, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     kij_parser.set_defaults(func=kij_command)
 
