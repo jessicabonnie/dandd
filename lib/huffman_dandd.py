@@ -137,7 +137,7 @@ class DeltaTreeNode:
         self.card=self.ksketches[self.bestk].card
         return
     
-    def ksweep_update_node(self, mink=2, maxk=32):
+    def ksweep_update_node(self, mink, maxk):
         # This should return an sfp that can be used to fill a parallel command
         sfp=SketchFilePath(filenames=self.fastas, kval=0, speciesinfo=self.speciesinfo, experiment=self.experiment)
         # this paths list will be appended and passed during SketchObj creation
@@ -206,6 +206,12 @@ class DeltaTreeNode:
 
     def update_node(self, kval, parallel=False):
         '''Populate the sketch object for the given k at the self node as well as all children of the node'''
+        ekrange=(kval, kval)
+        if self.experiment["ksweep"] is not None:
+            ekrange=self.experiment["ksweep"]
+            if kval not in range(ekrange[0],ekrange[1]+1):
+                print(f"k={kval} is outside of ksweep range ",ekrange)
+                return
         if not self.ksketches[kval]:
             #create sketch file path holding information relating to the sketch for that k 
             sfp = SketchFilePath(filenames=self.fastas, kval=kval, speciesinfo=self.speciesinfo, experiment=self.experiment)
@@ -242,7 +248,7 @@ class DeltaTreeNode:
         #self.update_card()
         return
 
-    def node_ksweep(self, mink=2, maxk=32):
+    def node_ksweep(self, mink, maxk):
         '''Sketch all of the ks for the node (and its decendent nodes)between mink and maxk (even when they weren't needed to calculate delta'''
         sketchlist=self.ksweep_update_node(mink=mink, maxk=maxk)
         multicard=self.ksketches[0].card_command(sketchlist)
@@ -586,11 +592,11 @@ class DeltaTree:
         print("Subtree Delta: ", small_spider.delta)
         return self - small_spider
    
-    def ksweep(self, mink:int=0, maxk:int=0) -> None:
-        if mink == 0:
-            mink=int(self.mink)
-        if maxk == 0:
-            maxk = int(self.maxk)
+    def ksweep(self, mink, maxk) -> None:
+        # if mink == 0:
+        #     mink=int(self.mink)
+        # if maxk == 0:
+        #     maxk = int(self.maxk)
         self.root.node_ksweep(mink=mink, maxk=maxk)
         # print(self.root.ksketches[mink])
         # self.speciesinfo.save_references()
