@@ -236,15 +236,9 @@ class DeltaTreeNode:
                 presketches=[]
                 # update each of the child nodes 
                 # TODO can be done in parallel
-                if parallel:
-                    pass
-                    # pool2 = Pool(processes=4)
-                    # results = [pool2.apply(_update_helper, args=(child, self.speciesinfo, kval, )) for child in self.children]
-                    # presketches=presketches + results
-                else:
-                    for i in range(len(self.children)):
-                        self.children[i].update_node(kval)
-                        presketches= presketches + [self.children[i].ksketches[kval].sketch]
+                for i in range(len(self.children)):
+                    self.children[i].update_node(kval)
+                    presketches= presketches + [self.children[i].ksketches[kval].sketch]
             # create a sketch object dependent on whether the tool is dashing or kmc
             if self.experiment["tool"] == "dashing":
                 self.ksketches[kval] = DashSketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
@@ -273,8 +267,8 @@ class DeltaTreeNode:
         for kval in range(mink, maxk+1):
             if self.ksketches[kval] is None:
                 self.update_node(kval)
-            if self.ksketches[kval].card == 0:
-                print("SKETCH CARD NOT THERE?")
+            # if self.ksketches[kval].card == 0:
+            #     print("SKETCH CARD NOT THERE?")
                 # if not self.ksketches[kval]:
                 #     exit(f"Something is wrong with this node's k={kval} sketch. Recommend deleting the input sketches: ", self.node_title)
         self.mink=mink
@@ -639,7 +633,8 @@ class DeltaTree:
             if i % step == 0:
                 sublist=[self.fastas[j] for j in ordering[:i]]
                 ospider=SubSpider(leafnodes=self.nodes_from_fastas(sublist), speciesinfo=self.speciesinfo, experiment=self.experiment)
-                # ospider.ksweep(mink=int(krange[0]), maxk=int(krange[1]))
+                # NOTE why do we need ksweep here if we just did it during fill_tree? or did we. Well, it doesn't work without it so.
+                ospider.ksweep(mink=int(krange[0]), maxk=int(krange[1]))
                 output.append({"ngen":i, "kval":ospider.root_k(), "delta": ospider.delta, "ordering": ordering_number, "fastas": sublist})
                 newsum = ospider.root.summarize(mink=int(krange[0]), maxk=int(krange[1]), ordering_number=ordering_number)
                 summary.extend(newsum)

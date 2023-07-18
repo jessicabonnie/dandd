@@ -439,8 +439,8 @@ class KMCSketchObj(SketchObj):
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         try:
-            if self.experiment["verbose"]:
-                print("Now deleting: "+ sketchname)
+            # if self.experiment["verbose"]:
+            #     print("Now deleting: "+ sketchname)
             os.remove(sketchname + '.kmc_*')
         except FileNotFoundError:
             pass
