@@ -210,11 +210,14 @@ class SketchObj(object):
                 print("Due to issues with leaf sketch/db file, we will Just Do It. (It=Sketch or Build Again)")
             subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd=cmd
-        elif not self.sketch_check():
-            if self.experiment["verbose"]:
-                print("Running Leaf Command: " + cmd)
-            subprocess.call(cmd, shell=True, stdout=stdout)
-            self.cmd=cmd
+        elif not self.sketch_check() :
+            if self.experiment["lowmem"] and self.check_cardinality() > 0:
+                self.cmd=cmd
+            else:
+                if self.experiment["verbose"]:
+                    print("Running Leaf Command: " + cmd)
+                subprocess.call(cmd, shell=True, stdout=stdout)
+                self.cmd=cmd
             
             ##TODO pass back the command so that it can be done in parallel?
         else:
@@ -239,13 +242,15 @@ class SketchObj(object):
             subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd = cmd
         elif not self.sketch_check():
-            # print(f"The sketch file {self.sfp.full} either doesn't exist or is empty")
-            if self.experiment["verbose"]:
-                print("Running Leaf Command: " + cmd)
-            subprocess.call(cmd, shell=True, stdout=stdout)
-            self.cmd = cmd
+            if self.experiment["lowmem"] and self.check_cardinality() > 0:
+                self.cmd=cmd
+            else:
+                if self.experiment["verbose"]:
+                    print("Running Union Command: " + cmd)
+                subprocess.call(cmd, shell=True, stdout=stdout)
+                self.cmd = cmd
         
-        self.cmd = cmd
+        # self.cmd = cmd
         if self.experiment['debug']:
             print(self.cmd)
         
@@ -340,10 +345,10 @@ class DashSketchObj(SketchObj):
         '''Check that dashing sketch at full path exists and is not empty'''
         if not path:
             path=self.sfp.full
-        if self.experiment["lowmem"]:
-            # print(self.check_cardinality())
-            if self.check_cardinality() > 0:
-                return True
+        # if self.experiment["lowmem"]:
+        #     # print(self.check_cardinality())
+        #     if self.check_cardinality() > 0:
+        #         return True
         if os.path.exists(path) and os.stat(path).st_size != 0:
             return True
         else:
@@ -355,8 +360,8 @@ class DashSketchObj(SketchObj):
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         try:
-            if self.experiment["verbose"]:
-                print("Now deleting: "+ sketchname)
+            # if self.experiment["verbose"]:
+            #     print("Now deleting: "+ sketchname)
             os.remove(sketchname)
         except FileNotFoundError:
             # print(f"{sketchname} has already been removed.")
