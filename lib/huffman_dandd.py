@@ -493,7 +493,7 @@ class DeltaTree:
         ''' Traverse the DeltaTree to return a dataframe with the delta values of the nodes in the tree.'''
         root = self._dt[-1]
         def _delta_recursive(node) -> List[Dict]:
-            tmplist=[{"delta": node.delta, "k": node.bestk, "title": node.node_title, "ngen": node.ngen, "fastas": "|".join(node.fastas)}]
+            tmplist=[{"delta": node.delta, "k": node.bestk, "title": node.node_title, "ngen": node.ngen,"sketchloc": node.ksketches[node.bestk].sketch, "card":node.ksketches[node.bestk].card ,"fastas": "|".join(node.fastas)}]
             if node.children:
                 nchild=len(node.children)
                 for i in range(nchild):
