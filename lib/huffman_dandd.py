@@ -9,9 +9,6 @@ from typing import List, Dict, Set, Tuple
 from math import factorial
 from itertools import permutations
 
-# Default initial size of sketch array for each node
-RANGEK=100
-
 
 def write_listdict_to_csv(outfile: str, listdict:List[Dict], suffix:str="", last_col: str = None):
     '''
@@ -78,8 +75,12 @@ class DeltaTreeNode:
         self.children=children
         self.mink = 0
         self.maxk = 0
+        if self.experiment["ksweep"] is not None:
+            (self.mink, self.maxk) = self.experiment["ksweep"]
         self.bestk = 0
         self.delta = 0
+        # Default initial size of sketch array for each node
+        RANGEK = max(100, self.maxk+2)
         self.ksketches = [None] * RANGEK
         self.assign_progeny()
         self.fastas = [f.fastas[0] for f in self.progeny]
@@ -107,6 +108,10 @@ class DeltaTreeNode:
 
         if self.experiment['tool'] == 'dashing' and kval > 32:
             raise ValueError("Exploratory k value is too high for dashing. Either something is amiss with your data or you need to be using --exact mode")
+        # what if maxk is larger than the default ksketches size?
+        elif kval > len(self.ksketches):
+        #     self.ksketches = self.ksketches + [None]* (maxk-len(self.ksketches))
+            self.ksketches.extend([None]* (kval-len(self.ksketches)+2))
         # make sure that all necessary ingredient sketches are available for the current k in question
         # NOTE make sure the double check which of these is necessary
         self.node_ksweep(mink=min(kval-direction,kval,kval+direction), maxk=max(kval-direction,kval,kval+direction))
@@ -143,6 +148,11 @@ class DeltaTreeNode:
     def ksweep_update_node(self, mink, maxk):
         # This should return an sfp that can be used to fill a parallel command
         sfp=SketchFilePath(filenames=self.fastas, kval=0, speciesinfo=self.speciesinfo, experiment=self.experiment)
+        # If maxk is greater than the size of ksketches, expand it
+        if maxk > len(self.ksketches):
+            print("MAXK is larger than the size if ksketches, extending ksketches")
+            self.ksketches.extend([None]* (maxk-len(self.ksketches)+2))
+            # self.ksketches = self.ksketches + [None]* (maxk-len(self.ksketches))
         # this paths list will be appended and passed during SketchObj creation
         presketches=[] 
         # this sketchlist will be used for a bath cardinality check
@@ -258,9 +268,7 @@ class DeltaTreeNode:
         sketchlist=self.ksweep_update_node(mink=mink, maxk=maxk)
         multicard=self.ksketches[0].card_command(sketchlist)
         self.ksketches[0].individual_card(cmd=multicard)
-        # if maxk > len(self.ksketches):
-        #     self.ksketches = self.ksketches + [None]* (maxk-len(self.ksketches))
-            #self.ksketches.extend([None]* (maxk-len(self.ksketches)))
+
         # This loop is necessary to populate properties of the sketch objects
         for kval in range(mink, maxk+1):
             if self.ksketches[kval] is None:
