@@ -20,13 +20,14 @@ def insert_pre_ext(filename, string):
     return '.'.join(toks[:-1] + [string] + [toks[-1]])
 
 def add_universal_cmds(subparser:argparse.ArgumentParser):
-    subparser.add_argument('--version', action='version', version='%(prog)s 0.1')
+    subparser.add_argument('--version', action='version', version='%(prog)s 0.2')
     subparser.add_argument("--verbose", "-v", action="store_true", default=False, help="Print some trees and report steps of actions.")
     subparser.add_argument( "--debug", action="store_true", default=False, dest="debug", help="Share command calls to 3rd party programs.")
-    subparser.add_argument( "--lowmem", action="store_true", default=False, dest="lowmem", help="Delete all multi-fasta sketches, while keeping cardinality stored in dictionary for later runs. Do not recommend using with --safe")
-    subparser.add_argument( "--safe", action="store_true", default=False, dest="safety",   help="Double check all sketch hashes to make sure they match the sums of the fasta hashes.")
+    subparser.add_argument( "--lowmem", action="store_true", default=False, dest="lowmem", help="Delete all multi-fasta sketches, while keeping cardinality stored in dictionary for later runs. Don't require sketch/db existence if the cardinality is already stored. Do not recommend using with --safe")
+    subparser.add_argument( "--safe", action="store_true", default=False, dest="safety",   help="Double check all sketch/db name hashes to make sure they match the sums of the component fasta hashes.")
     subparser.add_argument( "--fast", action="store_true", default=False, dest="fast",   help="Don't save so much stuff for second usage.")
     return subparser
+
 
 
 # def main_parser_command(args):
@@ -43,7 +44,6 @@ def tree_command(args):
         print("ERROR: You must provide either a datadirectory or a fasta file list!")
         sys.exit(1)
     if not args.sketchdir:
-        # args.sketchdir=os.path.join(args.outdir,args.tag,"sketchdb")
         args.sketchdir=os.path.join(args.outdir,"sketchdb")
         os.makedirs(args.sketchdir, exist_ok=True)
     tool="dashing"
@@ -71,9 +71,9 @@ def progressive_command(args):
     dtree.experiment["safety"] = args.safety
     dtree.experiment["fast"] = args.fast
     dtree.experiment["verbose"] = args.verbose
-    dtree.experiment["ksweep"] = None
     dtree.experiment["lowmem"] = args.lowmem
     dtree.experiment["baseset"] = set()
+    dtree.experiment["ksweep"] = None
     if args.ksweep:
         dtree.experiment["ksweep"]=(int(args.mink), int(args.maxk))
     dtree.speciesinfo.update(tool=dtree.experiment["tool"])
@@ -84,7 +84,6 @@ def progressive_command(args):
     # if len(str.split(args.outfile)<2):
     #     args.outfile=os.path.join(os.path.curdir,args.outfile)
     dtree.save(fileprefix=args.outfile)
-    # dtree.save(outdir=os.path.split(args.outfile)[0], tag=dtree.speciesinfo.tag, label=f"progu{args.norderings}")
 
 # def abba_command(args):
 #     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -94,15 +93,15 @@ def progressive_command(args):
 #     # else:
 #     #     print(tabulate(results, headers=list(results.columns)))
 
-def info_command(args):
-    dtree = pickle.load(open(args.delta_tree, "rb"))
-    if not args.tag:
-        args.tag=dtree.speciesinfo.tag
-    if args.ksweep:
-        dtree.experiment["ksweep"]=(int(args.mink), int(args.maxk))
-    args.outfile = dtree.make_prefix(tag=args.tag, label=f"info", outdir=args.outdir)
-    summary=dtree.summarize_tree(mink=args.mink, maxk=args.maxk)
-    write_listdict_to_csv(outfile=args.outfile+'_ksweep.csv', listdict=summary)
+# def info_command(args):
+#     dtree = pickle.load(open(args.delta_tree, "rb"))
+#     if not args.tag:
+#         args.tag=dtree.speciesinfo.tag
+#     if args.ksweep:
+#         dtree.experiment["ksweep"]=(int(args.mink), int(args.maxk))
+#     args.outfile = dtree.make_prefix(tag=args.tag, label=f"info", outdir=args.outdir)
+#     summary=dtree.summarize_tree(mink=args.mink, maxk=args.maxk)
+#     write_listdict_to_csv(outfile=args.outfile+'_ksweep.csv', listdict=summary)
 
 def kij_command(args):
     dtree = pickle.load(open(args.delta_tree, "rb"))
@@ -232,25 +231,17 @@ def parse_arguments():
 
     # Make parser for "dand_cmd.py info ..."
     info_parser = subparsers.add_parser("info", parents=[parent_parser, ksweep_parser])
-    commands.append('info')
+    # commands.append('info')
     
     info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command. Tree nodes will be updated to hold additional sketches as needed to perform info commands selected.")
 
     info_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="PREFIX TAG", type=str, required=False)
-    
-    # info_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
-
-    # info_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 
     info_parser.add_argument("-o", "--outdir", dest="outdir", default=os.getcwd(), type=str, help="directory to write the output tables.", metavar="OUTPUT DIR")
 
     info_parser.add_argument("-l", "--label", dest="label", default="", help="NOT IMPLEMENTED Label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False, metavar="SUFFIX TAG")
 
-    # info_parser.add_argument( "--ksweep", dest="ksweep", default=None,
-    # action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
-
-
-    info_parser.set_defaults(func=info_command)
+    # info_parser.set_defaults(func=info_command)
     
     # # Make parser for "dand_cmd.py abba ..."
     # abba_parser = subparsers.add_parser("abba", help='NOT IMPLEMENTED. "A before B, B before A" runs runs all permutations of orderings of subsets where both fasta A and fasta B are present -- with analysis comparing those where (1) fasta A preceeds B in the ordering; (2) fasta B preceeds A in the ordering. NOTE: A and B should both be present in the provided tree.')
