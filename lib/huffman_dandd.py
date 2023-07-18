@@ -207,8 +207,20 @@ class DeltaTreeNode:
             sub_cmd = self.ksketches[0]._union_command()
         cmdlist = ["parallel -j 95% '",sub_cmd,"' :::",  " ".join(empty_ks)]
         cmd = " ".join(cmdlist)
-        if self.experiment["debug"] or self.experiment["verbose"]:
+        if self.experiment["debug"]:
             print(cmd)
+        elif self.experiment["verbose"]:
+            lines=cmd.splitlines()
+            lnum=len(lines)
+            i=0
+            for i in range(lnum):
+                if i<= 2 or i>=(lnum-2):
+                    print(lines[i])
+                elif i == (lnum-3):
+                    print("\n")
+                else:
+                    print("..", end="")
+            
         subprocess.call(cmd, shell=True, stdout=None)
         shutil.rmtree(tmpdir)
         
@@ -219,7 +231,7 @@ class DeltaTreeNode:
 
 
 
-    def update_node(self, kval, parallel=False):
+    def update_node(self, kval):
         '''Populate the sketch object for the given k at the self node as well as all children of the node'''
         ekrange=(kval, kval)
         if self.experiment["ksweep"] is not None:
@@ -245,16 +257,6 @@ class DeltaTreeNode:
             elif self.experiment["tool"] == "kmc":
                 # TODO: create tmp directory for this obj to use here?
                 self.ksketches[kval] = KMCSketchObj(kval = kval, sfp = sfp, speciesinfo=self.speciesinfo, experiment=self.experiment, presketches=presketches)
-
-            # # if this is a leaf node, sketch from fasta    
-            # elif self.ngen == 1:
-            #     #print("Inside ngen=1 of update_node")
-            #     self.ksketches[kval] = SketchObj(kval = kval, sfp = sfp,  speciesinfo=self.speciesinfo, experiment=self.experiment)
-            #     self.update_card()
-            # else:
-            #     raise ValueError("For some reason you are trying to sketch ngen that is not >= 1. Something is amiss.")
-                
-        #self.update_card()
         return
 
     def node_ksweep(self, mink, maxk):
@@ -356,7 +358,7 @@ class DeltaTree:
         return root.bestk
 
 
-    def _build_tree(self, symbol: list, nchildren: int, parallel=False) -> None:
+    def _build_tree(self, symbol: list, nchildren: int) -> None:
         '''
         Build a DeltaTree. The depth first nodes will have the provided number of children until there are only k<n input fastas left. A python list of nodes is returned with pointers to child nodes where applicable.
 
