@@ -162,8 +162,6 @@ class DeltaTreeNode:
         # use mink/maxk provided unless ksweep in experiment object is different
         krange=[int(mink),int(maxk)]
         
-        # if self.experiment["ksweep"] is not None:
-        #     krange=self.experiment["ksweep"]
         # check the ks already in the node sketches, don't do them if they are already there. If none are empty return nothing
         empty_ks = [str(i) for i in range(int(mink),int(maxk)+1) if self.ksketches[i] is None]
         static_empty_ks = empty_ks.copy()
@@ -192,13 +190,24 @@ class DeltaTreeNode:
         # make a list of ks that don't have cardinalities/etc. stored in the tree and then figure out what the paths to those sketches would be
         for k in static_empty_ks:
             sketch_loc=self.ksketches[0].sfp.full.replace("{}",str(k))
-            
-            # now check if those sketches exist
+            update_sketch = False
+            # first check if those sketches exist
             # NOTE THIS IS A PROBLEM FOR LOW MEM
             if self.ksketches[0].sketch_check(path=sketch_loc):
                 empty_ks.remove(k)
-            elif self.experiment["lowmem"] and sketch_loc in self.speciesinfo.cardkey.keys():
-                empty_ks.remove(k)
+                if (sketch_loc in self.speciesinfo.cardkey.keys()) and self.speciesinfo.cardkey[sketch_loc] > 0:
+                    print(self.speciesinfo.cardkey[sketch_loc])
+                    update_sketch = True
+            elif self.experiment["lowmem"]:
+                if (sketch_loc in self.speciesinfo.cardkey.keys()) and self.speciesinfo.cardkey[sketch_loc] > 0 and self.ngen > 1:
+                    empty_ks.remove(k)
+                    update_sketch = True
+            if update_sketch:
+                pass
+                # self.ksketches[k].card = float(self.speciesinfo.cardkey[sketch_loc])
+                # self.ksketches[k].delta_pos = float(self.ksketches[k].card)/k
+                # self.ksketches[k].card = float(self.speciesinfo.cardkey[sketch_loc])
+                # self.ksketches[k].delta_pos =  float(self.speciesinfo.cardkey[sketch_loc])/k
         if len(empty_ks) == 0:
             return []
         if self.ngen < 2:
@@ -654,12 +663,18 @@ class DeltaTree:
         kij_results=[]
         j_results=[]
         new_experiment = self.experiment.copy()
-        new_experiment.update({'fast': False , 'safe': False})
-        (mink, maxk) = new_experiment["ksweep"]
+        new_experiment.update({'fast': True , 'safe': False, 'ksweep':None})
+        if jaccard and (mink == 0 or maxk == 0) :
+            if self.experiment["ksweep"]:
+                (mink, maxk) = self.experiment["ksweep"]
+                print("WARNING: If EITHER minimum OR maximum k are not provided with --mink and --maxk flags, DandD will default to the --ksweep values embedded in the delta-tree input.")
+            else:
+                print("WARNING: If BOTH minimum AND maximum k are not provided either by the input delta-tree or using --mink and --maxk, the --jaccard flag will be ignored.")
+                jaccard = False
         for pair in pairings:
             pspider=SubSpider(leafnodes=pair,speciesinfo=self.speciesinfo,experiment=new_experiment)
             pspider.root.find_delta(self.root_k())
-            pspider.ksweep(mink=mink, maxk=maxk)
+            # pspider.ksweep(mink=mink, maxk=maxk)
             kij_results.append(pspider.kij_summarize())
             if jaccard:
                 pspider.ksweep(mink=mink, maxk=maxk)
