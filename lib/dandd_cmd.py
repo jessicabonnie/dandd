@@ -14,6 +14,7 @@ from typing import List, Dict, Set, Tuple, NamedTuple
 
 
 # subcommand help: https://stackoverflow.com/questions/362426/implementing-a-command-action-parameter-style-command-line-interfaces
+# MUTUALLY EXCLUSIVE OPTIONS! Argument groups and parent parsers: https://pymotw.com/2/argparse/
 
 def insert_pre_ext(filename, string):
     toks = filename.split('.')
@@ -108,7 +109,7 @@ def kij_command(args):
     dtree.speciesinfo.update(tool=dtree.experiment["tool"])
     if not args.tag:
         args.tag=dtree.speciesinfo.tag
-    args.outfile = dtree.make_prefix(tag=args.tag, label='kij', outdir=args.outdir)
+    args.outfile = dtree.make_prefix(tag=args.tag, label=args.label, outdir=args.outdir)
     fastas=[]
     if args.flist_loc:
         with open(args.flist_loc) as file:
@@ -130,8 +131,8 @@ def kij_command(args):
         with open(args.outfile+"_AFtuples.pickle","wb") as f:
             pickle.dump(obj=j_and_kij_summ, file=f)
 
-    if args.jaccard:
-        write_listdict_to_csv(outfile=args.outfile,listdict=j_results,suffix=".jaccard.csv")
+    # if args.jaccard:
+    #     write_listdict_to_csv(outfile=args.outfile,listdict=j_results,suffix=".jaccard.csv")
 
 
 def parse_arguments():
@@ -144,6 +145,7 @@ def parse_arguments():
     ksweep_parser=argparse.ArgumentParser(add_help=False)
     ksweep_parser.add_argument( "--ksweep", dest="ksweep", default=None,
     action="store_true", help="indicate whether a k sweep should be performed for the combinations. Without --mink and --maxk, will default to mink=2, maxk=32")
+    # ksweep_parser.add_argument( "--no-ksweep", dest="ksweep", default=None,action="store_false", help="indicate that a k sweep should NOT be performed for the combinations. ")
     ksweep_parser.add_argument("--mink", dest="mink", metavar="MINIMUM-K", required=False, default=2, type=int, help="Minimum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
     ksweep_parser.add_argument("--maxk", dest="maxk", metavar="MAXIMUM-K", required=False, default=32, type=int, help="Maximum k to start sweep of ks for their possible deltas. Can be used to graph the argmax k")
 

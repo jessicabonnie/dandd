@@ -196,7 +196,6 @@ class DeltaTreeNode:
             if self.ksketches[0].sketch_check(path=sketch_loc):
                 empty_ks.remove(k)
                 if (sketch_loc in self.speciesinfo.cardkey.keys()) and self.speciesinfo.cardkey[sketch_loc] > 0:
-                    print(self.speciesinfo.cardkey[sketch_loc])
                     update_sketch = True
             elif self.experiment["lowmem"]:
                 if (sketch_loc in self.speciesinfo.cardkey.keys()) and self.speciesinfo.cardkey[sketch_loc] > 0 and self.ngen > 1:
