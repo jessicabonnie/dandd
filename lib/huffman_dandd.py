@@ -297,7 +297,6 @@ class DeltaTreeNode:
             # for index, value in enumerate(self.fastas):
             #     linedict[f"step{index}"] = value
             nodevals.append(linedict)
-            # self.speciesinfo.save_cardkey(tool = self.experiment["tool"])
         return nodevals
 
 
@@ -318,6 +317,8 @@ class DeltaTree:
             print("Now making tree for fastas: " + ", ".join(fasta_files))
         self._build_tree(fasta_files, nchildren)
         self.fill_tree(padding=padding)
+        self.speciesinfo.save_references(fast=experiment['fast'])
+        self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
         self.ngen = len(fasta_files)
         self.root=self._dt[-1]
         self.delta = self.root_delta()
@@ -619,7 +620,7 @@ class DeltaTree:
         summary=[]
         for i in range(0,len(orderings)):
             if self.experiment["verbose"]:
-                print(f"Now sweeping for ordering {i}")
+                print(f"Now sweeping for ordering {i+1}")
             oresults, osummary = [], []
             oresults, osummary = smain.sketch_ordering(orderings[i], ordering_number=i+1, step=step)
             # for o in osummary:
