@@ -1,5 +1,5 @@
 from species_specifics import SpeciesSpecifics
-import os
+import os, glob
 import hashlib
 import subprocess
 import csv
@@ -339,9 +339,13 @@ class DashSketchObj(SketchObj):
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         try:
+            for f in glob.glob(sketchname):
+                os.remove(f)
+
+
             # if self.experiment["verbose"]:
             #     print("Now deleting: "+ sketchname)
-            os.remove(sketchname)
+            # os.remove(sketchname)
         except FileNotFoundError:
             # print(f"{sketchname} has already been removed.")
             pass
