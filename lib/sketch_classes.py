@@ -1,5 +1,5 @@
 from species_specifics import SpeciesSpecifics
-import os
+import os, glob
 import hashlib
 import subprocess
 import csv
@@ -27,27 +27,6 @@ def canon_command(canon:bool, tool='dashing'):
         if tool == 'kmc':
             outstr='-b'
     return outstr
-
-
-# def parallel_progeny_command(sketchdir, kval:int, experiment) -> str:
-#     '''Produce the necessary leaf sketches for a node further up the tree in a single batch command to dashing/kmc
-#     NOTE: NOT CURRENTLY USED'''
-#         # fasta_list="\n".join(self.sfp.ffiles)
-#     if experiment["tool"] == "dashing":
-#         progeny_dir=os.path.join(sketchdir, "ngen" + str(1),"k"+ str(kval))
-#         cmdlist = [ DASHINGLOC, "sketch", 
-#     canon_command(experiment['canonicalize'], "dashing"),
-#     "-k" + str(kval), 
-#     "-S",str(experiment['registers']),
-#         #f"-p{experiment['nthreads']}",
-#         "--prefix", progeny_dir, "--paths", "/dev/stdin"]
-#             #    os.path.join(speciesinfo.inputdir, sfp.files[0])]
-#     else:
-#         cmdlist=[]
-#         raise NotImplementedError("tools other than dashing not yet implemented with parallel argument")
-#     cmd = " ".join(cmdlist)
-    
-#     return cmd
 
 class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location
@@ -170,7 +149,7 @@ class SketchObj(object):
         experiment['baseset'].add(sfp.base)
         self.experiment=experiment
         self._presketches = presketches
-        if kval > 0:
+        if self.kval > 0:
             self.create_sketch()
             self.card = self.check_cardinality()
             self.delta_pos = self.card/self.kval
@@ -210,11 +189,14 @@ class SketchObj(object):
                 print("Due to issues with leaf sketch/db file, we will Just Do It. (It=Sketch or Build Again)")
             subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd=cmd
-        elif not self.sketch_check():
-            if self.experiment["verbose"]:
-                print("Running Leaf Command: " + cmd)
-            subprocess.call(cmd, shell=True, stdout=stdout)
-            self.cmd=cmd
+        elif not self.sketch_check() :
+            if self.experiment["lowmem"] and self.check_cardinality() > 0:
+                self.cmd=cmd
+            else:
+                if self.experiment["verbose"]:
+                    print("Running Leaf Command: " + cmd)
+                subprocess.call(cmd, shell=True, stdout=stdout)
+                self.cmd=cmd
             
             ##TODO pass back the command so that it can be done in parallel?
         else:
@@ -239,13 +221,15 @@ class SketchObj(object):
             subprocess.call(cmd, shell=True, stdout=stdout)
             self.cmd = cmd
         elif not self.sketch_check():
-            # print(f"The sketch file {self.sfp.full} either doesn't exist or is empty")
-            if self.experiment["verbose"]:
-                print("Running Leaf Command: " + cmd)
-            subprocess.call(cmd, shell=True, stdout=stdout)
-            self.cmd = cmd
+            if self.experiment["lowmem"] and self.check_cardinality() > 0:
+                self.cmd=cmd
+            else:
+                if self.experiment["verbose"]:
+                    print("Running Union Command: " + cmd)
+                subprocess.call(cmd, shell=True, stdout=stdout)
+                self.cmd = cmd
         
-        self.cmd = cmd
+        # self.cmd = cmd
         if self.experiment['debug']:
             print(self.cmd)
         
@@ -290,23 +274,27 @@ class SketchObj(object):
             proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True, stderr=stderr)
         finally:
             self.parse_card(proc=proc)
+            # NOTE: THIS IS NEW ... MAYBE IT BREAKS EVERYTHING SOON?
+            self.check_cardinality()
         
-    def check_cardinality(self) -> bool:
+    def check_cardinality(self) -> float:
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. '''
         if self.sfp.full not in self.speciesinfo.cardkey.keys():
             if self.experiment["lowmem"]:
                 return 0
-            if self.experiment['verbose']:
-                print(f"Sketch File Path not in cardkey: {self.sfp.full}")
+            # if self.experiment['verbose']:
+            #     print(f"Sketch File Path not in cardkey: {self.sfp.full}")
         # If the full path is not in the list of keys in the cardinality dictionary or the stored cardinality is 0, we will need to check if there is a sketch
-        if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0):
+        if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0) or self.speciesinfo.cardkey[self.sfp.full] is None:
             if not self.sketch_check():
                 return 0
             self.individual_card()
-        card_val = self.speciesinfo.cardkey[self.sfp.full]
-        if self.experiment["lowmem"] and self.sfp.ngen > 1:
-            self.remove_sketch()
-        return float(card_val)
+        # Major error previously due to indentation
+        self.card = float(self.speciesinfo.cardkey[self.sfp.full])
+        self.delta_pos = self.card/int(self.kval)
+        # if self.experiment["lowmem"] and self.sfp.ngen > 1:
+        #     self.remove_sketch()
+        return float(self.card)
     
     # def summarize(self):
     #     outdict = {"kval":self.kval, "card":self.card, "delta_pos":self.delta_pos}
@@ -330,30 +318,32 @@ class DashSketchObj(SketchObj):
     def parse_card(self, proc):
         '''Parse the cardinality streaming from standard out for the dashing card command'''
         for card in csv.DictReader(proc.stdout.splitlines(),delimiter='\t'):
-                self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+            self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
 
     def sketch_check(self, path=None) -> bool:
         '''Check that dashing sketch at full path exists and is not empty'''
         if not path:
             path=self.sfp.full
-        if self.experiment["lowmem"]:
-            # print(self.check_cardinality())
-            if self.check_cardinality() > 0:
-                return True
+        # if self.experiment["lowmem"]:
+        #     # print(self.check_cardinality())
+        #     if self.check_cardinality() > 0:
+        #         return True
         if os.path.exists(path) and os.stat(path).st_size != 0:
             return True
         else:
             return False
     
-    def remove_sketch(self):
+    def remove_sketch(self, delete_me:str=None):
         '''Delete intermediate sketches in batches'''
-        sketchname= self.sfp.full
+        if not delete_me:
+            sketchname= self.sfp.full
+        else:
+            sketchname = delete_me
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         try:
-            if self.experiment["verbose"]:
-                print("Now deleting: "+ sketchname)
-            os.remove(sketchname)
+            for f in glob.glob(sketchname):
+                os.remove(f)
         except FileNotFoundError:
             # print(f"{sketchname} has already been removed.")
             pass
@@ -394,7 +384,7 @@ class KMCSketchObj(SketchObj):
             key, value = line.strip().split(',')
             # print (f"{key},{value}")
             # if key.strip() == 'total k-mers':
-            self.speciesinfo.cardkey[key] = value
+            self.speciesinfo.cardkey[key] = float(value)
 
     def card_command(self, sketch_paths:list=[]) -> str:
         '''Create the bash command to capture the cardinality of the databases'''
@@ -415,24 +405,27 @@ class KMCSketchObj(SketchObj):
         if not path:
             path=self.sfp.full
         # if we are trying to save space by deleting sketches it doesn't matter whether the sketch exists as long as the cardinality is stored
-        if self.experiment["lowmem"]:
+        # if self.experiment["lowmem"]:
             # print(self.check_cardinality())
-            if self.check_cardinality() > 0:
-                return True
+            # if self.check_cardinality() > 0:
+                # return True
         if (os.path.exists(path +".kmc_pre")) and (os.path.exists(path +".kmc_suf")) and os.stat(path +".kmc_suf").st_size != 0 and os.stat(path +".kmc_pre").st_size != 0:
             return True
         else:
             return False
         
-    def remove_sketch(self):
+    def remove_sketch(self, delete_me:str=None):
         '''Delete kmc database files for the associated sketch object'''
-        sketchname= self.sfp.full
+        if not delete_me:
+            sketchname= self.sfp.full
+        else:
+            sketchname = delete_me
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         try:
-            if self.experiment["verbose"]:
-                print("Now deleting: "+ sketchname)
-            os.remove(sketchname + '.kmc_*')
+            for f in glob.glob(sketchname):
+                os.remove(f+".kmc_*")
+        #     os.remove(sketchname + '.kmc_*')
         except FileNotFoundError:
             pass
 
@@ -443,8 +436,11 @@ class KMCSketchObj(SketchObj):
             kval_str="{}"
         tmpkdir=os.path.join(tmpdir,"k"+kval_str)
         os.makedirs(tmpkdir, exist_ok=True)
-        cmdlist = ['kmc -hp -t'+ str(self.experiment['nthreads']),
-        '-ci1 -cs2','-k' + kval_str,
+        tstring = ''
+        if self.experiment["nthreads"] > 0:
+            tstring = ' -t'+ str(self.experiment['nthreads'])
+        cmdlist = ['kmc -hp' + tstring,
+        ' -ci1 -cs2','-k' + kval_str,
         canon_command(canon=self.experiment['canonicalize'], tool="kmc"),
         '-fm', self.sfp.ffiles[0], self.sfp.full, tmpkdir]
         cmd = " ".join(cmdlist)
@@ -454,10 +450,14 @@ class KMCSketchObj(SketchObj):
         '''Command string to produce unions of the kmc database files based on the information used to initiate the sketch obj'''
         complex_input = "INPUT: \n"
         inputn=1
+        tstring = ''
+        if self.experiment["nthreads"] > 0:
+            tstring = ' -t'+ str(self.experiment['nthreads'])
+
         for sketch in self._presketches:
             complex_input = complex_input + f"input{inputn} = {sketch} -ci1   \n"
             inputn+=1
         complex_input = complex_input + f"OUTPUT:\n{self.sfp.full} = " + " + ".join([f"input{i+1}" for i in range(inputn-1)])
-        cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-hp","-t"+ str(self.experiment['nthreads']), "complex", "/dev/stdin"]
+        cmdlist = [f'echo -e "{complex_input}"',"|","kmc_tools","-hp ",tstring, "complex", "/dev/stdin"]
         cmd = " ".join(cmdlist)
         return cmd
