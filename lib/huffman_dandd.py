@@ -372,7 +372,8 @@ class DeltaTree:
                 for sketch in sketches:
                     sketch.remove_sketch()
 
-    def _build_tree(self, symbol: list, nchildren: int) -> None:
+
+    def _build_tree(self, symbol: list, nchildren: int, leafnodes: List[DeltaTreeNode] = []) -> None:
         '''
         Build a DeltaTree. The depth first nodes will have the provided number of children until there are only k<n input fastas left. A python list of nodes is returned with pointers to child nodes where applicable.
 
@@ -389,10 +390,13 @@ class DeltaTree:
             - nchildren: number of children of each node in the tree (or at least as many nodes as it works for)
         '''
         # create leaf nodes for all the provided fastas
-        inputs = [
-            DeltaTreeNode(
-                node_title=s, children=[], speciesinfo=self.speciesinfo, experiment=self.experiment, progeny=[]
-            ) for s in symbol]
+        if len(leafnodes) == 0:
+            inputs = [
+                DeltaTreeNode(
+                    node_title=s, children=[], speciesinfo=self.speciesinfo, experiment=self.experiment, progeny=[]
+                ) for s in symbol]
+        else:
+            inputs = leafnodes
         inputs.sort()
         for n in inputs:
             if self.experiment["ksweep"] is None:
