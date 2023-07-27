@@ -285,15 +285,15 @@ class SketchObj(object):
             # if self.experiment['verbose']:
             #     print(f"Sketch File Path not in cardkey: {self.sfp.full}")
         # If the full path is not in the list of keys in the cardinality dictionary or the stored cardinality is 0, we will need to check if there is a sketch
-        if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0):
+        if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0) or self.speciesinfo.cardkey[self.sfp.full] is None:
             if not self.sketch_check():
                 return 0
             self.individual_card()
         # Major error previously due to indentation
         self.card = float(self.speciesinfo.cardkey[self.sfp.full])
         self.delta_pos = self.card/int(self.kval)
-        if self.experiment["lowmem"] and self.sfp.ngen > 1:
-            self.remove_sketch()
+        # if self.experiment["lowmem"] and self.sfp.ngen > 1:
+        #     self.remove_sketch()
         return float(self.card)
     
     # def summarize(self):
@@ -333,19 +333,17 @@ class DashSketchObj(SketchObj):
         else:
             return False
     
-    def remove_sketch(self):
+    def remove_sketch(self, delete_me:str=None):
         '''Delete intermediate sketches in batches'''
-        sketchname= self.sfp.full
+        if not delete_me:
+            sketchname= self.sfp.full
+        else:
+            sketchname = delete_me
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         try:
             for f in glob.glob(sketchname):
                 os.remove(f)
-
-
-            # if self.experiment["verbose"]:
-            #     print("Now deleting: "+ sketchname)
-            # os.remove(sketchname)
         except FileNotFoundError:
             # print(f"{sketchname} has already been removed.")
             pass
@@ -407,24 +405,27 @@ class KMCSketchObj(SketchObj):
         if not path:
             path=self.sfp.full
         # if we are trying to save space by deleting sketches it doesn't matter whether the sketch exists as long as the cardinality is stored
-        if self.experiment["lowmem"]:
+        # if self.experiment["lowmem"]:
             # print(self.check_cardinality())
-            if self.check_cardinality() > 0:
-                return True
+            # if self.check_cardinality() > 0:
+                # return True
         if (os.path.exists(path +".kmc_pre")) and (os.path.exists(path +".kmc_suf")) and os.stat(path +".kmc_suf").st_size != 0 and os.stat(path +".kmc_pre").st_size != 0:
             return True
         else:
             return False
         
-    def remove_sketch(self):
+    def remove_sketch(self, delete_me:str=None):
         '''Delete kmc database files for the associated sketch object'''
-        sketchname= self.sfp.full
+        if not delete_me:
+            sketchname= self.sfp.full
+        else:
+            sketchname = delete_me
         if self.kval == 0:
             sketchname = self.sfp.full.replace("{}","*")
         try:
-            # if self.experiment["verbose"]:
-            #     print("Now deleting: "+ sketchname)
-            os.remove(sketchname + '.kmc_*')
+            for f in glob.glob(sketchname):
+                os.remove(f+".kmc_*")
+        #     os.remove(sketchname + '.kmc_*')
         except FileNotFoundError:
             pass
 

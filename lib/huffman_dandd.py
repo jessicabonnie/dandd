@@ -251,7 +251,7 @@ class DeltaTreeNode:
             #create sketch file path holding information relating to the sketch for that k 
             sfp = SketchFilePath(filenames=self.fastas, kval=kval, speciesinfo=self.speciesinfo, experiment=self.experiment)
             # if this isn't a leaf node then collect the sketches for unioning
-            presketches=None
+            presketches=[]
             if self.ngen > 1:
                 presketches=[]
                 # update each of the child nodes 
@@ -297,15 +297,14 @@ class DeltaTreeNode:
             # for index, value in enumerate(self.fastas):
             #     linedict[f"step{index}"] = value
             nodevals.append(linedict)
-            # self.speciesinfo.save_cardkey(tool = self.experiment["tool"])
         return nodevals
 
 
 class DeltaTree:
     ''' Delta tree data structure. '''
-    def __init__(self, fasta_files, speciesinfo, nchildren=2, experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':0, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False, 'ksweep': None, 'lowmem': False}, padding=True):
+    def __init__(self, fasta_files, speciesinfo, nchildren=2, leafnodes=[], experiment={'tool':'dashing', 'registers':20, 'canonicalize':True, 'debug':False, 'nthreads':0, 'baseset': set(), 'safety': False, 'fast': False, 'verbose': False, 'ksweep': None, 'lowmem': False}, padding=True):
         self.experiment=experiment
-        self._symbols = []
+        # self._symbols = []
         self.mink=0
         self.maxk=0
         if self.experiment["ksweep"] is not None:
@@ -326,6 +325,7 @@ class DeltaTree:
             speciesinfo.kstart = self.root_k()
         self.speciesinfo.save_references(fast=experiment['fast'])
         self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
+        # self.delete_sketches()
     def __sub__(self, other):
         # sub = subtraction
         print("Larger Tree Delta: ", self.delta)
@@ -365,6 +365,12 @@ class DeltaTree:
         root=self._dt[-1]
         return root.bestk
 
+    def delete_sketches(self):
+        for node in self._dt[:-1]:
+            sketches=[i for i in node.ksketches if i is not None]
+            if node.ngen > 1:
+                for sketch in sketches:
+                    sketch.remove_sketch()
 
     def _build_tree(self, symbol: list, nchildren: int) -> None:
         '''
@@ -619,7 +625,7 @@ class DeltaTree:
         summary=[]
         for i in range(0,len(orderings)):
             if self.experiment["verbose"]:
-                print(f"Now sweeping for ordering {i}")
+                print(f"Now sweeping for ordering {i+1}")
             oresults, osummary = [], []
             oresults, osummary = smain.sketch_ordering(orderings[i], ordering_number=i+1, step=step)
             # for o in osummary:
@@ -715,20 +721,22 @@ class DeltaTree:
 
 class SubSpider(DeltaTree):
     def __init__(self,leafnodes,speciesinfo,experiment):
-        self.fastahex = speciesinfo.fastahex
+        self.speciesinfo=speciesinfo
+        self.fastahex = self.speciesinfo.fastahex
         self.experiment=experiment
-        self._symbols = []
-        self.kstart=speciesinfo.kstart
+        # self._symbols = []
+        self.kstart=self.speciesinfo.kstart
         if self.experiment["ksweep"] is not None:
             self.mink, self.maxk = self.experiment["ksweep"]
         # else:
         #     self.mink, self.maxk = self.speciesinfo.kstart, self.speciesinfo.kstart
-        self.speciesinfo=speciesinfo
         self._build_tree(leafnodes)
         self.root=self._dt[-1]
         self.fastas=self.root.fastas
         self.ngen = len(self.fastas)
         self.delta = None
+        # NOTE : this didn't used to be here, maybe it breaks or slows?
+        self.fill_tree()
         if self.experiment["ksweep"] is None:
             self.delta = self.root_delta()
         else:
