@@ -121,7 +121,7 @@ def phylogeny_comparison(args, j_and_kij_summ):
         inp_base = os.path.basename(inp)
         assert inp_base.count('.') == 1
         input_names.append(inp_base.split('.')[0])
-    for k in [0] + list(map(int, range(args.mink, args.maxk))):
+    for k in [0] + list(map(int, range(int(args.mink), int(args.maxk)))):
         summ = list(filter(lambda x: x[3] == k, j_and_kij_summ))
         k1, k2, k12 = summ[0][-3:]
         assert len(summ) > 0

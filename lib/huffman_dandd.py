@@ -195,10 +195,11 @@ class DeltaTreeNode:
             # NOTE THIS IS A PROBLEM FOR LOW MEM
             if self.ksketches[0].sketch_check(path=sketch_loc):
                 empty_ks.remove(k)
-                if (sketch_loc in self.speciesinfo.cardkey.keys()) and self.speciesinfo.cardkey[sketch_loc] > 0:
-                    update_sketch = True
+                if (sketch_loc in self.speciesinfo.cardkey.keys()):
+                    if  self.speciesinfo.cardkey[sketch_loc] is not None and float(self.speciesinfo.cardkey[sketch_loc]) > 0 :
+                        update_sketch = True
             elif self.experiment["lowmem"]:
-                if (sketch_loc in self.speciesinfo.cardkey.keys()) and self.speciesinfo.cardkey[sketch_loc] > 0 and self.ngen > 1:
+                if (sketch_loc in self.speciesinfo.cardkey.keys()) and float(self.speciesinfo.cardkey[sketch_loc]) > 0 and self.ngen > 1:
                     empty_ks.remove(k)
                     update_sketch = True
             if update_sketch:

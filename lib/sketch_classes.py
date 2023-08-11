@@ -285,7 +285,7 @@ class SketchObj(object):
             # if self.experiment['verbose']:
             #     print(f"Sketch File Path not in cardkey: {self.sfp.full}")
         # If the full path is not in the list of keys in the cardinality dictionary or the stored cardinality is 0, we will need to check if there is a sketch
-        if (self.sfp.full not in self.speciesinfo.cardkey.keys() or self.speciesinfo.cardkey[self.sfp.full] == 0) or self.speciesinfo.cardkey[self.sfp.full] is None:
+        if (self.sfp.full not in self.speciesinfo.cardkey.keys() or float(self.speciesinfo.cardkey[self.sfp.full] == 0)) or self.speciesinfo.cardkey[self.sfp.full] is None:
             if not self.sketch_check():
                 return 0
             self.individual_card()
@@ -318,7 +318,7 @@ class DashSketchObj(SketchObj):
     def parse_card(self, proc):
         '''Parse the cardinality streaming from standard out for the dashing card command'''
         for card in csv.DictReader(proc.stdout.splitlines(),delimiter='\t'):
-            self.speciesinfo.cardkey[card['#Path']] = card['Size (est.)']
+            self.speciesinfo.cardkey[card['#Path']] = float(card['Size (est.)'])
 
     def sketch_check(self, path=None) -> bool:
         '''Check that dashing sketch at full path exists and is not empty'''
