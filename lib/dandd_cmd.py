@@ -21,7 +21,7 @@ def insert_pre_ext(filename, string):
     return '.'.join(toks[:-1] + [string] + [toks[-1]])
 
 def add_universal_cmds(subparser:argparse.ArgumentParser):
-    subparser.add_argument('--version', action='version', version='%(prog)s 0.2')
+    subparser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
     subparser.add_argument("--verbose", "-v", action="store_true", default=False, help="Print some trees and report steps of actions.")
     subparser.add_argument( "--debug", action="store_true", default=False, dest="debug", help="Share command calls to 3rd party programs.")
     subparser.add_argument( "--lowmem", action="store_true", default=False, dest="lowmem", help="Delete all multi-fasta sketches, while keeping cardinality stored in dictionary for later runs. Don't require sketch/db existence if the cardinality is already stored. Do not recommend using with --safe")
