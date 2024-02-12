@@ -3,7 +3,6 @@ A tool to estimate deltas for sequence sets and answer questions about relative 
 
  Jessica K. Bonnie, Omar Y. Ahmed, Ben Langmead. [**DandD: efficient measurement of sequence growth and similarity**]
  (https://www.sciencedirect.com/science/article/pii/S258900422400275X), [iScience](https://www.sciencedirect.com/journal/iscience) [10.1016/j.isci.2024.109054](https://doi.org/10.1016/j.isci.2024.109054)
- 
 
 ## Installation  
 ```
