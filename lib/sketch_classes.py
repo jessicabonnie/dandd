@@ -410,7 +410,9 @@ class KMCSketchObj(SketchObj):
             # if self.check_cardinality() > 0:
                 # return True
         if (os.path.exists(path +".kmc_pre")) and (os.path.exists(path +".kmc_suf")) and os.stat(path +".kmc_suf").st_size != 0 and os.stat(path +".kmc_pre").st_size != 0:
-            return True
+            if self.check_cardinality() > 0:
+                return True
+            return False
         else:
             return False
         
