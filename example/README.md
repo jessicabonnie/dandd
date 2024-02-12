@@ -64,8 +64,10 @@ If we wish to calculate the K-Independent Jaccard (KIJ) for our set, we use the 
 ```
 
 ### K-Sweep
-In the paper we analyze what potential values of the delta ratio were considered in order to compare its growth to other measures as well as illustrate the selection of the argmax-k. In order to accomplish this, we used the `--ksweep` command to produce all potential values of delta for ks within a specific range. Again we provide a window of `--mink` and `--maxk`. Depending on which pickle we provide we can sweep bare sketches with unions or every union performed in a progressive union. In the command below we do the latter:
+In the paper we analyze what potential values of the delta ratio were considered in order to compare its growth to other measures as well as illustrate the selection of the argmax-k. In order to accomplish this, we used the `--ksweep` command to produce all potential values of delta for ks within a specific range. Again we provide a window of `--mink` and `--maxk`. Depending on which subcommand we provide we can sweep bare sketches with unions or every union performed in a progressive union. In the command below we do the latter:
 
 ```
-../lib/dandd kij --ksweep --dtree /home/jbonnie1/dandd/dev-dandD/example/small_fish_progu30_5_dashing_dtree.pickle
+../lib/dandd progressive --ksweep --dtree /home/jbonnie1/dandd/dev-dandD/example/small_fish_progu30_5_dashing_dtree.pickle
 ```
+### Exactitude with KMC3
+If you wish to count kmers rather than estimate with dashing, you would adjust your `tree` subcommand at the beginning to use the `--exact` argument. All files output after this change will replace the word "dashing" with "kmc" in their output filenames.
