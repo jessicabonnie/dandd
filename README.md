@@ -1,7 +1,8 @@
 # DandD  
-A tool to estimate deltas for sequence sets and answer questions about relative contribution. DandD can be used to addresses how much new sequence is gained when a sequence collection grows and describe how much structural variation is discovered in each new human genome assembly allowing prediction of when discoveries will level off in the future. DandD uses a measure called $\delta$ (“delta”), developed initially for data compression and chiefly dependent on k-mer counts. DandD rapidly estimates $\delta$ using genomic sketches. Further information about the use of delta to address sequence similarity and how it is implemented in DandD can be found in the associated publication in iScience Volume 27, Issue 3, 15 March 2024, 109054.\\
- Jessica K. Bonnie, Omar Y. Ahmed, Ben Langmead. **DandD: efficient measurement of sequence growth and similarity**
- <https://www.sciencedirect.com/science/article/pii/S258900422400275X>, iScience<https://www.sciencedirect.com/journal/iscience> 10.1016/j.isci.2024.109054<https://doi.org/10.1016/j.isci.2024.109054>
+A tool to estimate deltas for sequence sets and answer questions about relative contribution. DandD can be used to addresses how much new sequence is gained when a sequence collection grows and describe how much structural variation is discovered in each new human genome assembly allowing prediction of when discoveries will level off in the future. DandD uses a measure called $\delta$ (“delta”), developed initially for data compression and chiefly dependent on k-mer counts. DandD rapidly estimates $\delta$ using genomic sketches. Further information about the use of delta to address sequence similarity and how it is implemented in DandD can be found in the associated publication in iScience Volume 27, Issue 3, 15 March 2024, 109054.
+
+ Jessica K. Bonnie, Omar Y. Ahmed, Ben Langmead. [**DandD: efficient measurement of sequence growth and similarity**]
+ (https://www.sciencedirect.com/science/article/pii/S258900422400275X), [iScience](https://www.sciencedirect.com/journal/iscience) [10.1016/j.isci.2024.109054](https://doi.org/10.1016/j.isci.2024.109054)
  
 
 ## Installation  
