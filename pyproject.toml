@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dandd"
+version = "1.0.0"
+authors = [
+    { name="Jessica K. Bonnie", email="jbonnie@example.com" },
+    { name="Omar Y. Ahmed" },
+    { name="Ben Langmead" }
+]
+description = "A tool to estimate deltas for sequence sets and answer questions about relative contribution"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "biopython"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/jessicabonnie/dandd"
+"Bug Tracker" = "https://github.com/jessicabonnie/dandd/issues"
+
+[project.scripts]
+dandd = "dandd.cli:main" 
