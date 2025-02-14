@@ -5,13 +5,19 @@ A tool to estimate deltas for sequence sets and answer questions about relative 
  (https://www.sciencedirect.com/science/article/pii/S258900422400275X), [iScience](https://www.sciencedirect.com/journal/iscience) [10.1016/j.isci.2024.109054](https://doi.org/10.1016/j.isci.2024.109054)
 
 ## Installation  
+
+### Using pip
+```bash
+pip install dandd
 ```
-git clone https://github.com/jessicabonnie/dandd  
+
+### From source
+```bash
+git clone https://github.com/jessicabonnie/dandd
 cd dandd
-chmod +x lib/dandd # make dandd executable
-# NOTE: The following will alias dandd for the session. For this to persist this should be added to .bashrc
-alias dandd=$(pwd)/lib/dandd 
+pip install .
 ```
+
 ### Dependencies
 #### Dashing
 **Note**: The version of *Dashing* currently available on bioconda is **not** recent enough. Please obtain the latest binary release for your system from [https://github.com/dnbaker/dashing-binaries](https://github.com/dnbaker/dashing-binaries) and move it to somewhere in your `$PATH`. Alternatively, you can install the latest version from source by cloning it from github
