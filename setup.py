@@ -7,7 +7,7 @@ setup(
     name="dandd",
     version="1.0.0",
     author="Jessica K. Bonnie",
-    author_email="jbonnie@example.com",  # Update with actual email
+    author_email="jbonnie1@jhu.edu",  # Update with actual email
     description="A tool to estimate deltas for sequence sets and answer questions about relative contribution",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -32,6 +32,11 @@ setup(
     entry_points={
         'console_scripts': [
             'dandd=dandd.cli:main',
+        ],
+    },
+    extras_require={
+        'test': [
+            'pytest>=7.0.0',
         ],
     },
 )
