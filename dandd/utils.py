@@ -4,6 +4,9 @@ import sys
 import hashlib
 import csv
 from typing import List, Dict
+from math import factorial
+from itertools import permutations
+from random import sample, shuffle
 
 def insert_pre_ext(filename, string):
     toks = filename.split('.')
@@ -51,3 +54,29 @@ def canon_command(canon:bool, tool='dashing'):
         if tool == 'kmc':
             outstr='-b'
     return outstr
+
+def permute(length, norder, preexist=set(), exhaust=False, verbose=False)-> Set[Tuple[int]]:
+    '''Create a set of ordering tuples. One approach will be used if the maximum number of possible permutations is low or desired. Another will be used if not.'''
+    fact=factorial(length)
+    newset=preexist.copy()
+    norder = min(norder, fact)
+    if verbose:
+        print(f"{norder} permutations will be produced.")
+    # if the number of permutations is low enough, generate all of them
+    if fact < 5041 or norder==fact or exhaust==True:
+        if verbose:
+            print(f"Factorial of {norder} less than 5041 (7! + 1). Randomized list of all permutations will be produced and then subset.")
+        # create a randomized list of all permutations
+        newpermute=list(permutations(range(length)))
+        shuffle(newpermute)
+    else:
+        newpermute=list()
+        while len(newpermute) < norder:
+            # tmpset=set([tuple(sample(list(range(length)),length)) for _ in range(norder)])
+            newpermute.extend([tuple(sample(list(range(length)),length)) for _ in range(norder)])
+            newpermute=list(set(newpermute))
+    index = 0
+    while len(newset) < norder:
+        newset.update([newpermute[index]])
+        index+=1
+    return newset

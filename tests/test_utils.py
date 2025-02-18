@@ -1,4 +1,4 @@
-import pytest
+import pytest # type: ignore
 import os
 from dandd.utils import insert_pre_ext, write_listdict_to_csv, blake2b, canon_command
 

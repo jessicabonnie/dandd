@@ -1,4 +1,4 @@
-import pytest
+import pytest # type: ignore
 import subprocess
 import tempfile
 import os
