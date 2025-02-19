@@ -79,7 +79,7 @@ class SketchObj(ABC):
         if self.kval == 0:
             return
         if not cmd:
-            cmd = self.card_command()#[self.sfp.full])
+            cmd = self.card_command([self.sfp.full])
             if not cmd:
                 return
         stderr=None
