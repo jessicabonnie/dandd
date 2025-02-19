@@ -34,24 +34,33 @@ class SketchFilePath:
         else:
             raise ValueError("is there another option for tool other than kmc or dashing?")
         return ext
-        
     def _hashsum(self, speciesinfo:SpeciesSpecifics):
         '''Calculate the blake2b hexsum of an individual fastas or sum the hexsums of component fastas to create hexidecimal identifiers for combinations of fastas'''
         if self.ngen == 1:
-            # Return just the hash string without 0x prefix for single files
-            output = blake2b(self.ffiles[0])
+            output= blake2b(self.ffiles[0])
         else:
             sum = int("0",16)
             for fasta in self.files:
-                if fasta not in speciesinfo.fastahex:
-                    speciesinfo.fastahex[fasta] = blake2b(os.path.join(speciesinfo.inputdir, fasta))
-                # Remove 0x prefix if present when converting to int
-                hash_val = speciesinfo.fastahex[fasta]
-                if hash_val.startswith('0x'):
-                    hash_val = hash_val[2:]
-                sum += int(hash_val, 16)
-            output = hex(sum)[2:]  # Remove 0x prefix from final sum
-        return output
+                sum += int(speciesinfo.fastahex[fasta],16)
+            output= hex(sum)
+        return output    
+    # def _hashsum(self, speciesinfo:SpeciesSpecifics):
+    #     '''Calculate the blake2b hexsum of an individual fastas or sum the hexsums of component fastas to create hexidecimal identifiers for combinations of fastas'''
+    #     if self.ngen == 1:
+    #         # Return just the hash string without 0x prefix for single files
+    #         output = blake2b(self.ffiles[0])
+    #     else:
+    #         sum = int("0",16)
+    #         for fasta in self.files:
+    #             if fasta not in speciesinfo.fastahex:
+    #                 speciesinfo.fastahex[fasta] = blake2b(os.path.join(speciesinfo.inputdir, fasta))
+    #             # Remove 0x prefix if present when converting to int
+    #             hash_val = speciesinfo.fastahex[fasta]
+    #             if hash_val.startswith('0x'):
+    #                 hash_val = hash_val[2:]
+    #             sum += int(hash_val, 16)
+    #         output = hex(sum)[2:]  # Remove 0x prefix from final sum
+    #     return output
         
     def _assign_base(self, speciesinfo:SpeciesSpecifics, kval:int, registers:int, canonicalize:bool, tool:str, safety=False) -> str:
         '''determine the base file name for the sketch using the properties that will be used to generate it'''
