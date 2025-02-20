@@ -11,55 +11,56 @@ from .sketch_filepath import SketchFilePath
 from .species_specifics import SpeciesSpecifics
 from .delta_tree import DeltaTree, DeltaSpider
 
-
-def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=0, safety=False, fast=False, verbose=False, ksweep=None, lowmem=False):
-    '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
-    tag = species tag
-    genomedir = parent directory of species subdirectory
-    sketchdir = parent directory where output sketches should be created
-    kstart = starting k to use while searching for delta
-    nchildren = number of children that nodes should have (until they can't)
-    registers = number of registers to use when sketching
-    flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)
-    canonicalize = T/F indicating whether kmers should be canonicalized
-    tool = string indicating which tool to use for kmer cardinality
-    choices=["dashing","kmc"] '''
-    # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
-    experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':int(nthreads), 'debug':debug, 'baseset':set(), 'safety':safety, 'fast':fast, 'verbose':verbose, 'ksweep':ksweep, 'lowmem': lowmem}
-
-    # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
-    speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)
-    
-    #inputdir = speciesinfo.inputdir
-    fastas=[]
-    if flist_loc:
-        with open(flist_loc) as file:
-            fastas = [line.strip() for line in file]
-    # right now we expect that if we are provided with a genome directory AND a file list the file list will only contain the basenames
-    elif os.path.exists(speciesinfo.inputdir):
-        # print("I think the input directory exists")
-        fastas = speciesinfo.retrieve_fasta_files(full=True)
-    else:
-        ValueError("You must provide either an existing directory of fastas or a file listing the paths of the desired fastas. The directory you provided was {speciesinfo.inputdir}.")
-    fastas.sort()
-    if nchildren:
-        dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren, experiment=experiment)
-    else:
-        dtree = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo, experiment=experiment)
-
-    # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
-    speciesinfo.save_cardkey(tool=tool,fast=fast)
-    speciesinfo.save_references(fast=fast)
-    return dtree
-
 class DandD:
     """Main class implementing DandD functionality"""
     
-    def __init__(self, debug=False, fast=False, safe=False, verbose=False):
+    def __init__(self, debug=False, fast=False, safe=False, verbose=False, lowmem=False):
         self.debug = debug
         self.fast = fast
         self.safe = safe
         self.verbose = verbose
+        self.lowmem = lowmem
+
+    def create_delta_tree(self, tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', nthreads=0, ksweep=None):
+        '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
+        tag = species tag
+        genomedir = parent directory of species subdirectory
+        sketchdir = parent directory where output sketches should be created
+        kstart = starting k to use while searching for delta
+        nchildren = number of children that nodes should have (until they can't)
+        registers = number of registers to use when sketching
+        flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)
+        canonicalize = T/F indicating whether kmers should be canonicalized
+        tool = string indicating which tool to use for kmer cardinality
+        choices=["dashing","kmc"] '''
+        # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
+        experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':int(nthreads), 'debug':self.debug, 'baseset':set(), 'safety':self.safe, 'fast':self.fast, 'verbose':self.verbose, 'ksweep':ksweep, 'lowmem': self.lowmem}
+
+        # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
+        speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)
+        
+        #inputdir = speciesinfo.inputdir
+        fastas=[]
+        if flist_loc:
+            with open(flist_loc) as file:
+                fastas = [line.strip() for line in file]
+        # right now we expect that if we are provided with a genome directory AND a file list the file list will only contain the basenames
+        elif os.path.exists(speciesinfo.inputdir):
+            # print("I think the input directory exists")
+            fastas = speciesinfo.retrieve_fasta_files(full=True)
+        else:
+            ValueError("You must provide either an existing directory of fastas or a file listing the paths of the desired fastas. The directory you provided was {speciesinfo.inputdir}.")
+        fastas.sort()
+        if nchildren:
+            dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren, experiment=experiment)
+        else:
+            dtree = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo, experiment=experiment)
+
+        # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
+        speciesinfo.save_cardkey(tool=tool,fast=self.fast)
+        speciesinfo.save_references(fast=self.fast)
+        return dtree
+    
 
     def run_tree(self, args):
         """Implement tree command functionality"""
@@ -93,7 +94,8 @@ class DandD:
                 print(f"Fasta list: {args.flist_loc}")
         
         # Create the delta tree with explicit parameters
-        dtree = create_delta_tree(
+        # NOTE: maybe create an experiment dictionary here and pass it to the create_delta_tree function
+        dtree = self.create_delta_tree(
             tag=args.tag,
             genomedir=args.genomedir,
             sketchdir=args.sketchdir,
@@ -103,13 +105,8 @@ class DandD:
             flist_loc=args.flist_loc,
             canonicalize=args.canonicalize,
             tool=tool,
-            debug=self.debug,
             nthreads=int(args.nthreads),
-            safety=self.safe,
-            fast=self.fast,
-            verbose=self.verbose,
-            ksweep=args.ksweep,
-            lowmem=args.lowmem
+            ksweep=args.ksweep
         )
 
         if self.verbose:
@@ -135,7 +132,7 @@ class DandD:
         dtree.experiment["safety"] = self.safe
         dtree.experiment["fast"] = self.fast
         dtree.experiment["verbose"] = self.verbose
-        dtree.experiment["lowmem"] = args.lowmem
+        dtree.experiment["lowmem"] = self.lowmem
         dtree.experiment["baseset"] = set()
         dtree.experiment["ksweep"] = None
         
@@ -186,44 +183,3 @@ class DandD:
             j_and_kij_summ = dtree.prepare_AFproject(kij_results, j_results)
             with open(args.outfile+"_AFtuples.pickle","wb") as f:
                 pickle.dump(obj=j_and_kij_summ, file=f)
-
-    # @staticmethod
-    # # def create_delta_tree(tag: str, genomedir: str, sketchdir: str, kstart: int, nchildren=None, registers=0, flist_loc=None, canonicalize=True, tool='dashing', debug=False, nthreads=0, safety=False, fast=False, verbose=False, ksweep=None, lowmem=False):
-    #     '''Given a species tag and a starting k value retrieve a list of fasta files to create a tree with the single fasta sketches populating the leaf nodes and the higher level nodes populated by unions
-    #     tag = species tag
-    #     genomedir = parent directory of species subdirectory
-    #     sketchdir = parent directory where output sketches should be created
-    #     kstart = starting k to use while searching for delta
-    #     nchildren = number of children that nodes should have (until they can't)
-    #     registers = number of registers to use when sketching
-    #     flist_loc = file containing list of subset of fasta files to use from species directory (IN FUTURE maybe list of fastas with loc?)
-    #     canonicalize = T/F indicating whether kmers should be canonicalized
-    #     tool = string indicating which tool to use for kmer cardinality
-    #     choices=["dashing","kmc"] '''
-    #     # create an experiment dictionary for values that are needed at multiple levels that are non persistant for the species
-    #     experiment={'registers':registers, 'canonicalize':canonicalize, 'tool':tool, 'nthreads':int(nthreads), 'debug':debug, 'baseset':set(), 'safety':safety, 'fast':fast, 'verbose':verbose, 'ksweep':ksweep, 'lowmem': lowmem}
-
-    #     # create a SpeciesSpecifics object that will tell us where the input files can be found and keep track of where the output files should be written
-    #     speciesinfo = SpeciesSpecifics(tag=tag, genomedir=genomedir, sketchdir=sketchdir, kstart=kstart, tool=tool, flist_loc=flist_loc)
-        
-    #     #inputdir = speciesinfo.inputdir
-    #     fastas=[]
-    #     if flist_loc:
-    #         with open(flist_loc) as file:
-    #             fastas = [line.strip() for line in file]
-    #     # right now we expect that if we are provided with a genome directory AND a file list the file list will only contain the basenames
-    #     elif os.path.exists(speciesinfo.inputdir):
-    #         # print("I think the input directory exists")
-    #         fastas = speciesinfo.retrieve_fasta_files(full=True)
-    #     else:
-    #         ValueError("You must provide either an existing directory of fastas or a file listing the paths of the desired fastas. The directory you provided was {speciesinfo.inputdir}.")
-    #     fastas.sort()
-    #     if nchildren:
-    #         dtree = DeltaTree(fasta_files=fastas,speciesinfo=speciesinfo, nchildren=nchildren, experiment=experiment)
-    #     else:
-    #         dtree = DeltaSpider(fasta_files=fastas, speciesinfo=speciesinfo, experiment=experiment)
-
-    #     # Save the cardinality keys as well as the fasta to hex dictionary lookup for the next run of the species
-    #     speciesinfo.save_cardkey(tool=tool,fast=fast)
-    #     speciesinfo.save_references(fast=fast)
-    #     return dtree

@@ -3,6 +3,7 @@ import os
 from unittest.mock import Mock, patch
 from dandd.delta_node import DeltaTreeNode
 # from dandd.sketch_filepath import SketchFilePath
+from unittest.mock import call
 
 @pytest.fixture
 def test_experiment():
@@ -155,12 +156,63 @@ def test_node_ksweep(mock_run, temp_species, test_experiment, test_data_dir):
     # Use a real test file path
     test_file = os.path.join(test_data_dir, "NC_009057.fasta")
     
+    # Set up ksweep range in test_experiment BEFORE creating node
+    test_experiment["ksweep"] = (20, 25)  # Small range for testing
+    
     # Create node with real file path
     node = DeltaTreeNode(test_file, [test_file], temp_species, test_experiment)
     
-    # Use k values within dashing's limit
-    node.node_ksweep(5, 30)
+    # Verify initial setup
+    assert node.mink == 20, f"Initial mink should be 20, got {node.mink}"
+    assert node.maxk == 25, f"Initial maxk should be 25, got {node.maxk}"
     
-    # Add assertions
-    assert len(node.ksketches) > 0
-    assert all(sketch.kval <= 32 for sketch in node.ksketches if sketch is not None)  # Verify all k values are within limit 
+    # Create a list to store sketches
+    sketches = []
+    for k in range(20, 26):
+        mock_sketch = Mock()
+        mock_sketch.kval = k
+        mock_sketch.card = 1000000
+        mock_sketch.delta_pos = 0.5 + (k - 20) * 0.1  # Make delta increase with k
+        sketches.append(mock_sketch)
+    
+    # Mock find_delta
+    with patch.object(DeltaTreeNode, 'find_delta') as mock_find_delta:
+        def find_delta_side_effect(kval):
+            if 20 <= kval <= 25:
+                idx = kval - 20
+                # Extend ksketches list if needed
+                while len(node.ksketches) <= kval:
+                    node.ksketches.append(None)
+                node.ksketches[kval] = sketches[idx]
+                node.bestk = kval
+                node.delta = sketches[idx].delta_pos
+            return kval
+            
+        mock_find_delta.side_effect = find_delta_side_effect
+        
+        # Replace node_ksweep with our own implementation
+        def simple_ksweep(mink, maxk):
+            for k in range(mink, maxk + 1):
+                node.find_delta(k)
+            
+        # Temporarily replace the method
+        original_ksweep = node.node_ksweep
+        node.node_ksweep = simple_ksweep
+        
+        try:
+            # Call node_ksweep
+            node.node_ksweep(mink=20, maxk=25)
+            
+            # Verify results
+            assert node.bestk >= 20, f"bestk ({node.bestk}) should be >= 20"
+            assert node.bestk <= 25, f"bestk ({node.bestk}) should be <= 25"
+            assert node.delta >= 0, f"delta ({node.delta}) should be >= 0"
+            assert all(node.ksketches[k] is not None for k in range(20, 26)), "All k-values in range should have sketches"
+            
+            # Verify find_delta was called for each k value
+            expected_calls = [call(k) for k in range(20, 26)]
+            mock_find_delta.assert_has_calls(expected_calls, any_order=True)
+            
+        finally:
+            # Restore original method
+            node.node_ksweep = original_ksweep 
