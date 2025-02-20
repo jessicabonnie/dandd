@@ -108,17 +108,34 @@ def test_create_leaf_sketch(mock_run, mock_sketch_obj):
     assert mock_run.call_args[1]['shell'] is True
     assert mock_run.call_args[1]['check'] is True
 
-@patch('subprocess.run')
+@pytest.fixture
+def mock_call():
+    """Mock subprocess.call"""
+    with patch('subprocess.call') as mock:
+        mock.return_value = 0
+        yield mock
+
+@patch('subprocess.call', new_callable=Mock)  # Explicitly create a Mock object
 def test_create_union_sketch(mock_run, mock_sketch_obj):
     """Test union sketch creation"""
-    mock_run.return_value = Mock(returncode=0)
+    # Set up mock return value
+    mock_run.return_value = 0
     
+    # Set up sketch_check to return False first time (to trigger sketch creation)
+    mock_sketch_obj._mock_sketch_check.return_value = False
+    
+    # Call create_union_sketch
     mock_sketch_obj.create_union_sketch()
     
+    # Verify the command was stored
     assert mock_sketch_obj.cmd == "mock union command"
-    mock_run.assert_called_once()
-    assert mock_run.call_args[1]['shell'] is True
-    assert mock_run.call_args[1]['check'] is True
+    
+    # Verify subprocess.call was called once with the correct command
+    mock_run.assert_called_once_with(
+        "mock union command",
+        shell=True,
+         stdout=subprocess.DEVNULL
+    )
 
 @patch('subprocess.run')
 def test_individual_card(mock_run, mock_sketch_obj):

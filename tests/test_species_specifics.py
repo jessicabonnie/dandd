@@ -1,4 +1,4 @@
-import pytest
+import pytest # type: ignore
 import os
 import pickle
 from dandd.species_specifics import SpeciesSpecifics

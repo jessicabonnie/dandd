@@ -207,7 +207,7 @@ def parse_arguments():
 #     return parser.parse_args()
 
 def main_recommended():
-    args = parse_args()
+    args, cmds = parse_arguments()
     
     if not args.command:
         print("Error: Please specify a command (tree, progressive, or kij)")

@@ -1,4 +1,4 @@
-import pytest
+import pytest # type: ignore
 import os
 import subprocess
 from unittest.mock import Mock, patch
@@ -169,7 +169,7 @@ def is_kmc_available():
     """Check if KMC is available on the system"""
     return shutil.which(KMCLOC) is not None
 
-@pytest.mark.skipif(not is_kmc_available(),
+@pytest.mark.skipif(not is_kmc_available(), 
                    reason="kmc command not found")
 def test_full_sketch_workflow(kmc_sketch_obj, test_data_dir):
     """Test full workflow: create sketch and check cardinality without mocks"""
@@ -232,19 +232,19 @@ def test_parse_card_real_format(kmc_sketch_obj):
     proc.stdout = f"""
 Info for {kmc_sketch_obj.sfp.full}:
 k = 21
-total k-mers = 4606432
-unique k-mers = 4123789
-singleton k-mers = 3500000
-max count = 65535
-min count = 1
+total k-mers: 4606432
+unique k-mers: 4123789
+singleton k-mers: 3500000
+max count: 65535
+min count: 1
 """
     
     # Parse the output
     kmc_sketch_obj.parse_card(proc)
     
-    # Verify the parsed value (total k-mers)
+    # Verify the cardinality was stored correctly
     assert kmc_sketch_obj.sfp.full in kmc_sketch_obj.speciesinfo.cardkey
-    assert kmc_sketch_obj.speciesinfo.cardkey[kmc_sketch_obj.sfp.full] == 4606432
+    assert kmc_sketch_obj.speciesinfo.cardkey[kmc_sketch_obj.sfp.full] == 4606432  # Using total k-mers value
 
 @patch('subprocess.run')
 def test_kmc_command_output(mock_run, kmc_sketch_obj, test_data_dir):
