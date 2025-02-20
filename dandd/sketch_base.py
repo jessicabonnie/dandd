@@ -5,6 +5,8 @@ import tempfile
 from abc import ABC, abstractmethod
 from dandd.species_specifics import SpeciesSpecifics
 from dandd.sketch_filepath import SketchFilePath
+import shutil
+DASHINGLOC="/home/jbonnie1/lib/dashing_working/dashing" 
 
 class SketchObj(ABC):
     ''' Abstract base class for sketch objects '''
@@ -25,38 +27,68 @@ class SketchObj(ABC):
             self.card = self.check_cardinality()
             self.delta_pos = self.card/self.kval
 
-    def create_sketch(self) -> None:
-        '''Create a sketch or union of sketches based on the information used to initiate the sketch obj'''
-        if not self.sketch_check():
-            if self.ngen == 1:
-                self.create_leaf_sketch()
-            else:
-                self.create_union_sketch()
-            self.card = self.check_cardinality()
-            self.delta_pos = self.card/self.kval
+    def create_sketch(self, just_do_it=False):
+        ''' If sketch file exists, assign path to self.sketch and return path. 
+            If not create sketch, assign, and then return path.'''
+        if self.sfp.ngen == 1:
+            self.create_leaf_sketch(just_do_it=just_do_it)
+        elif self.sfp.ngen > 1:
+            self.create_union_sketch(just_do_it=just_do_it)
+        else:
+            raise RuntimeError("For some reason you are trying to sketch an empty list of files. Don't do that.")
+        
+        self.sketch = self.sfp.full
+        return self.sketch
 
-    def create_leaf_sketch(self) -> None:
-        '''Create a sketch from a fasta file'''
-        with tempfile.TemporaryDirectory() as tmpdir:
-            self.cmd = self._leaf_command(tmpdir)
-            if self.experiment['verbose']:
-                print(self.cmd)
-            try:
-                subprocess.run(self.cmd, shell=True, check=True)
-            except subprocess.CalledProcessError as e:
-                print(f"Command failed: {self.cmd}")
-                raise e
-
-    def create_union_sketch(self) -> None:
-        '''Create a union of sketches'''
-        self.cmd = self._union_command()
-        if self.experiment['verbose']:
-            print(self.cmd)
+    def create_leaf_sketch(self, just_do_it=False):
+        '''If leaf sketch file exists, record the command that would have been used. If not run the command and store it.'''
+        tmpdir = tempfile.mkdtemp()
+        cmd = self._leaf_command(tmpdir=tmpdir)
+        stdout = None
+        if not self.experiment['verbose']:
+            stdout = subprocess.DEVNULL
+        if self.experiment['debug']:
+            print(cmd)
         try:
-            subprocess.run(self.cmd, shell=True, check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"Command failed: {self.cmd}")
-            raise e
+            if just_do_it or not self.sketch_check():
+                if not (self.experiment["lowmem"] and self.check_cardinality() > 0):
+                    if self.experiment["verbose"]:
+                        print("Running Leaf Command: " + cmd)
+                    try:
+                        subprocess.run(cmd, shell=True, stdout=stdout, check=True)
+                    except subprocess.CalledProcessError as e:
+                        if e.returncode == 127:  # Command not found
+                            tool = 'dashing' if 'dashing' in cmd else 'kmc'
+                            raise RuntimeError(f"Could not find {tool} command. Please ensure it is installed and in your PATH.") from e
+                        raise  # Re-raise other errors
+                    self.cmd = cmd
+            else:
+                self.cmd = cmd
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def create_union_sketch(self, just_do_it=False):
+        ''' If union sketch file exists, record the command that would have been used. If not run the command and store it.'''
+        cmd = self._union_command()
+        stdout=None
+        stdout=subprocess.DEVNULL
+        if self.experiment['verbose']:
+            stdout=subprocess.PIPE
+        if just_do_it:
+            subprocess.call(cmd, shell=True, stdout=stdout)
+            self.cmd = cmd
+        elif not self.sketch_check():
+            if self.experiment["lowmem"] and self.check_cardinality() > 0:
+                self.cmd=cmd
+            else:
+                if self.experiment["verbose"]:
+                    print("Running Union Command: " + cmd)
+                subprocess.call(cmd, shell=True, stdout=stdout)
+                self.cmd = cmd
+        
+        # self.cmd = cmd
+        if self.experiment['debug']:
+            print(self.cmd)
 
     def check_cardinality(self) -> float:
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it.'''
@@ -82,27 +114,23 @@ class SketchObj(ABC):
             cmd = self.card_command([self.sfp.full])
             if not cmd:
                 return
-        stderr=None
-        # if not self.experiment['verbose']:
-        #     stderr=subprocess.DEVNULL
+        stderr = None
         if self.experiment['debug']:
             print(cmd)
         try:
-            proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, check=True,universal_newlines=True, stderr=stderr)
-        except subprocess.CalledProcessError or RuntimeError:
-            # warnings.warn(message=f"{self.sfp.full} cannot be created. Will attempt to remove and recreate component sketches.", category=RuntimeWarning)
-            print(f"Recreating sketch {self.sfp.full}")
-            self.create_sketch(just_do_it=True)
-            # print("recreated sketch")
-            proc=subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, universal_newlines=True, stderr=stderr)
-        
+            proc = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, check=True, universal_newlines=True, stderr=stderr)
+            self.parse_card(proc=proc)
+            self.check_cardinality()
         except subprocess.CalledProcessError as e:
-            print(f"Command failed: {cmd}")
-            raise e
-        finally:
+            if not self.experiment['mock_run']:  # Don't recreate if we're in test mode
+                print(f"Recreating sketch {self.sfp.full}")
+                self.create_sketch(just_do_it=True)
+                proc = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, check=True, universal_newlines=True, stderr=stderr)
                 self.parse_card(proc=proc)
                 # NOTE: THIS IS NEW ... MAYBE IT BREAKS EVERYTHING SOON?
                 self.check_cardinality()
+            else:
+                raise e
 
     def check_cardinality(self) -> float:
         '''Check whether the cardinality of sketch/db is stored in the cardkey, if not run a card command for the sketch and store it. '''

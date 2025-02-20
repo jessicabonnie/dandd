@@ -1,4 +1,4 @@
-import pytest
+import pytest # type: ignore
 import os
 import subprocess
 from unittest.mock import Mock, patch
