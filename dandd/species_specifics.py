@@ -7,6 +7,7 @@ from typing import Dict
 import shutil
 from subprocess import CalledProcessError
 from dandd.utils import read_pickle_dict
+import sqlite3
 
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
@@ -15,6 +16,8 @@ class SpeciesSpecifics:
         self.sketchdir=sketchdir
         # self.species=self._resolve_species()
         self.fastahex=self._read_fastahex()
+        self.db_path = os.path.join(self.sketchdir, 'dandd.db')
+        self._init_db()
         self.cardkey=self._read_cardkey(tool=tool)
         self.inputdir=genomedir
         self.card0 = []
@@ -23,22 +26,6 @@ class SpeciesSpecifics:
         self.flist_loc=flist_loc
         self.sketchinfo=self._read_sketchinfo()
     
-    # def read_pickle(self, filepath) -> Dict:
-    #     '''Read a pickle into a dictionary if the filepath exists, otherwise return an empty dictionary'''
-    #     if os.path.exists(filepath):
-    #         try:
-    #             contents=pickle.load(open(filepath, "rb", -1))
-    #         except pickle.UnpicklingError:
-    #             try:
-    #                 contents=pickle.load(open(filepath+'.bkp', "rb", -1))
-    #             except FileExistsError:
-    #                 contents=dict()
-    #         # finally:
-    #         #     print(f"{filepath} and {filepath}.bkp are both corrupted. They will be overwritten.")
-    #         #     contents=dict()
-    #     else:
-    #         contents=dict()
-    #     return contents
 
     def _fastahex_loc(self)-> str:
         return os.path.join(self.sketchdir,'dandd_fastahex.pickle')
@@ -82,6 +69,38 @@ class SpeciesSpecifics:
         '''Recover key of previously calculated cardinalities from pickle file'''
         cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
         return read_pickle_dict(cardpath)
+    def _read_cardkey_db(self, tool: str) -> Dict[str, float]:
+        """Read cardinalities from SQLite database"""
+        cardkey = {}
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT sketch_path, cardinality 
+                FROM cardinalities 
+                WHERE tool = ? AND tag = ?
+            ''', (tool, self.tag))
+            for sketch_path, cardinality in cursor.fetchall():
+                cardkey[sketch_path] = cardinality
+        return cardkey
+
+    def save_cardkey_db(self, tool: str, fast=False) -> None:
+        """Store cardinalities in SQLite database"""
+        if not fast:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # Use a transaction for better performance with multiple inserts
+                cursor.execute('BEGIN TRANSACTION')
+                try:
+                    for sketch_path, cardinality in self.cardkey.items():
+                        cursor.execute('''
+                            INSERT OR REPLACE INTO cardinalities 
+                            (sketch_path, tool, tag, cardinality)
+                            VALUES (?, ?, ?, ?)
+                        ''', (sketch_path, tool, self.tag, cardinality))
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    raise e
     
     def save_cardkey(self, tool: str, fast=False) -> None:
         '''Store cardinalities in species specific pickle'''
@@ -98,3 +117,59 @@ class SpeciesSpecifics:
         if full:
             fastas=[os.path.join(self.inputdir,fasta) for fasta in fastas]
         return fastas
+
+    def _init_db(self):
+        """Initialize SQLite database with necessary tables if they don't exist"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            # Cardinalities table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS cardinalities (
+                    sketch_path TEXT PRIMARY KEY,
+                    tool TEXT NOT NULL,
+                    tag TEXT NOT NULL,
+                    cardinality REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            # Fastahex table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS fastahex (
+                    fasta_path TEXT PRIMARY KEY,
+                    hex_value TEXT NOT NULL,
+                    tag TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
+
+    def save_fastahex_db(self, fast=False) -> None:
+        """Store fasta hexsums in SQLite database"""
+        if not fast:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('BEGIN TRANSACTION')
+                try:
+                    for fasta_path, hex_value in self.fastahex.items():
+                        cursor.execute('''
+                            INSERT OR REPLACE INTO fastahex 
+                            (fasta_path, hex_value, tag)
+                            VALUES (?, ?, ?)
+                        ''', (fasta_path, hex_value, self.tag))
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    raise e
+    def _read_fastahex_db(self) -> Dict[str, str]:
+        """Read fasta hexsums from SQLite database"""
+        fastahex = {}
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT fasta_path, hex_value 
+                FROM fastahex 
+                WHERE tag = ?
+            ''', (self.tag,))
+            for fasta_path, hex_value in cursor.fetchall():
+                fastahex[fasta_path] = hex_value
+        return fastahex
