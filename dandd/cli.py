@@ -10,7 +10,7 @@ def add_universal_cmds(subparser:argparse.ArgumentParser):
     subparser.add_argument("--verbose", "-v", action="store_true", default=False, help="Print some trees and report steps of actions.")
     subparser.add_argument( "--debug", action="store_true", default=False, dest="debug", help="Share command calls to 3rd party programs.")
     subparser.add_argument( "--lowmem", action="store_true", default=False, dest="lowmem", help="Delete all multi-fasta sketches, while keeping cardinality stored in dictionary for later runs. Don't require sketch/db existence if the cardinality is already stored. Do not recommend using with --safe")
-    subparser.add_argument( "--safe", action="store_true", default=False, dest="safety",   help="Double check all sketch/db name hashes to make sure they match the sums of the component fasta hashes.")
+    subparser.add_argument( "--safe", action="store_true", default=False, dest="safe",   help="Double check all sketch/db name hashes to make sure they match the sums of the component fasta hashes.")
     subparser.add_argument( "--fast", action="store_true", default=False, dest="fast",   help="Don't save so much stuff for second usage.")
     return subparser
 
@@ -19,38 +19,38 @@ def add_universal_cmds(subparser:argparse.ArgumentParser):
 # def main_parser_command(args):
 #     experiment = {}
 #     experiment["debug"] = args.debug
-#     experiment["safety"] = args.safety
+#     experiment["safety"] = args.safe
 #     experiment["fast"] = args.fast
 #     experiment["verbose"] = args.verbose
    
 
 
-def tree_command(args):
-    dandd = DandD(
-        debug=args.debug,
-        fast=args.fast,
-        safe=args.safety,
-        verbose=args.verbose
-    )
-    dandd.run_tree(args)
+# def tree_command(args):
+#     dandd = DandD(
+#         debug=args.debug,
+#         fast=args.fast,
+#         safe=args.safe,
+#         verbose=args.verbose
+#     )
+#     dandd.run_tree(args)
 
-def progressive_command(args):
-    dandd = DandD(
-        debug=args.debug,
-        fast=args.fast,
-        safe=args.safety,
-        verbose=args.verbose
-    )
-    dandd.run_progressive(args)
+# def progressive_command(args):
+#     dandd = DandD(
+#         debug=args.debug,
+#         fast=args.fast,
+#         safe=args.safe,
+#         verbose=args.verbose
+#     )
+#     dandd.run_progressive(args)
 
-def kij_command(args):
-    dandd = DandD(
-        debug=args.debug,
-        fast=args.fast,
-        safe=args.safety,
-        verbose=args.verbose
-    )
-    dandd.run_kij(args)
+# def kij_command(args):
+#     dandd = DandD(
+#         debug=args.debug,
+#         fast=args.fast,
+#         safe=args.safe,
+#         verbose=args.verbose
+#     )
+#     dandd.run_kij(args)
 
 
 def parse_arguments():
@@ -74,7 +74,7 @@ def parse_arguments():
     # Keep track of subcommands 
     commands = []
     # Create subcommand parser
-    subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands',help='additional help',dest='command')
+    subparsers = parser.add_subparsers(title='subcommands', description='valid subcommands', help='additional help', dest='command')
     subparsers.required = True
 
     # Make parser for "dand_cmd.py tree ..."
@@ -106,7 +106,7 @@ def parse_arguments():
 
     tree_parser.add_argument("-C", "--no-canon", action="store_false", default=True,  dest="canonicalize", help="instruct dashing to use non-canonicalized kmers")
 
-    tree_parser.set_defaults(func=tree_command)
+    # tree_parser.set_defaults(func=tree_command)
 
     # Make parser for "dand_cmd.py progressive ..."
     progressive_parser = subparsers.add_parser("progressive", help="Measure Delta as each individual fasta is added to the set. If a specific ordering is not provided, a set of random orderings can be generated. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)", 
@@ -128,21 +128,8 @@ def parse_arguments():
 
     progressive_parser.add_argument("--step", dest="step", default=1, type=int, help="Number of sketches to include in each progression. Mostly used for a single ordered progression.", metavar="INTEGER")
 
-    progressive_parser.set_defaults(func=progressive_command)
+    # progressive_parser.set_defaults(func=progressive_command)
 
-    # Make parser for "dand_cmd.py info ..."
-    # info_parser = subparsers.add_parser("info", parents=[parent_parser, ksweep_parser])
-    # # commands.append('info')
-    
-    # info_parser.add_argument("-d", "--dtree", dest="delta_tree", metavar="DELTA TREE", required=True, help="filepath to a pickle produced by the tree command. Tree nodes will be updated to hold additional sketches as needed to perform info commands selected.")
-
-    # info_parser.add_argument("-s", "--tag", dest="tag", help="tagname used to label outputfiles, default to original tag used to create input tree",  metavar="PREFIX TAG", type=str, required=False)
-
-    # info_parser.add_argument("-o", "--outdir", dest="outdir", default=os.getcwd(), type=str, help="directory to write the output tables.", metavar="OUTPUT DIR")
-
-    # info_parser.add_argument("-l", "--label", dest="label", default="", help="NOT IMPLEMENTED Label to use in result file names -- to distinguish it from others (e.g. to indicate a particular input file list).", required=False, metavar="SUFFIX TAG")
-
-    # info_parser.set_defaults(func=info_command)
 
    # Make parser for "dand_cmd.py kij ..."
     kij_parser = subparsers.add_parser("kij", help="K Independent Jaccard. If a subset of fastas is not provided, matrix will include all inputs used to generate the delta tree using the `tree` command. NOTE: Options used during creation of delta tree will be used (e.g. exact/estimate, genome directory, species tag name.)", parents=[parent_parser, ksweep_parser])
@@ -162,52 +149,14 @@ def parse_arguments():
 
     kij_parser.add_argument("--jaccard", dest="jaccard", default=False, action="store_true", help="Indicate whether to include output for standard jaccard difference for indicated ks")
 
-    kij_parser.set_defaults(func=kij_command)
+    # kij_parser.set_defaults(func=kij_command)
 
     return parser, commands
 
 
-# def parse_args():
-#     parser = argparse.ArgumentParser(
-#         description="DandD: Efficient measurement of sequence growth and similarity"
-#     )
-    
-#     # Global options
-#     parser.add_argument('--debug', action='store_true',
-#                        help='Print commands for each call to Dashing or KMC')
-#     parser.add_argument('--fast', action='store_true',
-#                        help='Avoid writing intermediate reference files')
-#     parser.add_argument('--safe', action='store_true',
-#                        help='Double check all sketch hashes')
-#     parser.add_argument('--verbose', action='store_true',
-#                        help='Show progress messages')
-
-#     subparsers = parser.add_subparsers(dest='command')
-
-#     # Tree command
-#     tree_parser = subparsers.add_parser('tree')
-#     tree_parser.add_argument('--fastas', '-f', help='File containing paths to fastas')
-#     tree_parser.add_argument('--datadir', help='Directory containing fastas')
-#     tree_parser.add_argument('--outdir', '-o', default='.',
-#                             help='Output directory (default: current)')
-#     # Add other tree arguments...
-
-#     # Progressive command 
-#     prog_parser = subparsers.add_parser('progressive')
-#     prog_parser.add_argument('--dtree', '-d', required=True,
-#                             help='Delta tree pickle from tree command')
-#     # Add other progressive arguments...
-
-#     # KIJ command
-#     kij_parser = subparsers.add_parser('kij')
-#     kij_parser.add_argument('--dtree', '-d', required=True,
-#                            help='Delta tree pickle from tree command')
-#     # Add other kij arguments...
-
-#     return parser.parse_args()
-
-def main_recommended():
-    args, cmds = parse_arguments()
+def main():
+    parser, cmds = parse_arguments()
+    args = parser.parse_args()
     
     if not args.command:
         print("Error: Please specify a command (tree, progressive, or kij)")
@@ -217,7 +166,8 @@ def main_recommended():
         debug=args.debug,
         fast=args.fast,
         safe=args.safe,
-        verbose=args.verbose
+        verbose=args.verbose,
+        lowmem=args.lowmem
     )
     
     if args.command == 'tree':
@@ -227,7 +177,7 @@ def main_recommended():
     elif args.command == 'kij':
         dandd.run_kij(args)
 
-def main():
+def main_prev():
     parser, commands = parse_arguments()
     args = parser.parse_args(sys.argv[1:])
     # if len(sys.argv) < 2:
