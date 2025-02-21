@@ -1,6 +1,6 @@
 import pytest # type: ignore
 import os
-from dandd.utils import insert_pre_ext, write_listdict_to_csv, blake2b, canon_command
+from dandd.utils import insert_pre_ext, write_listdict_to_csv, blake2b, canon_command, read_pickle_dict
 
 def test_insert_pre_ext():
     assert insert_pre_ext("test.txt", "suffix") == "test.suffix.txt"
@@ -54,3 +54,20 @@ def test_canon_command():
     
     # Test default tool (dashing)
     assert canon_command(False) == '--no-canon' 
+
+def test_read_pickle_dict(tmp_path):
+    """Test pickle reading functionality"""
+    # Test with non-existent file
+    nonexistent = tmp_path / "nonexistent.pickle"
+    result = read_pickle_dict(str(nonexistent))
+    assert isinstance(result, dict)
+    assert len(result) == 0
+
+    # Test with valid pickle file
+    test_data = {"key": "value"}
+    test_pickle = tmp_path / "test.pickle"
+    with open(test_pickle, "wb") as f:
+        pickle.dump(test_data, f)
+    
+    result = temp_species.read_pickle(str(test_pickle))
+    assert result == test_data

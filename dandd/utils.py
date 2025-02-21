@@ -3,10 +3,12 @@ from __future__ import annotations
 import sys
 import hashlib
 import csv
-from typing import List, Dict
+from typing import List, Dict, Tuple, Set
 from math import factorial
 from itertools import permutations
 from random import sample, shuffle
+import pickle
+import os
 
 def insert_pre_ext(filename, string):
     toks = filename.split('.')
@@ -80,3 +82,21 @@ def permute(length, norder, preexist=set(), exhaust=False, verbose=False)-> Set[
         newset.update([newpermute[index]])
         index+=1
     return newset
+
+
+def read_pickle_dict(filepath) -> Dict:
+    '''Read a pickle into a dictionary if the filepath exists, otherwise return an empty dictionary'''
+    if os.path.exists(filepath):
+        try:
+            contents=pickle.load(open(filepath, "rb", -1))
+        except pickle.UnpicklingError:
+            try:
+                contents=pickle.load(open(filepath+'.bkp', "rb", -1))
+            except FileExistsError:
+                contents=dict()
+        # finally:
+        #     print(f"{filepath} and {filepath}.bkp are both corrupted. They will be overwritten.")
+        #     contents=dict()
+    else:
+        contents=dict()
+    return contents

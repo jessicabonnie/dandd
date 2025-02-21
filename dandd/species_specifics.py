@@ -6,6 +6,7 @@ import re
 from typing import Dict
 import shutil
 from subprocess import CalledProcessError
+from dandd.utils import read_pickle_dict
 
 class SpeciesSpecifics:
     '''An object to store the specifics of a species file info'''
@@ -22,22 +23,22 @@ class SpeciesSpecifics:
         self.flist_loc=flist_loc
         self.sketchinfo=self._read_sketchinfo()
     
-    def read_pickle(self, filepath) -> Dict:
-        '''Read a pickle into a dictionary if the filepath exists, otherwise return an empty dictionary'''
-        if os.path.exists(filepath):
-            try:
-                contents=pickle.load(open(filepath, "rb", -1))
-            except pickle.UnpicklingError:
-                try:
-                    contents=pickle.load(open(filepath+'.bkp', "rb", -1))
-                except FileExistsError:
-                    contents=dict()
-            # finally:
-            #     print(f"{filepath} and {filepath}.bkp are both corrupted. They will be overwritten.")
-            #     contents=dict()
-        else:
-            contents=dict()
-        return contents
+    # def read_pickle(self, filepath) -> Dict:
+    #     '''Read a pickle into a dictionary if the filepath exists, otherwise return an empty dictionary'''
+    #     if os.path.exists(filepath):
+    #         try:
+    #             contents=pickle.load(open(filepath, "rb", -1))
+    #         except pickle.UnpicklingError:
+    #             try:
+    #                 contents=pickle.load(open(filepath+'.bkp', "rb", -1))
+    #             except FileExistsError:
+    #                 contents=dict()
+    #         # finally:
+    #         #     print(f"{filepath} and {filepath}.bkp are both corrupted. They will be overwritten.")
+    #         #     contents=dict()
+    #     else:
+    #         contents=dict()
+    #     return contents
 
     def _fastahex_loc(self)-> str:
         return os.path.join(self.sketchdir,'dandd_fastahex.pickle')
@@ -45,11 +46,11 @@ class SpeciesSpecifics:
         return os.path.join(self.sketchdir,'dandd_sketchinfo.pickle')
     def _read_fastahex(self):
         '''Recover species specific fasta to hexidecimal dictionary from pickle file'''
-        return self.read_pickle(self._fastahex_loc())
+        return read_pickle_dict(self._fastahex_loc())
 
     def _read_sketchinfo(self) -> Dict[str,Dict]:
         '''Recover sketch name mappings from sketch directory file'''
-        return self.read_pickle(self._sketchinfo_loc())
+        return read_pickle_dict(self._sketchinfo_loc())
 
     def update(self, tool) -> None:
         self.fastahex=self._read_fastahex()
@@ -80,7 +81,7 @@ class SpeciesSpecifics:
     def _read_cardkey(self, tool) -> Dict[str, int]:
         '''Recover key of previously calculated cardinalities from pickle file'''
         cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
-        return self.read_pickle(cardpath)
+        return read_pickle_dict(cardpath)
     
     def save_cardkey(self, tool: str, fast=False) -> None:
         '''Store cardinalities in species specific pickle'''
