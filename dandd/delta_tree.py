@@ -187,11 +187,15 @@ class DeltaTree:
     #     self._dt = children + [body_node]
     
     def make_prefix(self, tag: str, label="", outdir:str=None):
+        '''
+        Make a prefix for the output file
+        '''
         if not outdir:
             outdir=os.getcwd()
         if not label == "":
             label = "_"+label
         fileprefix=os.path.join(outdir,  tag + label + "_" + str(self.ngen) + "_" + self.experiment["tool"] )
+
         return fileprefix
     def save(self, fileprefix:str, fast=False):
         '''
@@ -276,38 +280,25 @@ class DeltaTree:
         # self.speciesinfo.save_references()
         #self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
 
-    def orderings_list(self, ordering_file=None, flist_loc=None, count=0)-> Tuple[List[str], List[Tuple[int]]]:
+    def orderings_list(self, fastas: List[str], ordering_file=None, flist_loc=None, count=0, verbose=False)-> Tuple[List[str], List[Tuple[int]]]:
         '''create or retrieve a series of random orderings of fasta sketches. return also the expected "sorted" array of the files. A subset of the fastas in the tree can be provided by name (in a file). The ordering of this file will be used when count=1 and the list is provided.'''
-        fastas=self.fastas
-        fastas.sort()
-
-        # If a fasta file list is provided, subset the fastas from the species directory to only use the intersection
-        if flist_loc:
-            with open(flist_loc) as file:
-                fsublist = [line.strip() for line in file]
-            fastas = [f for f in fastas if f in fsublist]
-            #order fastas as given in file
-            fastas = [f for f in fsublist if f in fastas]
+        
         # if count is one "sorted" ordering is returned with the reference list
         if count == 1:
-            return fastas,[tuple(i for i in range(len(fastas)))]
+            return [tuple(i for i in range(len(fastas)))]
         
         # orderings are handled as sets to prevent duplication
         orderings=set()
-        default_ordering=os.path.join(self.speciesinfo.sketchdir, self.speciesinfo.tag + "_"+ str(len(fastas))+"_orderings.pickle")
-        # if no ordering file is provided the default location is used
-        if not ordering_file:
-            ordering_file=default_ordering
         # if the ordering file exists then read the orderings
         if os.path.exists(ordering_file):
             with open(ordering_file,'rb') as f:
                 orderings=pickle.load(f)
             # if count was not provided then just return the orderings that are already there
             if count==0:
-                return fastas, list(orderings)
+                return list(orderings)
             # if the count is lte to the number of orderings in the file, take the first count number of orderings
             if count <= len(orderings):
-                return fastas, list(orderings)[:count]
+                return list(orderings)[:count]
 
         # if there is no ordering file at the location, time to make one    
         else:
@@ -315,14 +306,23 @@ class DeltaTree:
             if count<1:
                 raise ValueError("You must provide a value for count when there is no default ordering file")
         
-        orderings = permute(length=len(fastas), norder=count, preexist=orderings, verbose=self.experiment['verbose'])
+        orderings = permute(length=len(fastas), norder=count, preexist=orderings, verbose=verbose)
         # save the orderings for use next run of species 
         with open(ordering_file,"wb") as f:
             pickle.dump(orderings, f)
-        return fastas, list(orderings)
+        return list(orderings)
 
     def progressive_wrapper(self, flist_loc=None, count=30, ordering_file=None,step=1, debug=False)-> List[dict]:
-        fastas, orderings = self.orderings_list( ordering_file=ordering_file, flist_loc=flist_loc, count=count)
+        '''
+        Wrapper for the progressive union function.
+        '''
+        fastas = self.subset_fastas(flist_loc=flist_loc)
+        # if no ordering file is provided the default location is used
+        if not ordering_file:
+            default_ordering=os.path.join(self.speciesinfo.sketchdir, self.speciesinfo.tag + "_"+ str(len(fastas))+"_orderings.pickle")
+            ordering_file=default_ordering
+
+        orderings = self.orderings_list(fastas=fastas, ordering_file=ordering_file, flist_loc=flist_loc, count=count, verbose=self.experiment['verbose'])
 
         return self.progressive_union(flist=fastas, orderings=orderings, step=step)
 
@@ -345,6 +345,23 @@ class DeltaTree:
             self.speciesinfo.save_references(fast=self.experiment['fast'])
             self.speciesinfo.save_cardkey(tool=self.experiment["tool"],fast=self.experiment['fast'])
         return results, summary
+
+
+    def subset_fastas(self, flist_loc: str) -> List[str]:
+        '''
+        Provided a file of fasta names, return a list of fastas that are in the species directory.
+        '''
+        fastas=self.fastas
+        fastas.sort()
+
+        # If a fasta file list is provided, subset the fastas from the species directory to only use the intersection
+        if flist_loc:
+            with open(flist_loc) as file:
+                fsublist = [line.strip() for line in file]
+            fastas = [f for f in fastas if f in fsublist]
+            #order fastas as given in file
+            fastas = [f for f in fsublist if f in fastas]
+        return fastas
 
     def sketch_ordering(self, ordering, ordering_number, step=1) -> Tuple[List[dict], List[dict]]:
         '''Provided an ordering for the fastas in a tree, create sketches of the subsets within that ordering and report the deltas'''
