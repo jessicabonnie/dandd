@@ -8,7 +8,7 @@ from dandd.sketch_dashing import DashSketchObj
 from dandd.sketch_kmc import KMCSketchObj
 from dandd.sketch_filepath import SketchFilePath
 
-class DeltaTreeNode:
+class DeltaNode:
     ''' A node in a Delta tree. 
         node_title = name of input file or composite of inputfiles
         children = the nodes that are this nodes children

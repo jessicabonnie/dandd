@@ -12,7 +12,7 @@ from .sketch_filepath import SketchFilePath
 from .sketch_base import SketchObj
 from .sketch_dashing import DashSketchObj
 from .sketch_kmc import KMCSketchObj
-from .delta_node import DeltaTreeNode
+from .delta_node import DeltaNode
 from .delta_tree import DeltaTree, DeltaSpider, SubSpider
 
 __all__ = [
@@ -24,5 +24,5 @@ __all__ = [
     'DeltaTree',
     'DeltaSpider',
     'SubSpider',
-    'DeltaTreeNode'
+    'DeltaNode'
 ]

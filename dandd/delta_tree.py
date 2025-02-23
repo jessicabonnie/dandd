@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 import pickle
-from dandd.delta_node import DeltaTreeNode
+from dandd.delta_node import DeltaNode
 from dandd.utils import permute, write_listdict_to_csv
 from typing import List, Dict, Set, Tuple
 
@@ -79,7 +79,7 @@ class DeltaTree:
                     sketch.remove_sketch()
 
 
-    def _build_tree(self, symbol: list, nchildren: int, leafnodes: List[DeltaTreeNode] = []) -> None:
+    def _build_tree(self, symbol: list, nchildren: int, leafnodes: List[DeltaNode] = []) -> None:
         '''
         Build a DeltaTree. The depth first nodes will have the provided number of children until there are only k<n input fastas left. A python list of nodes is returned with pointers to child nodes where applicable.
 
@@ -98,7 +98,7 @@ class DeltaTree:
         # create leaf nodes for all the provided fastas
         if len(leafnodes) == 0:
             inputs = [
-                DeltaTreeNode(
+                DeltaNode(
                     node_title=s, children=[], speciesinfo=self.speciesinfo, experiment=self.experiment, progeny=[]
                 ) for s in symbol]
         else:
@@ -121,7 +121,7 @@ class DeltaTree:
             #flatten the progeny list
             progeny=[item for sublist in progeny for item in sublist]
             child_titles=[c.node_title for c in children]
-            new_node = DeltaTreeNode(
+            new_node = DeltaNode(
                 node_title="_".join(child_titles), speciesinfo=self.speciesinfo,
                 children = children,
                 progeny=progeny,
@@ -166,7 +166,7 @@ class DeltaTree:
         #self.speciesinfo.save_references()
         #self.speciesinfo.save_cardkey(tool=self.experiment["tool"])
     
-    def leaf_nodes(self) -> List[DeltaTreeNode]:
+    def leaf_nodes(self) -> List[DeltaNode]:
         return [child for child in self._dt if child.ngen==1]
 
     # def to_spider(self):
@@ -177,7 +177,7 @@ class DeltaTree:
     #     #flatten the progeny list
     #     progeny=[item for sublist in progeny for item in sublist]
     #     child_titles=[c.node_title for c in children]
-    #     body_node = DeltaTreeNode(
+    #     body_node = DeltaNode(
     #         node_title="_".join(child_titles), speciesinfo=self.speciesinfo,
     #         children = children,
     #         progeny=progeny,
@@ -475,7 +475,7 @@ class SubSpider(DeltaTree):
         #flatten the progeny list
         progeny=[item for sublist in progeny for item in sublist]
         child_titles=[os.path.basename(c.node_title) for c in children]
-        body_node = DeltaTreeNode(
+        body_node = DeltaNode(
             node_title="_".join(child_titles), speciesinfo=self.speciesinfo,
             children = children,
             progeny=progeny,

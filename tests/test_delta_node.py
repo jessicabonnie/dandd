@@ -1,7 +1,7 @@
 import pytest # type: ignore
 import os
 from unittest.mock import Mock, patch
-from dandd.delta_node import DeltaTreeNode
+from dandd.delta_node import DeltaNode
 # from dandd.sketch_filepath import SketchFilePath
 from unittest.mock import call
 
@@ -25,8 +25,8 @@ def test_experiment():
     }
 
 def test_init(temp_species, test_experiment):
-    """Test initialization of DeltaTreeNode"""
-    node = DeltaTreeNode(
+    """Test initialization of DeltaNode"""
+    node = DeltaNode(
         node_title="test_node",
         children=[],
         speciesinfo=temp_species,
@@ -42,7 +42,7 @@ def test_init(temp_species, test_experiment):
 
 def test_assign_progeny(temp_species, test_experiment):
     """Test assign_progeny method"""
-    node = DeltaTreeNode("test_node", [], temp_species, test_experiment)
+    node = DeltaNode("test_node", [], temp_species, test_experiment)
     node.assign_progeny()
     
     assert node.progeny == [node]
@@ -51,8 +51,8 @@ def test_assign_progeny(temp_species, test_experiment):
 
 def test_lt_comparison(temp_species, test_experiment):
     """Test less than comparison between nodes"""
-    node1 = DeltaTreeNode("node1", [], temp_species, test_experiment)
-    node2 = DeltaTreeNode("node2", [], temp_species, test_experiment)
+    node1 = DeltaNode("node1", [], temp_species, test_experiment)
+    node2 = DeltaNode("node2", [], temp_species, test_experiment)
     node2.ngen = 2
     
     assert node1 < node2
@@ -60,7 +60,7 @@ def test_lt_comparison(temp_species, test_experiment):
 
 def test_find_delta_helper_dashing_limit(temp_species, test_experiment):
     """Test that find_delta_helper raises error for dashing with k > 32"""
-    node = DeltaTreeNode("test_node", [], temp_species, test_experiment)
+    node = DeltaNode("test_node", [], temp_species, test_experiment)
     
     with pytest.raises(ValueError) as exc_info:
         node.find_delta_helper(33)
@@ -68,9 +68,9 @@ def test_find_delta_helper_dashing_limit(temp_species, test_experiment):
 
 def test_node_with_children(temp_species, test_experiment):
     """Test node with children initialization"""
-    child1 = DeltaTreeNode("child1", [], temp_species, test_experiment)
-    child2 = DeltaTreeNode("child2", [], temp_species, test_experiment)
-    parent = DeltaTreeNode("parent", [child1, child2], temp_species, test_experiment)
+    child1 = DeltaNode("child1", [], temp_species, test_experiment)
+    child2 = DeltaNode("child2", [], temp_species, test_experiment)
+    parent = DeltaNode("parent", [child1, child2], temp_species, test_experiment)
     
     assert len(parent.children) == 2
     assert parent.children[0].node_title == "child1"
@@ -93,7 +93,7 @@ def test_ksweep_range(temp_species):
         'mock_run': True  # Prevent actual command execution
     }
     
-    node = DeltaTreeNode("test_node", [], temp_species, experiment)
+    node = DeltaNode("test_node", [], temp_species, experiment)
     assert node.mink == 5
     assert node.maxk == 15
     assert len(node.ksketches) >= node.maxk + 2
@@ -110,11 +110,11 @@ def test_find_delta(mock_run, temp_species, test_experiment, test_data_dir):
     test_file = os.path.join(test_data_dir, "NC_009057.fasta")
     
     # Create node with real file path
-    node = DeltaTreeNode(test_file, [test_file], temp_species, test_experiment)
+    node = DeltaNode(test_file, [test_file], temp_species, test_experiment)
     
     # Start at k=20 to avoid hitting dashing's k=32 limit during exploration
     # Mock the recursive calls to find_delta_helper
-    with patch.object(DeltaTreeNode, 'find_delta_helper') as mock_helper:
+    with patch.object(DeltaNode, 'find_delta_helper') as mock_helper:
         # Set up mock behavior for find_delta_helper
         def helper_side_effect(kval, direction):
             # Create a mock sketch with the specified k-value
@@ -160,7 +160,7 @@ def test_node_ksweep(mock_run, temp_species, test_experiment, test_data_dir):
     test_experiment["ksweep"] = (20, 25)  # Small range for testing
     
     # Create node with real file path
-    node = DeltaTreeNode(test_file, [test_file], temp_species, test_experiment)
+    node = DeltaNode(test_file, [test_file], temp_species, test_experiment)
     
     # Verify initial setup
     assert node.mink == 20, f"Initial mink should be 20, got {node.mink}"
@@ -176,7 +176,7 @@ def test_node_ksweep(mock_run, temp_species, test_experiment, test_data_dir):
         sketches.append(mock_sketch)
     
     # Mock find_delta
-    with patch.object(DeltaTreeNode, 'find_delta') as mock_find_delta:
+    with patch.object(DeltaNode, 'find_delta') as mock_find_delta:
         def find_delta_side_effect(kval):
             if 20 <= kval <= 25:
                 idx = kval - 20
