@@ -6,6 +6,23 @@ from .core import DandD
 import os
 
 def add_universal_cmds(subparser:argparse.ArgumentParser):
+    """
+    Add universal command-line arguments that are shared across all subcommands.
+    
+    Args:
+        subparser (argparse.ArgumentParser): Parser to add universal arguments to
+    
+    Returns:
+        argparse.ArgumentParser: Parser with added universal arguments
+        
+    Universal arguments added:
+        --version: Show program version
+        --verbose (-v): Print progress information
+        --debug: Show third-party program commands
+        --lowmem: Delete sketches after storing cardinalities
+        --safe: Verify sketch hashes
+        --fast: Skip saving intermediate files
+    """
     subparser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
     subparser.add_argument("--verbose", "-v", action="store_true", default=False, help="Print some trees and report steps of actions.")
     subparser.add_argument( "--debug", action="store_true", default=False, dest="debug", help="Share command calls to 3rd party programs.")
@@ -54,6 +71,22 @@ def add_universal_cmds(subparser:argparse.ArgumentParser):
 
 
 def parse_arguments():
+    """
+    Create and configure argument parsers for all DandD commands.
+    
+    Creates parsers for three main subcommands:
+    - tree: Calculate deltas and create DandD tree
+    - progressive: Perform progressive unions
+    - kij: Calculate K-Independent Jaccard similarities
+    
+    Each subcommand has its own set of arguments as documented in the README.
+    Universal arguments from add_universal_cmds() are added to all subcommands.
+    
+    Returns:
+        tuple: (ArgumentParser, list)
+            - Configured argument parser
+            - List of valid command names
+    """
 
      # Arguments shared across all commands
     parent_parser=argparse.ArgumentParser(add_help=False)
@@ -155,6 +188,17 @@ def parse_arguments():
 
 
 def main():
+    """
+    Main entry point for the DandD command-line interface.
+    
+    Parses command line arguments and executes the appropriate command by:
+    1. Getting parser and valid commands
+    2. Parsing arguments
+    3. Creating DandD instance with universal options
+    4. Running appropriate subcommand (tree, progressive, or kij)
+    
+    Exits with error if no valid subcommand is provided.
+    """
     parser, cmds = parse_arguments()
     args = parser.parse_args()
     
@@ -178,6 +222,12 @@ def main():
         dandd.run_kij(args)
 
 def main_prev():
+    """
+    Legacy main function kept for backwards compatibility.
+    Currently disabled via commenting.
+    
+    Used the function-based approach rather than the current class-based approach.
+    """
     parser, commands = parse_arguments()
     args = parser.parse_args(sys.argv[1:])
     # if len(sys.argv) < 2:

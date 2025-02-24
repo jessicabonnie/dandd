@@ -1,17 +1,51 @@
 #! /usr/bin/env python3
+"""
+Module for managing species-specific data storage and retrieval.
+Handles both SQLite database and pickle-based storage of:
+- Fasta file hexsums
+- Sketch cardinalities
+- Sketch information
+"""
 from __future__ import annotations
 import pickle
 import os
 import re
-from typing import Dict
+from typing import Dict, List, Optional
 import shutil
 from subprocess import CalledProcessError
 from dandd.utils import read_pickle_dict
 import sqlite3
 
 class SpeciesSpecifics:
-    '''An object to store the specifics of a species file info'''
-    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, tool: str, flist_loc=None):
+    """
+    Manages species-specific data storage and retrieval.
+    
+    Attributes:
+        tag (str): Identifier for the species/experiment
+        sketchdir (str): Directory where sketches and metadata are stored
+        fastahex (Dict[str, str]): Maps fasta paths to their hexsums
+        db_path (str): Path to SQLite database
+        cardkey (Dict[str, float]): Maps sketch paths to their cardinalities
+        inputdir (str): Directory containing input fasta files
+        card0 (List[str]): List of zero cardinality sketches
+        kstart (int): Starting k-mer size
+        orderings (Optional[List[List[str]]]): Ordering information for sketches
+        flist_loc (Optional[str]): Location of fasta list file
+        sketchinfo (Dict[str, Dict]): Mapping of sketch metadata
+    """
+
+    def __init__(self, tag: str, genomedir: str, sketchdir: str, kstart: int, tool: str, flist_loc: Optional[str] = None) -> None:
+        """
+        Initialize SpeciesSpecifics object.
+        
+        Args:
+            tag: Identifier for the species/experiment
+            genomedir: Directory containing input fasta files
+            sketchdir: Directory where sketches and metadata are stored
+            kstart: Starting k-mer size
+            tool: Sketching tool to use ('dashing' or 'kmc')
+            flist_loc: Optional path to file listing fasta files to use
+        """
         self.tag=tag
         self.sketchdir=sketchdir
         # self.species=self._resolve_species()
@@ -65,7 +99,7 @@ class SpeciesSpecifics:
             self._save_sketchinfo()  
 
     
-    def _read_cardkey(self, tool) -> Dict[str, int]:
+    def _read_cardkey(self, tool) -> Dict[str, float]:
         '''Recover key of previously calculated cardinalities from pickle file'''
         cardpath=os.path.join(self.sketchdir, f'{self.tag}_{tool}_cardinalities.pickle')
         return read_pickle_dict(cardpath)
