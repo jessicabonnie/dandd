@@ -1,6 +1,7 @@
 import pytest # type: ignore
 import os
 from dandd.utils import insert_pre_ext, write_listdict_to_csv, blake2b, canon_command, read_pickle_dict
+import pickle
 
 def test_insert_pre_ext():
     assert insert_pre_ext("test.txt", "suffix") == "test.suffix.txt"
@@ -69,5 +70,5 @@ def test_read_pickle_dict(tmp_path):
     with open(test_pickle, "wb") as f:
         pickle.dump(test_data, f)
     
-    result = temp_species.read_pickle(str(test_pickle))
+    result = read_pickle_dict(str(test_pickle))
     assert result == test_data
