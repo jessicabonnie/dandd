@@ -8,7 +8,8 @@ import glob
 import shutil
 
 # Define DASHINGLOC with full path
-DASHINGLOC = "/home/jbonnie1/lib/dashing/dashing"
+# DASHINGLOC = "/home/jbonnie1/lib/dashing/dashing"
+DASHINGLOC = "dashing"
 
 @pytest.fixture
 def dash_sketch_obj(temp_species, test_experiment):

@@ -6,8 +6,8 @@ import glob
 from dandd.sketch_base import SketchObj
 from dandd.utils import canon_command
 
-DASHINGLOC="/home/jbonnie1/lib/dashing_working/dashing"
-# DASHINGLOC = "dashing"
+# DASHINGLOC="/home/jbonnie1/lib/dashing_working/dashing"
+DASHINGLOC = "dashing"
    
 class DashSketchObj(SketchObj):
     def __init__(self, kval, sfp, speciesinfo, experiment, presketches=[]):

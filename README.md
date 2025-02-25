@@ -6,11 +6,6 @@ A tool to estimate deltas for sequence sets and answer questions about relative 
 
 ## Installation  
 
-### Using pip
-```bash
-pip install dandd
-```
-
 ### From source
 ```bash
 git clone https://github.com/jessicabonnie/dandd
