@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="dandd",
-    version="1.0.0",
+    version="1.1.0",
     author="Jessica K. Bonnie",
     author_email="jbonnie1@jhu.edu",  # Update with actual email
     description="A tool to estimate deltas for sequence sets and answer questions about relative contribution",
