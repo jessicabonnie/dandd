@@ -1,32 +1,13 @@
-from species_specifics import SpeciesSpecifics
+from dandd.species_specifics import SpeciesSpecifics
 import os, glob
 import hashlib
 import subprocess
 import csv
 import tempfile
 import shutil
-
+from dandd.utils import blake2b, canon_command
 # This assumes that the command for dashing has been aliased
 DASHINGLOC="dashing" 
-
-def blake2b(fname):
-    '''Create a blake2b hexsum from a file'''
-    hash_blake2b = hashlib.blake2b()
-    with open(fname, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_blake2b.update(chunk)
-    return hash_blake2b.hexdigest()
-
-def canon_command(canon:bool, tool='dashing'):
-    '''Determine what should be added to sketching command when not canonicalizing
-    '''
-    outstr=''
-    if not canon:
-        if tool == 'dashing':
-            outstr='--no-canon'
-        if tool == 'kmc':
-            outstr='-b'
-    return outstr
 
 class SketchFilePath:
     '''An object to prepare sketch and union naming and directory location
